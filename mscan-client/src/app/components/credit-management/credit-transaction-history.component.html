@@ -1,0 +1,68 @@
+<div class="transaction-history-container">
+  <div class="header">
+    <h2>Credit Transaction History</h2>
+  </div>
+
+  <div class="filters">
+    <select [(ngModel)]="typeFilter" (change)="onFilterChange()" class="filter-select">
+      <option value="all">All Transactions</option>
+      <option value="CREDIT">Credits Added</option>
+      <option value="DEBIT">Credits Spent</option>
+    </select>
+  </div>
+
+  <div *ngIf="loading" class="loading">Loading transaction history...</div>
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <div *ngIf="!loading && !error" class="transactions-container" (scroll)="onScroll($event)">
+    <div *ngIf="transactions.length === 0" class="no-data">
+      No transactions found
+    </div>
+
+    <div *ngFor="let transaction of transactions" 
+         class="transaction-item"
+         [class]="getTransactionTypeClass(transaction.transaction_type)">
+      <div class="transaction-icon">
+        {{ getTransactionIcon(transaction.transaction_type) }}
+      </div>
+
+      <div class="transaction-details">
+        <div class="transaction-header">
+          <span class="transaction-type-label">
+            {{ transaction.transaction_type === 'CREDIT' ? 'Credits Added' : 'Credits Spent' }}
+          </span>
+          <span class="transaction-date">
+            {{ transaction.created_at | date: 'medium' }}
+          </span>
+        </div>
+
+        <div class="transaction-description" *ngIf="transaction.description">
+          {{ transaction.description }}
+        </div>
+
+        <div class="transaction-reference" *ngIf="transaction.reference_type">
+          <span class="reference-label">Reference:</span>
+          <span class="reference-value">{{ transaction.reference_type }}</span>
+        </div>
+
+        <div class="transaction-balance">
+          <span class="balance-label">Balance:</span>
+          <span class="balance-change">
+            {{ transaction.balance_before }} 
+            → 
+            {{ transaction.balance_after }}
+          </span>
+        </div>
+      </div>
+
+      <div class="transaction-amount" [class]="getTransactionTypeClass(transaction.transaction_type)">
+        <span class="amount-sign">{{ getTransactionSign(transaction.transaction_type) }}</span>
+        <span class="amount-value">{{ transaction.amount }}</span>
+      </div>
+    </div>
+
+    <div *ngIf="loadingMore" class="loading-more">
+      Loading more transactions...
+    </div>
+  </div>
+</div>

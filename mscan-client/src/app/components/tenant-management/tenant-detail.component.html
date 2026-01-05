@@ -1,0 +1,103 @@
+<div class="detail-container">
+  <div class="header">
+    <button (click)="goBack()" class="btn-back">← Back to List</button>
+    <div class="actions" *ngIf="tenant">
+      <button (click)="editTenant()" class="btn-primary">Edit Tenant</button>
+      <button (click)="toggleStatus()" class="btn-secondary">
+        {{ tenant.status === 'active' ? 'Deactivate' : 'Activate' }}
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading">Loading tenant details...</div>
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <div *ngIf="!loading && !error && tenant" class="content">
+    <div class="info-card">
+      <h2>{{ tenant.tenant_name }}</h2>
+      <span [class]="getStatusClass(tenant.status)" class="status-badge">
+        {{ tenant.status }}
+      </span>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Basic Information</h3>
+        <div class="info-row">
+          <span class="label">Tenant ID:</span>
+          <span class="value">{{ tenant.id }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Contact Person:</span>
+          <span class="value">{{ tenant.contact_person }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Email:</span>
+          <span class="value">{{ tenant.email }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Phone:</span>
+          <span class="value">{{ tenant.phone || 'N/A' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Address:</span>
+          <span class="value">{{ tenant.address || 'N/A' }}</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Account Status</h3>
+        <div class="info-row">
+          <span class="label">Status:</span>
+          <span [class]="getStatusClass(tenant.status)" class="value-badge">
+            {{ tenant.status }}
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="label">Created:</span>
+          <span class="value">{{ tenant.created_at | date : 'medium' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Last Updated:</span>
+          <span class="value">{{ tenant.updated_at | date : 'medium' }}</span>
+        </div>
+      </div>
+
+      <div class="card stats-card">
+        <h3>Total Credit Balance</h3>
+        <div class="stat-value">{{ tenant.total_credits_received || 0 }}</div>
+        <div class="stat-label">Total Credits</div>
+      </div>
+
+      <div class="card stats-card">
+        <h3>Total Coupons Generated</h3>
+        <div class="stat-value">{{ tenant.total_coupons || 0 }}</div>
+        <div class="stat-label">Total Coupons</div>
+      </div>
+
+      <div class="card stats-card">
+        <h3>Total Credit Spent</h3>
+        <div class="stat-value">{{ tenant.total_credits_spent || 0 }}</div>
+        <div class="stat-label">All Time</div>
+      </div>
+
+      <div class="card stats-card">
+        <h3>Available Credit Balance</h3>
+        <div class="stat-value">{{ tenant.credit_balance || 0 }}</div>
+        <div class="stat-label">Available Credits</div>
+      </div>
+
+      <div class="card stats-card">
+        <h3>Total Scans</h3>
+        <div class="stat-value">{{ tenant.total_scans || 0 }}</div>
+        <div class="stat-label">All Time</div>
+      </div>
+
+      <div class="card stats-card">
+        <h3>Verification Apps</h3>
+        <div class="stat-value">{{ tenant.verification_apps_count || 0 }}</div>
+        <div class="stat-label">Configured Apps</div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,76 @@
+<div class="scan-history-container">
+  <div class="header">
+    <div>
+      <h1>Scan History</h1>
+      <p>View all QR code scan attempts and their outcomes</p>
+    </div>
+    <button class="btn-primary" (click)="viewAnalytics()">
+      <span class="material-icons">analytics</span>
+      View Analytics
+    </button>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <span class="material-icons">qr_code_scanner</span>
+      <div class="stat-content">
+        <h3>{{ stats.totalScans }}</h3>
+        <p>Total Scans</p>
+      </div>
+    </div>
+    <div class="stat-card success">
+      <span class="material-icons">check_circle</span>
+      <div class="stat-content">
+        <h3>{{ stats.successfulScans }}</h3>
+        <p>Successful</p>
+      </div>
+    </div>
+    <div class="stat-card error">
+      <span class="material-icons">cancel</span>
+      <div class="stat-content">
+        <h3>{{ stats.failedScans }}</h3>
+        <p>Failed</p>
+      </div>
+    </div>
+    <div class="stat-card info">
+      <span class="material-icons">percent</span>
+      <div class="stat-content">
+        <h3>{{ stats.successRate }}%</h3>
+        <p>Success Rate</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div *ngIf="loading" class="loading">Loading scan history...</div>
+
+    <div *ngIf="!loading && scans.length === 0" class="empty-state">
+      <span class="material-icons">qr_code_scanner</span>
+      <h3>No Scans Yet</h3>
+      <p>Scan history will appear here once customers start scanning your coupon QR codes.</p>
+    </div>
+
+    <table *ngIf="!loading && scans.length > 0">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Coupon Code</th>
+          <th>Status</th>
+          <th>Device</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let scan of scans">
+          <td>{{ scan.scan_timestamp | date:'short' }}</td>
+          <td>{{ scan.coupon_code }}</td>
+          <td>
+            <span class="badge" [class.success]="scan.scan_status === 'SUCCESS'" [class.error]="scan.scan_status !== 'SUCCESS'">
+              {{ scan.scan_status }}
+            </span>
+          </td>
+          <td>{{ scan.device_info || 'Unknown' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

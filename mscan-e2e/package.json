@@ -1,0 +1,29 @@
+{
+  "name": "mscan-e2e",
+  "version": "1.0.0",
+  "description": "End-to-end tests for MScan application using Playwright",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:ui": "playwright test --ui",
+    "test:super-admin": "playwright test tests/super-admin --headed",
+    "test:tenant-admin": "playwright test tests/tenant-admin --headed",
+    "test:auth": "playwright test tests/auth --headed",
+    "report": "playwright show-report",
+    "codegen": "playwright codegen"
+  },
+  "keywords": [
+    "e2e",
+    "testing",
+    "playwright"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^20.10.0",
+    "@types/pg": "^8.16.0",
+    "pg": "^8.16.3"
+  }
+}

@@ -1,0 +1,102 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <h1>TMS System</h1>
+      <p>Transport Management System</p>
+      
+      <!-- Subdomain Indicator -->
+      <div class="subdomain-info" *ngIf="currentSubdomain">
+        <span class="material-icons">business</span>
+        <span class="subdomain-text">{{ currentSubdomain }}</span>
+      </div>
+      <div class="root-domain-info" *ngIf="!currentSubdomain">
+        <span class="material-icons">admin_panel_settings</span>
+        <span class="admin-text">Super Admin Login</span>
+      </div>
+    </div>
+
+    <!-- Email Step -->
+    <div *ngIf="step === 'email'" class="login-form">
+      <h2>Login</h2>
+      <p class="subtitle">Enter your email to receive an OTP</p>
+
+      <form [formGroup]="emailForm" (ngSubmit)="requestOTP()">
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            placeholder="Enter your email"
+            [class.error]="emailForm.get('email')?.invalid && emailForm.get('email')?.touched"
+          />
+          <div class="error-message" *ngIf="emailForm.get('email')?.invalid && emailForm.get('email')?.touched">
+            <span *ngIf="emailForm.get('email')?.errors?.['required']">Email is required</span>
+            <span *ngIf="emailForm.get('email')?.errors?.['email']">Please enter a valid email</span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary" [disabled]="loading || emailForm.invalid">
+          <span *ngIf="!loading">Send OTP</span>
+          <span *ngIf="loading">Sending...</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- OTP Step -->
+    <div *ngIf="step === 'otp'" class="login-form">
+      <h2>Verify OTP</h2>
+      <p class="subtitle">Enter the 6-digit code sent to <strong>{{ email }}</strong></p>
+
+      <div class="countdown" *ngIf="countdown && countdown !== 'OTP expired'">
+        <span>⏱️ Expires in: {{ countdown }}</span>
+      </div>
+
+      <div class="countdown expired" *ngIf="countdown === 'OTP expired'">
+        <span>⚠️ OTP has expired</span>
+      </div>
+
+      <form [formGroup]="otpForm" (ngSubmit)="verifyOTP()">
+        <div class="form-group">
+          <label for="otp">OTP Code</label>
+          <input
+            id="otp"
+            type="text"
+            formControlName="otp"
+            placeholder="Enter 6-digit OTP"
+            maxlength="6"
+            [class.error]="otpForm.get('otp')?.invalid && otpForm.get('otp')?.touched"
+          />
+          <div class="error-message" *ngIf="otpForm.get('otp')?.invalid && otpForm.get('otp')?.touched">
+            <span *ngIf="otpForm.get('otp')?.errors?.['required']">OTP is required</span>
+            <span *ngIf="otpForm.get('otp')?.errors?.['pattern']">OTP must be 6 digits</span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary" [disabled]="loading || otpForm.invalid">
+          <span *ngIf="!loading">Verify & Login</span>
+          <span *ngIf="loading">Verifying...</span>
+        </button>
+
+        <div class="form-actions">
+          <button type="button" class="btn-text" (click)="resendOTP()" [disabled]="loading">
+            Resend OTP
+          </button>
+          <button type="button" class="btn-text" (click)="goBack()">
+            Change Email
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Success Message -->
+    <div class="success-message" *ngIf="success">
+      ✓ {{ success }}
+    </div>
+
+    <!-- Error Message -->
+    <div class="error-message-box" *ngIf="error">
+      ⚠️ {{ error }}
+    </div>
+  </div>
+</div>

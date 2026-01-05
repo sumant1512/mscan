@@ -1,0 +1,281 @@
+.form-container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.form-header {
+  margin-bottom: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.form-header h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.alert {
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+
+.alert-error {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.alert-success {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.tenant-form {
+  background: white;
+  padding: 32px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.form-group {
+  margin-bottom: 24px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.required {
+  color: #dc2626;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-group input.invalid,
+.form-group textarea.invalid {
+  border-color: #dc2626;
+}
+
+.form-group input.invalid:focus,
+.form-group textarea.invalid:focus {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.error-text {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #dc2626;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-primary,
+.btn-secondary {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.btn-primary:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: white;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* Subdomain Input Styles */
+.subdomain-group {
+  background: #f9fafb;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.subdomain-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}
+
+.subdomain-input-wrapper input {
+  flex: 0 0 250px;
+  padding-right: 40px;
+}
+
+.subdomain-input-wrapper input.valid {
+  border-color: #16a34a;
+}
+
+.subdomain-input-wrapper input.valid:focus {
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+}
+
+.domain-suffix {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.validation-icon {
+  position: absolute;
+  right: 12px;
+  font-size: 18px;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.success-icon {
+  color: #16a34a;
+  font-weight: bold;
+}
+
+.error-icon {
+  color: #dc2626;
+  font-weight: bold;
+}
+
+.subdomain-feedback {
+  margin-top: 8px;
+  min-height: 20px;
+}
+
+.success-text {
+  display: block;
+  font-size: 13px;
+  color: #16a34a;
+}
+
+.help-text {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.suggestions {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.suggestions strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.suggestion-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.suggestion-pill {
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #2563eb;
+  color: #2563eb;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.suggestion-pill:hover {
+  background: #2563eb;
+  color: white;
+}
+
+.preview-box {
+  margin-top: 16px;
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.preview-box strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.url-preview {
+  font-size: 14px;
+  color: #2563eb;
+  font-weight: 600;
+  word-break: break-all;
+}

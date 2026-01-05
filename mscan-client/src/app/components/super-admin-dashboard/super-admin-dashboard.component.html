@@ -1,0 +1,92 @@
+<div class="dashboard">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-content">
+      <h1>Super Admin Dashboard</h1>
+      <div class="header-actions">
+        <span class="user-name">{{ userName }}</span>
+        <button class="btn-logout" (click)="logout()">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="content">
+    <!-- Loading State -->
+    <div class="loading-container" *ngIf="loading">
+      <div class="spinner"></div>
+      <p>Loading dashboard...</p>
+    </div>
+
+    <!-- Error State -->
+    <div class="error-box" *ngIf="error && !loading">
+      ⚠️ {{ error }}
+      <button class="btn-retry" (click)="loadDashboardStats()">Retry</button>
+    </div>
+
+    <!-- Quick Actions (visible when not loading) -->
+    <div class="quick-actions" *ngIf="!loading">
+      <h2>Quick Actions</h2>
+      <button class="btn-action" (click)="navigateToCustomers()">
+        <span class="action-icon">➕</span>
+        Register New Tenant
+      </button>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div class="dashboard-content" *ngIf="stats && !loading">
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon customers">🏢</div>
+          <div class="stat-info">
+            <h3>Total Customers</h3>
+            <p class="stat-value">{{ stats.totalTenants }}</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon users">👥</div>
+          <div class="stat-info">
+            <h3>Total Users</h3>
+            <p class="stat-value">{{ stats.totalUsers }}</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon active">🟢</div>
+          <div class="stat-info">
+            <h3>Active Sessions (24h)</h3>
+            <p class="stat-value">{{ stats.activeSessions24h }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Tenants Table -->
+      <div class="section">
+        <h2>Recent Customers</h2>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Company Name</th>
+                <th>Contact Email</th>
+                <th>Created At</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let tenant of stats.recentTenants">
+                <td>{{ tenant.companyName }}</td>
+                <td>{{ tenant.contactEmail }}</td>
+                <td>{{ tenant.createdAt | date : 'short' }}</td>
+              </tr>
+              <tr *ngIf="stats.recentTenants.length === 0">
+                <td colspan="3" class="no-data">No customers registered yet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

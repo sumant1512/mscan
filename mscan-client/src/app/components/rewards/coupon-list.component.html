@@ -1,0 +1,395 @@
+<div class="coupon-list-container">
+  <div class="header">
+    <h2>My Coupons</h2>
+    <div class="header-actions">
+      <button (click)="openRangeActivationModal()" class="btn-secondary">🎯 Activate Range</button>
+      <button (click)="openDeactivationModal()" class="btn-warning">🚫 Deactivate Range</button>
+      <button (click)="createCoupon()" class="btn-primary">+ Create Coupon</button>
+    </div>
+  </div>
+
+  <!-- Bulk Actions Toolbar -->
+  <div class="bulk-actions-bar" *ngIf="getSelectedCount() > 0">
+    <div class="bulk-info">
+      <span class="selection-count">{{ getSelectedCount() }} selected</span>
+      <button (click)="clearSelection()" class="btn-link">Clear</button>
+    </div>
+    <div class="bulk-buttons">
+      <button (click)="bulkPrint()" class="btn-secondary btn-sm">🖨️ Mark as Printed</button>
+      <button (click)="bulkActivate()" class="btn-primary btn-sm">✅ Activate Selected</button>
+    </div>
+  </div>
+
+  <div class="filters">
+    <div class="search-box">
+      <input
+        type="text"
+        [(ngModel)]="searchQuery"
+        (keyup.enter)="onSearch()"
+        placeholder="Search coupons..."
+        class="search-input"
+      />
+      <button (click)="onSearch()" class="btn-search">Search</button>
+    </div>
+
+    <select [(ngModel)]="appFilter" (change)="onFilterChange()" class="filter-select">
+      <option value="all">All Apps</option>
+      <option *ngFor="let app of verificationApps" [value]="app.id">{{ app.app_name }}</option>
+    </select>
+
+    <select [(ngModel)]="statusFilter" (change)="onFilterChange()" class="filter-select">
+      <option value="all">All Status</option>
+      <option value="draft">📝 Draft</option>
+      <option value="printed">🖨️ Printed</option>
+      <option value="active">✅ Active</option>
+      <option value="used">✓ Used</option>
+      <option value="inactive">🚫 Inactive</option>
+      <option value="expired">⏰ Expired</option>
+    </select>
+  </div>
+
+  <div *ngIf="loading" class="loading">Loading coupons...</div>
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <!-- Selection Controls -->
+  <div *ngIf="!loading && !error && coupons.length > 0" class="selection-controls">
+    <label class="checkbox-label">
+      <input type="checkbox" [checked]="selectAll" (change)="toggleSelectAll()" />
+      <span>Select All</span>
+    </label>
+    <span class="hint-text">Select coupons to perform bulk operations</span>
+  </div>
+
+  <div *ngIf="!loading && !error" class="coupons-list" (scroll)="onScroll($event)">
+    <div
+      *ngFor="let coupon of coupons"
+      class="coupon-card"
+      [class.selected]="isCouponSelected(coupon.id)"
+    >
+      <div class="card-main-line" (click)="toggleCoupon(coupon.id)" style="cursor: pointer">
+        <!-- Checkbox -->
+        <div class="card-checkbox" (click)="$event.stopPropagation()">
+          <input
+            type="checkbox"
+            [checked]="isCouponSelected(coupon.id)"
+            (change)="toggleCouponSelection(coupon.id)"
+            [id]="'coupon-' + coupon.id"
+          />
+        </div>
+
+        <!-- App Name -->
+        <span class="main-app-name" *ngIf="coupon.app_name">
+          {{ coupon.app_name }}
+        </span>
+        <span class="main-app-name" *ngIf="!coupon.app_name"> N/A </span>
+
+        <!-- Status -->
+        <span [class]="getStatusClass(coupon.status)" class="main-status-badge">
+          {{ getStatusIcon(coupon.status) }} {{ coupon.status }}
+        </span>
+
+        <!-- Coupon Reference -->
+        <span class="main-reference">
+          {{ coupon.coupon_reference || 'N/A' }}
+        </span>
+
+        <!-- Cost -->
+        <span class="main-cost"> 💰 {{ coupon.credit_cost }} credits </span>
+
+        <!-- Expand Icon -->
+        <span class="expand-icon" [class.expanded]="isCouponExpanded(coupon.id)">▼</span>
+      </div>
+
+      <div class="card-details-collapsed" *ngIf="isCouponExpanded(coupon.id)">
+        <div class="detail-section">
+          <div class="detail-row">
+            <span class="detail-label">📝 Description:</span>
+            <span>{{ coupon.description || 'N/A' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">🎫 Coupon Code:</span>
+            <span class="code-display">{{ coupon.coupon_code }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">💵 Discount:</span>
+            <span class="discount-value">{{ getDiscountDisplay(coupon) }}</span>
+          </div>
+          <div class="detail-row" *ngIf="coupon.product_name">
+            <span class="detail-label">📦 Product:</span>
+            <span>{{ coupon.product_name }}</span>
+          </div>
+          <div class="detail-row" *ngIf="coupon.product_sku">
+            <span class="detail-label">🏷️ SKU:</span>
+            <span>{{ coupon.product_sku }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">📅 Expires:</span>
+            <span>{{ coupon.expiry_date | date : 'short' }}</span>
+          </div>
+          <div class="detail-row" *ngIf="coupon.total_usage_limit">
+            <span class="detail-label">📊 Usage:</span>
+            <span>{{ coupon.current_usage_count }}/{{ coupon.total_usage_limit }}</span>
+          </div>
+          <div class="detail-row" *ngIf="!coupon.total_usage_limit">
+            <span class="detail-label">📊 Usage:</span>
+            <span>{{ coupon.current_usage_count }} (unlimited)</span>
+          </div>
+          <div class="detail-row" *ngIf="coupon.printed_at">
+            <span class="detail-label">🖨️ Printed:</span>
+            <span>{{ coupon.printed_at | date : 'short' }} (×{{ coupon.printed_count }})</span>
+          </div>
+          <div class="detail-row" *ngIf="coupon.activated_at">
+            <span class="detail-label">✅ Activated:</span>
+            <span>{{ coupon.activated_at | date : 'short' }}</span>
+          </div>
+        </div>
+
+        <div class="card-actions" (click)="$event.stopPropagation()">
+          <button
+            (click)="showQRCode(coupon)"
+            class="btn-action btn-align"
+            *ngIf="coupon.status === 'active'"
+          >
+            <span class="material-icons me-1">qr_code</span>
+            QR Code
+          </button>
+          <button
+            (click)="markAsPrinted(coupon)"
+            class="btn-action btn-align"
+            *ngIf="coupon.status === 'draft'"
+          >
+            <span class="material-icons me-1">print</span>
+            Mark Printed
+          </button>
+          <button
+            (click)="toggleStatus(coupon)"
+            class="btn-action btn-align"
+            *ngIf="coupon.status === 'active' || coupon.status === 'inactive'"
+          >
+            <span class="material-icons me-1">{{
+              coupon.status === 'active' ? 'pause' : 'play_arrow'
+            }}</span>
+            {{ coupon.status === 'active' ? 'Deactivate' : 'Activate' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="coupons.length === 0" class="no-data">No coupons found</div>
+
+    <div *ngIf="loadingMore" class="loading-more">Loading more coupons...</div>
+  </div>
+</div>
+
+<div *ngIf="showQRModal && selectedCoupon" class="modal-overlay" (click)="closeQRModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <h3>{{ selectedCoupon.description || 'Coupon' }}</h3>
+
+    <div class="qr-section">
+      <img
+        *ngIf="selectedCoupon.qr_code_url"
+        [src]="selectedCoupon.qr_code_url"
+        alt="QR Code"
+        class="qr-image"
+      />
+      <div *ngIf="!selectedCoupon.qr_code_url" class="qr-placeholder">QR Code not available</div>
+    </div>
+
+    <div class="code-section">
+      <div class="code-label">Coupon Code</div>
+      <div class="code-value">{{ selectedCoupon.coupon_code }}</div>
+      <button (click)="copyCode()" class="btn-copy">Copy Code</button>
+    </div>
+
+    <div class="coupon-info">
+      <div class="info-row">
+        <span>Valid Until:</span>
+        <span>{{ selectedCoupon.expiry_date | date : 'short' }}</span>
+      </div>
+      <div class="info-row">
+        <span>Discount:</span>
+        <span>{{ getDiscountDisplay(selectedCoupon) }}</span>
+      </div>
+      <div class="info-row">
+        <span>Usage:</span>
+        <span
+          >{{ selectedCoupon.current_usage_count }} /
+          {{ selectedCoupon.total_usage_limit || '∞' }}</span
+        >
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button (click)="downloadQR()" class="btn-download">Download QR</button>
+      <button (click)="closeQRModal()" class="btn-close">Close</button>
+    </div>
+  </div>
+</div>
+<!-- Range Activation Modal -->
+<div *ngIf="showRangeActivationModal" class="modal-overlay" (click)="closeRangeActivationModal()">
+  <div class="modal-content range-activation-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>🎯 Activate Coupon Range</h3>
+      <button (click)="closeRangeActivationModal()" class="btn-close-icon">×</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="fromRef">From Coupon Reference</label>
+        <input
+          id="fromRef"
+          type="text"
+          [(ngModel)]="rangeActivation.from_reference"
+          (ngModelChange)="onRangeInputChange()"
+          placeholder="e.g., CP-001"
+          class="form-input"
+        />
+        <small class="hint">Starting coupon reference in the range</small>
+      </div>
+
+      <div class="form-group">
+        <label for="toRef">To Coupon Reference</label>
+        <input
+          id="toRef"
+          type="text"
+          [(ngModel)]="rangeActivation.to_reference"
+          (ngModelChange)="onRangeInputChange()"
+          placeholder="e.g., CP-050"
+          class="form-input"
+        />
+        <small class="hint">Ending coupon reference in the range (max 1000 coupons)</small>
+      </div>
+
+      <!-- Preview Count -->
+      <div class="preview-count" *ngIf="rangePreviewCount > 0">
+        <span class="icon">📄</span>
+        <span class="text"
+          ><strong>{{ rangePreviewCount }}</strong> coupon(s) will be activated</span
+        >
+      </div>
+      <div class="preview-warning" *ngIf="rangePreviewCount > 100">
+        <span class="icon">⚠️</span>
+        <span class="text">Large range detected. This may take a moment to process.</span>
+      </div>
+
+      <div class="form-group">
+        <label for="fromStatus">From Status</label>
+        <select id="fromStatus" [(ngModel)]="rangeActivation.status_filter" class="form-select">
+          <option value="draft">📝 Draft</option>
+          <option value="printed">🖨️ Printed</option>
+        </select>
+        <small class="hint">Only coupons with this status will be activated</small>
+      </div>
+
+      <div class="form-group">
+        <label for="activationNote">Activation Note (Optional)</label>
+        <textarea
+          id="activationNote"
+          [(ngModel)]="rangeActivation.activation_note"
+          placeholder="Add a note about this activation..."
+          rows="3"
+          class="form-textarea"
+        ></textarea>
+      </div>
+
+      <div class="info-box">
+        <span class="icon">ℹ️</span>
+        <div class="text">
+          <strong>Important:</strong> This will activate all coupons in the specified range with
+          status "{{ rangeActivation.status_filter }}". The action cannot be undone.
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions mt-3">
+      <button
+        (click)="activateRange()"
+        class="btn-primary"
+        [disabled]="!rangeActivation.from_reference || !rangeActivation.to_reference"
+      >
+        ✅ Activate Range
+      </button>
+      <button (click)="closeRangeActivationModal()" class="btn-secondary">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Deactivation Modal -->
+<div *ngIf="showDeactivationModal" class="modal-overlay" (click)="closeDeactivationModal()">
+  <div class="modal-content deactivation-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>🚫 Deactivate Coupon Range</h3>
+      <button (click)="closeDeactivationModal()" class="btn-close-icon">×</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="warning-banner">
+        <span class="icon">⚠️</span>
+        <div class="text">
+          <strong>Warning:</strong> Deactivating coupons will prevent them from being scanned. This
+          action is intended for lost or damaged coupons.
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="deactFromRef">From Coupon Reference</label>
+        <input
+          id="deactFromRef"
+          type="text"
+          [(ngModel)]="deactivation.from_reference"
+          placeholder="e.g., CP-001"
+          class="form-input"
+        />
+        <small class="hint">Starting coupon reference in the range</small>
+      </div>
+
+      <div class="form-group">
+        <label for="deactToRef">To Coupon Reference</label>
+        <input
+          id="deactToRef"
+          type="text"
+          [(ngModel)]="deactivation.to_reference"
+          placeholder="e.g., CP-050"
+          class="form-input"
+        />
+        <small class="hint">Ending coupon reference in the range</small>
+      </div>
+
+      <div class="form-group">
+        <label for="deactivationReason">Deactivation Reason <span class="required">*</span></label>
+        <textarea
+          id="deactivationReason"
+          [(ngModel)]="deactivation.deactivation_reason"
+          placeholder="e.g., Coupons lost during shipment, damaged in storage, etc."
+          rows="4"
+          class="form-textarea"
+          required
+        ></textarea>
+        <small class="hint">Please provide a detailed reason for deactivating these coupons</small>
+      </div>
+
+      <div class="info-box danger">
+        <span class="icon">🛑</span>
+        <div class="text">
+          <strong>Cannot be undone:</strong> Deactivated coupons cannot be reactivated. They will be
+          marked as inactive permanently.
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button
+        (click)="deactivateRange()"
+        class="btn-danger"
+        [disabled]="
+          !deactivation.from_reference ||
+          !deactivation.to_reference ||
+          !deactivation.deactivation_reason.trim()
+        "
+      >
+        🚫 Deactivate Range
+      </button>
+      <button (click)="closeDeactivationModal()" class="btn-secondary">Cancel</button>
+    </div>
+  </div>
+</div>

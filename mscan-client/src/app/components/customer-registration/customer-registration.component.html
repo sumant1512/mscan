@@ -1,0 +1,129 @@
+<div class="registration-container">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-content">
+      <h1>Register New Customer</h1>
+      <button class="btn-back" (click)="cancel()">← Back to Dashboard</button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="content">
+    <div class="form-card">
+      <!-- Success Message -->
+      <div class="success-message" *ngIf="success">
+        ✓ {{ success }}
+      </div>
+
+      <!-- Error Message -->
+      <div class="error-message" *ngIf="error">
+        ⚠️ {{ error }}
+      </div>
+
+      <!-- Registration Form -->
+      <form [formGroup]="registrationForm" (ngSubmit)="onSubmit()">
+        <!-- Company Name -->
+        <div class="form-group">
+          <label for="companyName">Company Name <span class="required">*</span></label>
+          <input
+            id="companyName"
+            type="text"
+            formControlName="companyName"
+            placeholder="Enter company name"
+            [class.error]="isFieldInvalid('companyName')"
+          />
+          <div class="field-error" *ngIf="hasError('companyName', 'required')">
+            Company name is required
+          </div>
+          <div class="field-error" *ngIf="hasError('companyName', 'minlength')">
+            Company name must be at least 2 characters
+          </div>
+        </div>
+
+        <!-- Contact Email (Admin Email) -->
+        <div class="form-group">
+          <label for="contactEmail">Admin Email <span class="required">*</span></label>
+          <input
+            id="contactEmail"
+            type="email"
+            formControlName="contactEmail"
+            placeholder="admin@company.com"
+            [class.error]="isFieldInvalid('contactEmail')"
+          />
+          <div class="field-hint">This will be the tenant admin's login email</div>
+          <div class="field-error" *ngIf="hasError('contactEmail', 'required')">
+            Email is required
+          </div>
+          <div class="field-error" *ngIf="hasError('contactEmail', 'email')">
+            Please enter a valid email address
+          </div>
+        </div>
+
+        <!-- Admin Name -->
+        <div class="form-group">
+          <label for="adminName">Admin Full Name <span class="required">*</span></label>
+          <input
+            id="adminName"
+            type="text"
+            formControlName="adminName"
+            placeholder="Enter admin's full name"
+            [class.error]="isFieldInvalid('adminName')"
+          />
+          <div class="field-error" *ngIf="hasError('adminName', 'required')">
+            Admin name is required
+          </div>
+          <div class="field-error" *ngIf="hasError('adminName', 'minlength')">
+            Name must be at least 2 characters
+          </div>
+        </div>
+
+        <!-- Contact Phone -->
+        <div class="form-group">
+          <label for="contactPhone">Contact Phone (Optional)</label>
+          <input
+            id="contactPhone"
+            type="tel"
+            formControlName="contactPhone"
+            placeholder="+1 (555) 123-4567"
+            [class.error]="isFieldInvalid('contactPhone')"
+          />
+          <div class="field-error" *ngIf="hasError('contactPhone', 'pattern')">
+            Please enter a valid phone number
+          </div>
+        </div>
+
+        <!-- Address -->
+        <div class="form-group">
+          <label for="address">Address (Optional)</label>
+          <textarea
+            id="address"
+            formControlName="address"
+            placeholder="Enter company address"
+            rows="3"
+          ></textarea>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" (click)="cancel()" [disabled]="loading">
+            Cancel
+          </button>
+          <button type="submit" class="btn-submit" [disabled]="loading || registrationForm.invalid">
+            <span *ngIf="!loading">Register Customer</span>
+            <span *ngIf="loading">Registering...</span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Info Box -->
+      <div class="info-box">
+        <h3>📧 What happens next?</h3>
+        <ul>
+          <li>A new customer account will be created</li>
+          <li>A welcome email with login instructions will be sent to the admin email</li>
+          <li>The admin can login using OTP sent to their email</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

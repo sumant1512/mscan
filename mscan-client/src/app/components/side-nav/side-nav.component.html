@@ -1,0 +1,63 @@
+<aside class="side-nav" [class.collapsed]="isCollapsed">
+  <div class="nav-header">
+    <div class="header-row">
+      <h2 *ngIf="!isCollapsed">MSCAN</h2>
+      <button class="collapse-btn" (click)="toggleCollapse()">
+        <span class="material-icons">{{ isCollapsed ? 'menu' : 'menu_open' }}</span>
+      </button>
+    </div>
+    <div *ngIf="!isCollapsed" class="subdomain-container">
+      <div class="subdomain-indicator" *ngIf="currentSubdomain && userType !== 'SUPER_ADMIN'">
+        <span class="material-icons">business</span>
+        <span class="tenant-name">{{ currentTenantName }}</span>
+        <span class="subdomain-badge">{{ currentSubdomain }}</span>
+      </div>
+      <div class="root-indicator" *ngIf="!currentSubdomain && userType === 'SUPER_ADMIN'">
+        <span class="material-icons">admin_panel_settings</span>
+        <span class="admin-label">Super Admin</span>
+      </div>
+    </div>
+  </div>
+
+  <nav class="nav-menu">
+    <ul>
+      <ng-container *ngFor="let item of menuItems">
+        <!-- Menu item without children -->
+        <li *ngIf="!item.children" 
+            class="nav-item" 
+            [class.active]="isActive(item.route)"
+            [routerLink]="item.route">
+          <span class="material-icons">{{ item.icon }}</span>
+          <span class="nav-label" *ngIf="!isCollapsed">{{ item.label }}</span>
+        </li>
+
+        <!-- Menu item with children -->
+        <li *ngIf="item.children" class="nav-item has-children" [class.expanded]="item.expanded">
+          <div class="nav-item-header" (click)="toggleSubmenu(item)">
+            <span class="material-icons">{{ item.icon }}</span>
+            <span class="nav-label" *ngIf="!isCollapsed">{{ item.label }}</span>
+            <span class="material-icons expand-icon" *ngIf="!isCollapsed">
+              {{ item.expanded ? 'expand_less' : 'expand_more' }}
+            </span>
+          </div>
+          <ul class="sub-menu" *ngIf="!isCollapsed && item.expanded">
+            <li *ngFor="let child of item.children" 
+                class="sub-item"
+                [class.active]="isActive(child.route)"
+                [routerLink]="child.route">
+              <span class="material-icons">{{ child.icon }}</span>
+              <span class="nav-label">{{ child.label }}</span>
+            </li>
+          </ul>
+        </li>
+      </ng-container>
+    </ul>
+  </nav>
+
+  <div class="nav-footer">
+    <button class="logout-btn" (click)="logout()">
+      <span class="material-icons">logout</span>
+      <span *ngIf="!isCollapsed">Logout</span>
+    </button>
+  </div>
+</aside>

@@ -1,0 +1,263 @@
+.profile-container {
+  padding: 24px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.profile-header {
+  margin-bottom: 32px;
+}
+
+.profile-header h1 {
+  font-size: 28px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0 0 8px 0;
+}
+
+.profile-header p {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+
+.profile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.profile-card,
+.security-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 32px;
+}
+
+.user-info-section {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding-bottom: 32px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.avatar .material-icons {
+  font-size: 48px;
+  color: white;
+}
+
+.user-details h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0 0 8px 0;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #e0f2fe;
+  color: #0369a1;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.tenant-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #666;
+  font-size: 14px;
+}
+
+.tenant-info .material-icons {
+  font-size: 18px;
+}
+
+.form-section h3,
+.security-card h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0 0 24px 0;
+}
+
+.alert {
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+
+.alert-error {
+  background: #fee;
+  color: #c00;
+  border: 1px solid #fcc;
+}
+
+.alert-success {
+  background: #efe;
+  color: #0a0;
+  border: 1px solid #cfc;
+}
+
+.form-group {
+  margin-bottom: 24px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #00d4ff;
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+}
+
+.form-input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.error-msg {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #c00;
+}
+
+.info-msg {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #666;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e5e5;
+}
+
+.btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #00d4ff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #00b8e6;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 212, 255, 0.3);
+}
+
+.btn-primary:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+}
+
+.btn-primary .material-icons {
+  font-size: 18px;
+}
+
+.security-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.security-item:last-child {
+  border-bottom: none;
+}
+
+.security-item h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0 0 4px 0;
+}
+
+.security-item p {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+
+.status-badge {
+  padding: 6px 16px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.enabled {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+@media (max-width: 768px) {
+  .profile-container {
+    padding: 16px;
+  }
+
+  .profile-card,
+  .security-card {
+    padding: 24px 16px;
+  }
+
+  .user-info-section {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .security-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}

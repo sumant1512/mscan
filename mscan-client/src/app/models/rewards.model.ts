@@ -1,0 +1,189 @@
+export interface Tenant {
+  id: number;
+  tenant_name: string;
+  contact_person: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  status: 'active' | 'inactive' | 'suspended';
+  created_at: string;
+  updated_at: string;
+  total_credits_received?: number;
+  total_credits_spent?: number;
+  credit_balance?: number;
+  total_coupons?: number;
+  total_scans?: number;
+  subdomain_slug?: string;
+  verification_apps_count?: number;
+}
+
+export interface CreditRequest {
+  id: number;
+  tenant_id: number;
+  requested_amount: number;
+  justification?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requested_at: string;
+  processed_at?: string;
+  processed_by?: number;
+  rejection_reason?: string;
+  tenant_name?: string;
+  contact_email?: string;
+  processed_by_name?: string;
+}
+
+export interface CreditBalance {
+  tenant_id: number;
+  total_credits: number;
+  balance: number;
+  total_received: number;
+  total_spent: number;
+  total_coupons_created: number;
+  last_updated: string;
+}
+
+export interface CreditTransaction {
+  id: number;
+  tenant_id: number;
+  transaction_type: 'CREDIT' | 'DEBIT';
+  amount: number;
+  balance_before: number;
+  balance_after: number;
+  reference_id?: number;
+  reference_type?: string;
+  description?: string;
+  created_at: string;
+  created_by?: number;
+  created_by_name?: string;
+}
+
+export interface VerificationApp {
+  id: string;
+  tenant_id: string;
+  app_name: string;
+  description?: string;
+  logo_url?: string;
+  primary_color?: string;
+  secondary_color?: string;
+  welcome_message?: string;
+  scan_success_message?: string;
+  scan_failure_message?: string;
+  post_scan_redirect_url?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  total_coupons?: number;
+  total_scans?: number;
+}
+
+export interface Product {
+  id: number;
+  tenant_id: string;
+  product_name: string;
+  product_sku?: string;
+  description?: string;
+  category_id?: number;
+  price?: number;
+  currency?: string;
+  image_url?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Category {
+  id: number;
+  tenant_id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  is_active: boolean;
+  product_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Coupon {
+  id: string;
+  tenant_id: string;
+  verification_app_id?: string;
+  coupon_code: string;
+  discount_type: 'FIXED_AMOUNT';
+  discount_value: number;
+  discount_currency?: string;
+  buy_quantity?: number;
+  get_quantity?: number;
+  min_purchase_amount?: number;
+  expiry_date: string;
+  total_usage_limit?: number;
+  per_user_usage_limit?: number;
+  current_usage_count: number;
+  status: 'draft' | 'printed' | 'active' | 'used' | 'expired' | 'exhausted' | 'inactive';
+  qr_code_url?: string;
+  description?: string;
+  terms?: string;
+  product_name?: string;
+  product_sku?: string;
+  credit_cost: number;
+  created_at: string;
+  updated_at: string;
+  printed_at?: string;
+  printed_count?: number;
+  activated_at?: string;
+  activation_note?: string;
+  deactivation_reason?: string;
+  app_name?: string;
+  total_scans?: number;
+  successful_scans?: number;
+  coupon_reference?: string;
+}
+
+export interface Scan {
+  id: number;
+  coupon_id: number;
+  tenant_id: number;
+  scan_timestamp: string;
+  scan_status: 'SUCCESS' | 'EXPIRED' | 'EXHAUSTED' | 'INVALID' | 'INACTIVE';
+  location_lat?: number;
+  location_lng?: number;
+  device_info?: string;
+  user_agent?: string;
+  ip_address?: string;
+  coupon_code?: string;
+}
+
+export interface ScanAnalytics {
+  total_scans: number;
+  successful_scans: number;
+  expired_scans: number;
+  exhausted_scans: number;
+  invalid_scans: number;
+}
+
+export interface CreditCostBreakdown {
+  total: number;
+  breakdown: {
+    base: number;
+    discountMultiplier: number;
+    quantityMultiplier: number;
+    timeMultiplier: number;
+  };
+  minimumCost: number;
+}
+
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+  search?: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}

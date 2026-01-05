@@ -1,0 +1,8 @@
+<div class="dashboard-container" *ngIf="!loading">
+  <app-super-admin-dashboard *ngIf="isSuperAdmin"></app-super-admin-dashboard>
+  <app-tenant-dashboard *ngIf="!isSuperAdmin"></app-tenant-dashboard>
+</div>
+
+<div class="loading" *ngIf="loading">
+  Loading dashboard...
+</div>

@@ -1,0 +1,607 @@
+{
+  "config": {
+    "configFile": "/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/playwright.config.ts",
+    "rootDir": "/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/tests",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.57.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "auth/authentication.spec.ts",
+      "file": "auth/authentication.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Authentication Tests",
+          "file": "auth/authentication.spec.ts",
+          "line": 8,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "Super Admin Authentication",
+              "file": "auth/authentication.spec.ts",
+              "line": 15,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should login successfully as super admin",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 4772,
+                          "errors": [],
+                          "stdout": [
+                            {
+                              "text": "🔐 Starting Super Admin login...\n"
+                            },
+                            {
+                              "text": "✅ Login page loaded\n"
+                            },
+                            {
+                              "text": "✅ Connected to database\n"
+                            },
+                            {
+                              "text": "📧 Entering email: admin@mscan.com\n"
+                            },
+                            {
+                              "text": "📨 Clicked Send OTP button, waiting for response...\n"
+                            },
+                            {
+                              "text": "✅ OTP input screen appeared\n"
+                            },
+                            {
+                              "text": "🔐 Retrieved OTP for admin@mscan.com: 768413\n"
+                            },
+                            {
+                              "text": "🔢 Entering OTP: 768413\n"
+                            },
+                            {
+                              "text": "✅ Clicked Verify & Login\n"
+                            },
+                            {
+                              "text": "✅ Successfully navigated to dashboard\n"
+                            },
+                            {
+                              "text": "🔌 Disconnected from database\n"
+                            },
+                            {
+                              "text": "🎉 Super Admin login successful!\n"
+                            }
+                          ],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-01-03T09:02:06.099Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "62b8d4dbcee4331d62dc-23255fd5a2b53ec8443d",
+                  "file": "auth/authentication.spec.ts",
+                  "line": 16,
+                  "column": 9
+                },
+                {
+                  "title": "should display error for invalid email",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 1548,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-01-03T09:02:11.006Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "62b8d4dbcee4331d62dc-dadd017cff374b820bcd",
+                  "file": "auth/authentication.spec.ts",
+                  "line": 27,
+                  "column": 9
+                },
+                {
+                  "title": "should display error for invalid OTP",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 1541,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-01-03T09:02:12.563Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "62b8d4dbcee4331d62dc-da9249d8ad429f546526",
+                  "file": "auth/authentication.spec.ts",
+                  "line": 39,
+                  "column": 9
+                },
+                {
+                  "title": "should logout successfully",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 4840,
+                          "errors": [],
+                          "stdout": [
+                            {
+                              "text": "🔐 Starting Super Admin login...\n"
+                            },
+                            {
+                              "text": "✅ Login page loaded\n"
+                            },
+                            {
+                              "text": "✅ Connected to database\n"
+                            },
+                            {
+                              "text": "📧 Entering email: admin@mscan.com\n"
+                            },
+                            {
+                              "text": "📨 Clicked Send OTP button, waiting for response...\n"
+                            },
+                            {
+                              "text": "✅ OTP input screen appeared\n"
+                            },
+                            {
+                              "text": "🔐 Retrieved OTP for admin@mscan.com: 473991\n"
+                            },
+                            {
+                              "text": "🔢 Entering OTP: 473991\n"
+                            },
+                            {
+                              "text": "✅ Clicked Verify & Login\n"
+                            },
+                            {
+                              "text": "✅ Successfully navigated to dashboard\n"
+                            },
+                            {
+                              "text": "🔌 Disconnected from database\n"
+                            },
+                            {
+                              "text": "🎉 Super Admin login successful!\n"
+                            }
+                          ],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-01-03T09:02:14.109Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "62b8d4dbcee4331d62dc-2abd5024a74877a2d503",
+                  "file": "auth/authentication.spec.ts",
+                  "line": 55,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Tenant Admin Authentication",
+              "file": "auth/authentication.spec.ts",
+              "line": 68,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should login successfully as tenant admin",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 4698,
+                          "errors": [],
+                          "stdout": [
+                            {
+                              "text": "🔐 Starting Tenant Admin login for sumant@mscan.com...\n"
+                            },
+                            {
+                              "text": "✅ Connected to database\n"
+                            },
+                            {
+                              "text": "📧 Entering email: sumant@mscan.com\n"
+                            },
+                            {
+                              "text": "✅ OTP input screen appeared\n"
+                            },
+                            {
+                              "text": "🔐 Retrieved OTP for sumant@mscan.com: 668235\n"
+                            },
+                            {
+                              "text": "🔢 Retrieved OTP from database: 668235\n"
+                            },
+                            {
+                              "text": "🔢 Entering OTP in UI\n"
+                            },
+                            {
+                              "text": "🔌 Disconnected from database\n"
+                            },
+                            {
+                              "text": "🎉 Tenant Admin login successful via UI!\n"
+                            }
+                          ],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-01-03T09:02:18.953Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "62b8d4dbcee4331d62dc-2b3870bd9b92c261a60b",
+                  "file": "auth/authentication.spec.ts",
+                  "line": 75,
+                  "column": 9
+                },
+                {
+                  "title": "should logout and stay on tenant subdomain",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 4895,
+                          "errors": [],
+                          "stdout": [
+                            {
+                              "text": "🔐 Starting Tenant Admin login for sumant@mscan.com...\n"
+                            },
+                            {
+                              "text": "✅ Connected to database\n"
+                            },
+                            {
+                              "text": "📧 Entering email: sumant@mscan.com\n"
+                            },
+                            {
+                              "text": "✅ OTP input screen appeared\n"
+                            },
+                            {
+                              "text": "🔐 Retrieved OTP for sumant@mscan.com: 908627\n"
+                            },
+                            {
+                              "text": "🔢 Retrieved OTP from database: 908627\n"
+                            },
+                            {
+                              "text": "🔢 Entering OTP in UI\n"
+                            },
+                            {
+                              "text": "🔌 Disconnected from database\n"
+                            },
+                            {
+                              "text": "🎉 Tenant Admin login successful via UI!\n"
+                            }
+                          ],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-01-03T09:02:23.657Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "62b8d4dbcee4331d62dc-170b380f9c91312329af",
+                  "file": "auth/authentication.spec.ts",
+                  "line": 93,
+                  "column": 9
+                },
+                {
+                  "title": "should clear tokens on subdomain mismatch",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 5034,
+                          "errors": [],
+                          "stdout": [
+                            {
+                              "text": "🔐 Starting Tenant Admin login for sumant@mscan.com...\n"
+                            },
+                            {
+                              "text": "✅ Connected to database\n"
+                            },
+                            {
+                              "text": "📧 Entering email: sumant@mscan.com\n"
+                            },
+                            {
+                              "text": "✅ OTP input screen appeared\n"
+                            },
+                            {
+                              "text": "🔐 Retrieved OTP for sumant@mscan.com: 598410\n"
+                            },
+                            {
+                              "text": "🔢 Retrieved OTP from database: 598410\n"
+                            },
+                            {
+                              "text": "🔢 Entering OTP in UI\n"
+                            },
+                            {
+                              "text": "🔌 Disconnected from database\n"
+                            },
+                            {
+                              "text": "🎉 Tenant Admin login successful via UI!\n"
+                            }
+                          ],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-01-03T09:02:28.557Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "62b8d4dbcee4331d62dc-39eba442f54b8f0c1fa7",
+                  "file": "auth/authentication.spec.ts",
+                  "line": 102,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "Session Management",
+              "file": "auth/authentication.spec.ts",
+              "line": 117,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should maintain session after page reload",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 4184,
+                          "errors": [],
+                          "stdout": [
+                            {
+                              "text": "🔐 Starting Super Admin login...\n"
+                            },
+                            {
+                              "text": "✅ Login page loaded\n"
+                            },
+                            {
+                              "text": "✅ Connected to database\n"
+                            },
+                            {
+                              "text": "📧 Entering email: admin@mscan.com\n"
+                            },
+                            {
+                              "text": "📨 Clicked Send OTP button, waiting for response...\n"
+                            },
+                            {
+                              "text": "✅ OTP input screen appeared\n"
+                            },
+                            {
+                              "text": "🔐 Retrieved OTP for admin@mscan.com: 883501\n"
+                            },
+                            {
+                              "text": "🔢 Entering OTP: 883501\n"
+                            },
+                            {
+                              "text": "✅ Clicked Verify & Login\n"
+                            },
+                            {
+                              "text": "✅ Successfully navigated to dashboard\n"
+                            },
+                            {
+                              "text": "🔌 Disconnected from database\n"
+                            },
+                            {
+                              "text": "🎉 Super Admin login successful!\n"
+                            }
+                          ],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-01-03T09:02:33.597Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "62b8d4dbcee4331d62dc-ddb69fe043e4a25205cc",
+                  "file": "auth/authentication.spec.ts",
+                  "line": 118,
+                  "column": 9
+                },
+                {
+                  "title": "should redirect to login when accessing protected route without auth",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 60000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 1453,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-01-03T09:02:37.786Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "62b8d4dbcee4331d62dc-aa6731419a7c13550890",
+                  "file": "auth/authentication.spec.ts",
+                  "line": 130,
+                  "column": 9
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-01-03T09:02:05.752Z",
+    "duration": 33513.74800000001,
+    "expected": 9,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

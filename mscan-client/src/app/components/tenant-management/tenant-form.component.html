@@ -1,0 +1,160 @@
+<div class="form-container">
+  <div class="form-header">
+    <h2>{{ isEditMode ? 'Edit Tenant' : 'Create New Tenant' }}</h2>
+    <button type="button" class="btn-secondary" (click)="goToTenantList()">
+      📋 View All Tenants
+    </button>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+  <div *ngIf="success" class="alert alert-success">{{ success }}</div>
+
+  <form [formGroup]="tenantForm" (ngSubmit)="onSubmit()" class="tenant-form">
+    <div class="form-group">
+      <label for="tenant_name">Tenant Name <span class="required">*</span></label>
+      <input 
+        type="text" 
+        id="tenant_name" 
+        formControlName="tenant_name"
+        [class.invalid]="isFieldInvalid('tenant_name')"
+        placeholder="Enter tenant/business name">
+      <span *ngIf="isFieldInvalid('tenant_name')" class="error-text">
+        {{ getFieldError('tenant_name') }}
+      </span>
+    </div>
+
+    <!-- Subdomain Input Field -->
+    <div class="form-group subdomain-group" *ngIf="!isEditMode">
+      <label for="subdomain_slug">Choose Your Subdomain <span class="required">*</span></label>
+      <div class="subdomain-input-wrapper">
+        <input 
+          type="text" 
+          id="subdomain_slug" 
+          formControlName="subdomain_slug"
+          [class.invalid]="isFieldInvalid('subdomain_slug') || subdomainAvailable === false"
+          [class.valid]="subdomainAvailable === true"
+          placeholder="your-company">
+        <span class="domain-suffix">.{{ domainBase }}</span>
+        <span class="validation-icon">
+          <span *ngIf="checkingAvailability" class="spinner">⏳</span>
+          <span *ngIf="!checkingAvailability && subdomainAvailable === true" class="success-icon">✓</span>
+          <span *ngIf="!checkingAvailability && subdomainAvailable === false" class="error-icon">✗</span>
+        </span>
+      </div>
+      
+      <!-- Validation Messages -->
+      <div class="subdomain-feedback">
+        <span *ngIf="subdomainAvailable === true" class="success-text">
+          ✓ Available! Your dashboard will be at: <strong>{{ getSubdomainPreview() }}</strong>
+        </span>
+        <span *ngIf="subdomainAvailable === false" class="error-text">
+          ✗ This subdomain is already taken.
+        </span>
+        <span *ngIf="isFieldInvalid('subdomain_slug')" class="error-text">
+          {{ getFieldError('subdomain_slug') }}
+        </span>
+      </div>
+
+      <!-- Format Help -->
+      <div class="help-text">
+        ℹ️ 3-50 characters, lowercase letters, numbers, and hyphens only
+      </div>
+
+      <!-- Suggestions -->
+      <div *ngIf="suggestions.length > 0" class="suggestions">
+        <strong>Suggestions:</strong>
+        <div class="suggestion-pills">
+          <button 
+            *ngFor="let suggestion of suggestions" 
+            type="button"
+            class="suggestion-pill"
+            (click)="selectSuggestion(suggestion)">
+            {{ suggestion }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Preview Box -->
+      <div class="preview-box">
+        <strong>Your tenant URL:</strong>
+        <div class="url-preview">https://{{ getSubdomainPreview() }}</div>
+      </div>
+    </div>
+
+    <!-- Show subdomain as read-only in edit mode -->
+    <div class="form-group" *ngIf="isEditMode && tenantForm.get('subdomain_slug')?.value">
+      <label for="subdomain_slug_readonly">Tenant Subdomain</label>
+      <div class="subdomain-input-wrapper">
+        <input 
+          type="text" 
+          id="subdomain_slug_readonly"
+          [value]="tenantForm.get('subdomain_slug')?.value"
+          readonly
+          disabled
+          class="readonly-input">
+        <span class="domain-suffix">.{{ domainBase }}</span>
+      </div>
+      <div class="help-text">
+        ℹ️ Subdomain cannot be changed after creation
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="contact_person">Contact Person <span class="required">*</span></label>
+      <input 
+        type="text" 
+        id="contact_person" 
+        formControlName="contact_person"
+        [class.invalid]="isFieldInvalid('contact_person')"
+        placeholder="Enter contact person name">
+      <span *ngIf="isFieldInvalid('contact_person')" class="error-text">
+        {{ getFieldError('contact_person') }}
+      </span>
+    </div>
+
+    <div class="form-group">
+      <label for="email">Email <span class="required">*</span></label>
+      <input 
+        type="email" 
+        id="email" 
+        formControlName="email"
+        [class.invalid]="isFieldInvalid('email')"
+        placeholder="tenant@example.com">
+      <span *ngIf="isFieldInvalid('email')" class="error-text">
+        {{ getFieldError('email') }}
+      </span>
+    </div>
+
+    <div class="form-group">
+      <label for="phone">Phone</label>
+      <input 
+        type="tel" 
+        id="phone" 
+        formControlName="phone"
+        [class.invalid]="isFieldInvalid('phone')"
+        placeholder="+1234567890">
+      <span *ngIf="isFieldInvalid('phone')" class="error-text">
+        {{ getFieldError('phone') }}
+      </span>
+    </div>
+
+    <div class="form-group">
+      <label for="address">Address</label>
+      <textarea 
+        id="address" 
+        formControlName="address"
+        rows="3"
+        placeholder="Enter business address"></textarea>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" (click)="cancel()" class="btn-secondary" [disabled]="loading">
+        Cancel
+      </button>
+      <button type="submit" class="btn-primary" 
+        [disabled]="loading || tenantForm.invalid || (!isEditMode && (checkingAvailability || subdomainAvailable !== true))">
+        {{ loading ? 'Saving...' : (isEditMode ? 'Update Tenant' : 'Create Tenant') }}
+      </button>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,92 @@
+<div class="dashboard">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-content">
+      <div class="header-left">
+        <h1>{{ stats?.tenant?.companyName || 'Dashboard' }}</h1>
+        <p class="subtitle" *ngIf="currentUser">Welcome, {{ currentUser.fullName }}</p>
+      </div>
+      <div class="header-actions">
+        <span class="role-badge">{{ currentUser?.role }}</span>
+        <button class="btn-logout" (click)="logout()">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="content">
+    <!-- Loading State -->
+    <div class="loading-container" *ngIf="loading">
+      <div class="spinner"></div>
+      <p>Loading dashboard...</p>
+    </div>
+
+    <!-- Error State -->
+    <div class="error-box" *ngIf="error && !loading">
+      ⚠️ {{ error }}
+      <button class="btn-retry" (click)="loadDashboardStats()">Retry</button>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div class="dashboard-content" *ngIf="stats && !loading">
+      <!-- Company Info Card -->
+      <div class="company-card">
+        <h2>Company Information</h2>
+        <div class="company-details">
+          <div class="detail-row">
+            <span class="label">Company:</span>
+            <span class="value">{{ stats.tenant.companyName }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Contact Email:</span>
+            <span class="value">{{ stats.tenant.contactEmail }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Member Since:</span>
+            <span class="value">{{ stats.tenant.memberSince | date:'short' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon users">👥</div>
+          <div class="stat-info">
+            <h3>Total Users</h3>
+            <p class="stat-value">{{ stats.totalUsers }}</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon active">🟢</div>
+          <div class="stat-info">
+            <h3>Active Users (24h)</h3>
+            <p class="stat-value">{{ stats.activeUsers24h }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="section">
+        <h2>Recent Activity</h2>
+        <div class="activity-list">
+          <div class="activity-item" *ngFor="let activity of stats.recentActivity">
+            <div class="activity-icon">📝</div>
+            <div class="activity-details">
+              <p class="activity-action">{{ activity.action }}</p>
+              <p class="activity-meta">
+                <span>{{ activity.user }}</span>
+                <span class="separator">•</span>
+                <span>{{ activity.timestamp | date:'short' }}</span>
+              </p>
+            </div>
+          </div>
+          <div class="no-activity" *ngIf="stats.recentActivity.length === 0">
+            No recent activity
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

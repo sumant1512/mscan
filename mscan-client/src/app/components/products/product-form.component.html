@@ -1,0 +1,111 @@
+<div class="form-container">
+  <div class="header">
+    <h2>{{ isEditMode ? 'Edit Product' : 'Create New Product' }}</h2>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+  <div *ngIf="success" class="alert alert-success">{{ success }}</div>
+
+  <form [formGroup]="productForm" (ngSubmit)="onSubmit()" class="product-form">
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="product_name">Product Name <span class="required">*</span></label>
+        <input
+          type="text"
+          id="product_name"
+          formControlName="product_name"
+          [class.invalid]="isFieldInvalid('product_name')"
+          placeholder="e.g., Premium T-Shirt"
+        />
+        <span *ngIf="isFieldInvalid('product_name')" class="error-text">
+          {{ getFieldError('product_name') }}
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label for="product_sku">Product SKU</label>
+        <input
+          type="text"
+          id="product_sku"
+          formControlName="product_sku"
+          placeholder="e.g., TSHIRT-001"
+        />
+        <small class="hint">Stock Keeping Unit (unique identifier)</small>
+      </div>
+
+      <div class="form-group full-width">
+        <label for="description">Description</label>
+        <textarea
+          id="description"
+          formControlName="description"
+          rows="3"
+          placeholder="Product description..."
+        ></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="category_id">Category</label>
+        <select
+          id="category_id"
+          formControlName="category_id"
+        >
+          <option value="">Select Category (Optional)</option>
+          <option *ngFor="let category of categories" [value]="category.id">
+            {{ category.name }}
+          </option>
+        </select>
+        <small class="hint">Optional: Assign to a category</small>
+      </div>
+
+      <div class="form-group">
+        <label for="price">Price</label>
+        <input
+          type="number"
+          id="price"
+          formControlName="price"
+          [class.invalid]="isFieldInvalid('price')"
+          placeholder="0.00"
+          step="0.01"
+          min="0"
+        />
+        <span *ngIf="isFieldInvalid('price')" class="error-text">
+          {{ getFieldError('price') }}
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label for="currency">Currency</label>
+        <select id="currency" formControlName="currency">
+          <option value="USD">USD</option>
+          <option value="INR">INR</option>
+          <option value="EUR">EUR</option>
+          <option value="GBP">GBP</option>
+        </select>
+      </div>
+
+      <div class="form-group full-width">
+        <label for="image_url">Image URL</label>
+        <input
+          type="url"
+          id="image_url"
+          formControlName="image_url"
+          placeholder="https://example.com/image.jpg"
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="is_active" />
+          <span>Active Product</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary" [disabled]="loading">
+        {{ loading ? 'Saving...' : (isEditMode ? 'Update Product' : 'Create Product') }}
+      </button>
+      <button type="button" class="btn-secondary" (click)="cancel()">Cancel</button>
+    </div>
+  </form>
+</div>

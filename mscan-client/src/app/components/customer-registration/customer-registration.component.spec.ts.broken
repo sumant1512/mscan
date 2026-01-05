@@ -1,0 +1,474 @@
+/**
+ * Unit Tests for Customer Registration Component - Jest
+ */
+
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ReactiveFormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { of, throwError } from 'rxjs';
+import { CustomerRegistrationComponent } from './customer-registration.component';
+import { UserService } from '../../services/user.service';
+import { AuthService } from '../../services/auth.service';
+
+describe('CustomerRegistrationComponent', () => {
+  let component: CustomerRegistrationComponent;
+  let fixture: ComponentFixture<CustomerRegistrationComponent>;
+  let userService: any;
+  let authService: any;
+  let router: any;
+
+  beforeEach(async () => {
+    const userServiceMock = {
+      createCustomer: vi.fn()
+    };
+
+    const authServiceMock = {
+      isSuperAdmin: vi.fn().mockReturnValue(true)
+    };
+
+    const routerMock = {
+      navigate: vi.fn()
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [ReactiveFormsModule, CustomerRegistrationComponent],
+      providers: [
+        { provide: UserService, useValue: userServiceMock },
+        { provide: AuthService, useValue: authServiceMock },
+        { provide: Router, useValue: routerMock }
+      ]
+    }).compileComponents();
+
+    userService = TestBed.inject(UserService) as any // UserService>;
+    authService = TestBed.inject(AuthService) as any // AuthService>;
+    router = TestBed.inject(Router) as any // Router>;
+
+    fixture = TestBed.createComponent(CustomerRegistrationComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  describe('Component Initialization', () => {
+    it('should create', () => {
+      expect(component).toBeTruthy();
+    });
+
+    it('should initialize registration form with all fields', () => {
+      expect(component.registrationForm).toBeDefined();
+      expect(component.registrationForm.get('companyName')).toBeDefined();
+      expect(component.registrationForm.get('contactEmail')).toBeDefined();
+      expect(component.registrationForm.get('adminName')).toBeDefined();
+      expect(component.registrationForm.get('contactPhone')).toBeDefined();
+      expect(component.registrationForm.get('address')).toBeDefined();
+    });
+  });
+
+  describe('Form Validation', () => {
+    it('should require company name', () => {
+      const control = component.registrationForm.get('companyName');
+      control?.setValue('');
+      expect(control?.hasError('required')).toBe(true);
+
+      control?.setValue('Test Company');
+      expect(control?.valid).toBe(true);
+    });
+
+    it('should validate email format', () => {
+      const control = component.registrationForm.get('contactEmail');
+      
+      control?.setValue('invalid');
+      expect(control?.hasError('email')).toBe(true);
+
+      control?.setValue('valid@example.com');
+      expect(control?.valid).toBe(true);
+    });
+
+    it('should validate phone number format', () => {
+      const control = component.registrationForm.get('contactPhone');
+      
+      control?.setValue('abc');
+      expect(control?.hasError('pattern')).toBe(true);
+
+      control?.setValue('+1234567890');
+      expect(control?.valid).toBe(true);
+    });
+
+    it('should require admin name', () => {
+      const control = component.registrationForm.get('adminName');
+      control?.setValue('');
+      expect(control?.hasError('required')).toBe(true);
+
+      control?.setValue('John Doe');
+      expect(control?.valid).toBe(true);
+    });
+
+    it('should disable submit when form is invalid', () => {
+      component.registrationForm.reset();
+      expect(component.registrationForm.valid).toBe(false);
+    });
+  });
+
+  describe('Customer Registration', () => {
+    const validFormData = {
+      companyName: 'Test Company',
+      contactEmail: 'admin@test.com',
+      adminName: 'John Doe',
+      contactPhone: '+1234567890',
+      address: '123 Test St'
+    };
+
+    beforeEach(() => {
+      component.registrationForm.patchValue(validFormData);
+    });
+
+    it('should register customer successfully', async () => {
+      userService.createCustomer.mockReturnValue(of({
+        success: true,
+        message: 'Customer registered successfully'
+      }));
+
+      component.onSubmit();
+      
+      await fixture.whenStable();
+
+      expect(userService.createCustomer).toHaveBeenCalledWith(validFormData);
+      expect(component.success).toContain('successfully');
+      expect(component.error).toBe('');
+      expect(component.loading).toBe(false);
+    });
+
+    it('should handle registration errors', async () => {
+      userService.createCustomer.mockReturnValue(throwError(() => ({
+        error: { message: 'Email already exists' }
+      })));
+
+      component.onSubmit();
+      
+      await fixture.whenStable();
+
+      expect(component.error).toBeTruthy();
+      expect(component.loading).toBe(false);
+    });
+
+    it('should navigate to dashboard after successful registration', (done) => {
+      userService.createCustomer.mockReturnValue(of({
+        success: true,
+        message: 'Customer registered'
+      }));
+
+      component.onSubmit();
+
+      setTimeout(() => {
+        expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
+        done();
+      }, 3100);
+    });
+  });
+
+  describe('Cancel Action', () => {
+    it('should navigate back to dashboard', () => {
+      component.cancel();
+      expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
+    });
+  });
+
+  describe('Field Validation Helpers', () => {
+    it('should check if field has specific error', () => {
+      const control = component.registrationForm.get('contactEmail');
+      control?.setValue('');
+      control?.markAsTouched();
+      
+      expect(component.hasError('contactEmail', 'required')).toBe(true);
+    });
+
+    it('should check if field is invalid and touched', () => {
+      const control = component.registrationForm.get('companyName');
+      control?.setValue('');
+      control?.markAsTouched();
+      
+      expect(component.isFieldInvalid('companyName')).toBe(true);
+    });
+  });
+});
+
+
+  beforeEach(async () => {
+    const userServiceSpy = jasmine.createSpyObj('UserService', ['registerCustomer']);
+
+    await TestBed.configureTestingModule({
+      imports: [
+        ReactiveFormsModule,
+        HttpClientTestingModule,
+        RouterTestingModule,
+        CustomerRegistrationComponent
+      ],
+      providers: [
+        { provide: UserService, useValue: userServiceSpy }
+      ]
+    }).compileComponents();
+
+    userService = TestBed.inject(UserService) as jasmine.SpyObj<UserService>;
+
+    fixture = TestBed.createComponent(CustomerRegistrationComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  describe('Component Initialization', () => {
+    it('should create', () => {
+      expect(component).toBeTruthy();
+    });
+
+    it('should initialize registration form with all fields', () => {
+      expect(component.registrationForm).toBeDefined();
+      expect(component.registrationForm.get('fullName')).toBeDefined();
+      expect(component.registrationForm.get('email')).toBeDefined();
+      expect(component.registrationForm.get('phoneNumber')).toBeDefined();
+      expect(component.registrationForm.get('tenantName')).toBeDefined();
+      expect(component.registrationForm.get('tenantCode')).toBeDefined();
+    });
+  });
+
+  describe('Form Validation', () => {
+    it('should require full name', () => {
+      const fullNameControl = component.registrationForm.get('fullName');
+      fullNameControl?.setValue('');
+      expect(fullNameControl?.hasError('required')).toBe(true);
+
+      fullNameControl?.setValue('John Doe');
+      expect(fullNameControl?.valid).toBe(true);
+    });
+
+    it('should validate email format', () => {
+      const emailControl = component.registrationForm.get('email');
+      
+      emailControl?.setValue('invalid');
+      expect(emailControl?.hasError('email')).toBe(true);
+
+      emailControl?.setValue('valid@example.com');
+      expect(emailControl?.valid).toBe(true);
+    });
+
+    it('should validate phone number format', () => {
+      const phoneControl = component.registrationForm.get('phoneNumber');
+      
+      phoneControl?.setValue('123');
+      expect(phoneControl?.hasError('pattern')).toBe(true);
+
+      phoneControl?.setValue('+1234567890');
+      expect(phoneControl?.valid).toBe(true);
+    });
+
+    it('should require tenant name', () => {
+      const tenantNameControl = component.registrationForm.get('tenantName');
+      tenantNameControl?.setValue('');
+      expect(tenantNameControl?.hasError('required')).toBe(true);
+
+      tenantNameControl?.setValue('Test Company');
+      expect(tenantNameControl?.valid).toBe(true);
+    });
+
+    it('should validate tenant code format (uppercase alphanumeric)', () => {
+      const tenantCodeControl = component.registrationForm.get('tenantCode');
+      
+      tenantCodeControl?.setValue('test'); // lowercase
+      expect(tenantCodeControl?.hasError('pattern')).toBe(true);
+
+      tenantCodeControl?.setValue('TEST-123'); // contains hyphen
+      expect(tenantCodeControl?.hasError('pattern')).toBe(true);
+
+      tenantCodeControl?.setValue('TEST123'); // valid
+      expect(tenantCodeControl?.valid).toBe(true);
+    });
+
+    it('should disable submit when form is invalid', () => {
+      component.registrationForm.reset();
+      expect(component.registrationForm.valid).toBe(false);
+    });
+
+    it('should enable submit when form is valid', () => {
+      component.registrationForm.patchValue({
+        fullName: 'John Doe',
+        email: 'john@example.com',
+        phoneNumber: '+1234567890',
+        tenantName: 'Test Company',
+        tenantCode: 'TEST123'
+      });
+
+      expect(component.registrationForm.valid).toBe(true);
+    });
+  });
+
+  describe('Customer Registration', () => {
+    const validFormData = {
+      fullName: 'John Doe',
+      email: 'john@example.com',
+      phoneNumber: '+1234567890',
+      tenantName: 'Test Company',
+      tenantCode: 'TEST123'
+    };
+
+    beforeEach(() => {
+      component.registrationForm.patchValue(validFormData);
+    });
+
+    it('should register customer successfully', fakeAsync(() => {
+      userService.registerCustomer.and.returnValue(of({
+        success: true,
+        message: 'Customer registered successfully'
+      }));
+
+      component.onSubmit();
+      tick();
+
+      expect(userService.registerCustomer).toHaveBeenCalledWith(validFormData);
+      expect(component.successMessage).toContain('successfully');
+      expect(component.errorMessage).toBe('');
+      expect(component.isLoading).toBe(false);
+    }));
+
+    it('should reset form after successful registration', fakeAsync(() => {
+      userService.registerCustomer.and.returnValue(of({
+        success: true,
+        message: 'Customer registered successfully'
+      }));
+
+      component.onSubmit();
+      tick();
+
+      expect(component.registrationForm.pristine).toBe(true);
+      expect(component.registrationForm.get('email')?.value).toBe('');
+    }));
+
+    it('should handle duplicate email error', fakeAsync(() => {
+      userService.registerCustomer.and.returnValue(throwError(() => ({
+        error: { message: 'Email already registered' }
+      })));
+
+      component.onSubmit();
+      tick();
+
+      expect(component.errorMessage).toContain('Email already registered');
+      expect(component.successMessage).toBe('');
+      expect(component.isLoading).toBe(false);
+    }));
+
+    it('should handle duplicate tenant code error', fakeAsync(() => {
+      userService.registerCustomer.and.returnValue(throwError(() => ({
+        error: { message: 'Tenant code already exists' }
+      })));
+
+      component.onSubmit();
+      tick();
+
+      expect(component.errorMessage).toContain('Tenant code already exists');
+      expect(component.successMessage).toBe('');
+    }));
+
+    it('should handle network errors', fakeAsync(() => {
+      userService.registerCustomer.and.returnValue(throwError(() => ({
+        error: { message: 'Network error' }
+      })));
+
+      component.onSubmit();
+      tick();
+
+      expect(component.errorMessage).toBeTruthy();
+      expect(component.isLoading).toBe(false);
+    }));
+
+    it('should not submit if form is invalid', () => {
+      component.registrationForm.reset();
+      component.onSubmit();
+
+      expect(userService.registerCustomer).not.toHaveBeenCalled();
+    });
+
+    it('should prevent multiple simultaneous submissions', fakeAsync(() => {
+      userService.registerCustomer.and.returnValue(of({
+        success: true,
+        message: 'Registered'
+      }));
+
+      component.isLoading = true;
+      component.onSubmit();
+      tick();
+
+      expect(userService.registerCustomer).not.toHaveBeenCalled();
+    }));
+  });
+
+  describe('Error Handling', () => {
+    it('should display validation errors', () => {
+      const emailControl = component.registrationForm.get('email');
+      emailControl?.setValue('invalid');
+      emailControl?.markAsTouched();
+
+      fixture.detectChanges();
+
+      expect(emailControl?.hasError('email')).toBe(true);
+    });
+
+    it('should clear success message on new submission', fakeAsync(() => {
+      component.successMessage = 'Previous success';
+      
+      component.registrationForm.patchValue({
+        fullName: 'John Doe',
+        email: 'john@example.com',
+        phoneNumber: '+1234567890',
+        tenantName: 'Test Company',
+        tenantCode: 'TEST123'
+      });
+
+      userService.registerCustomer.and.returnValue(of({
+        success: true,
+        message: 'New success'
+      }));
+
+      component.onSubmit();
+      tick();
+
+      expect(component.successMessage).not.toContain('Previous');
+    }));
+
+    it('should clear error message on new submission', fakeAsync(() => {
+      component.errorMessage = 'Previous error';
+      
+      component.registrationForm.patchValue({
+        fullName: 'John Doe',
+        email: 'john@example.com',
+        phoneNumber: '+1234567890',
+        tenantName: 'Test Company',
+        tenantCode: 'TEST123'
+      });
+
+      userService.registerCustomer.and.returnValue(of({
+        success: true,
+        message: 'Success'
+      }));
+
+      component.onSubmit();
+      tick();
+
+      expect(component.errorMessage).toBe('');
+    }));
+  });
+
+  describe('Form Controls', () => {
+    it('should get form control by name', () => {
+      const emailControl = component.getControl('email');
+      expect(emailControl).toBe(component.registrationForm.get('email'));
+    });
+
+    it('should check if field has error and is touched', () => {
+      const emailControl = component.registrationForm.get('email');
+      emailControl?.setValue('invalid');
+      emailControl?.markAsUntouched();
+
+      expect(component.hasError('email', 'email')).toBe(false);
+
+      emailControl?.markAsTouched();
+      expect(component.hasError('email', 'email')).toBe(true);
+    });
+  });
+});

@@ -1,0 +1,83 @@
+<div class="category-container">
+  <div class="header">
+    <h2>Product Categories</h2>
+    <div class="header-actions">
+      <div class="search-box">
+        <input 
+          type="text" 
+          [(ngModel)]="searchQuery" 
+          (keyup.enter)="onSearch()"
+          placeholder="Search categories..."
+        />
+        <button (click)="onSearch()" class="btn-search">
+          <span class="material-icons">search</span>
+        </button>
+      </div>
+      <button (click)="createCategory()" class="btn-primary">
+        <span class="material-icons">add</span>
+        Add Category
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+
+  <div *ngIf="loading" class="loading">
+    <p>Loading categories...</p>
+  </div>
+
+  <div *ngIf="!loading && categories.length === 0" class="empty-state">
+    <span class="material-icons">category</span>
+    <h3>No categories found</h3>
+    <p>Create your first product category to get started</p>
+    <button (click)="createCategory()" class="btn-primary">
+      <span class="material-icons">add</span>
+      Create Category
+    </button>
+  </div>
+
+  <div *ngIf="!loading && categories.length > 0" class="category-grid">
+    <div *ngFor="let category of categories" class="category-card">
+      <div class="category-icon">
+        <span class="material-icons">{{ category.icon || 'category' }}</span>
+      </div>
+      <div class="category-info">
+        <h3>{{ category.name }}</h3>
+        <p class="category-description">{{ category.description || 'No description' }}</p>
+        <div class="category-meta">
+          <span class="product-count">
+            <span class="material-icons">inventory_2</span>
+            {{ category.product_count || 0 }} products
+          </span>
+          <span class="status-badge" [class.active]="category.is_active" [class.inactive]="!category.is_active">
+            {{ category.is_active ? 'Active' : 'Inactive' }}
+          </span>
+        </div>
+      </div>
+      <div class="category-actions">
+        <button (click)="editCategory(category.id)" class="btn-action" title="Edit">
+          <span class="material-icons">edit</span>
+        </button>
+        <button (click)="confirmDelete(category)" class="btn-action btn-danger" title="Delete">
+          <span class="material-icons">delete</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div *ngIf="showDeleteModal" class="modal-overlay" (click)="showDeleteModal = false">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <h3>Delete Category</h3>
+    <p>Are you sure you want to delete <strong>{{ selectedCategory?.name }}</strong>?</p>
+    <p class="warning-text">
+      <span class="material-icons">warning</span>
+      This action cannot be undone.
+    </p>
+    <div class="modal-actions">
+      <button (click)="showDeleteModal = false" class="btn-secondary">Cancel</button>
+      <button (click)="deleteCategory()" class="btn-danger">Delete</button>
+    </div>
+  </div>
+</div>

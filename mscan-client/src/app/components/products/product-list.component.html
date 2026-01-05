@@ -1,0 +1,76 @@
+<div class="products-container">
+  <div class="header">
+    <h2>Product Catalog</h2>
+    <div class="header-actions">
+      <div class="search-box">
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          (keyup.enter)="onSearch()"
+          placeholder="Search products..."
+        />
+        <button (click)="onSearch()" class="btn-search">
+          <span class="material-icons">search</span>
+        </button>
+      </div>
+      <button (click)="createProduct()" class="btn-primary">
+        <span class="material-icons">add</span>
+        Add Product
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+
+  <div *ngIf="loading" class="loading">
+    <p>Loading products...</p>
+  </div>
+
+  <div *ngIf="!loading && products.length === 0" class="empty-state">
+    <span class="material-icons">inventory_2</span>
+    <h3>No products found</h3>
+    <p>Create your first product to get started</p>
+    <button (click)="createProduct()" class="btn-primary">
+      <span class="material-icons">add</span>
+      Create Product
+    </button>
+  </div>
+
+  <div *ngIf="!loading && products.length > 0" class="products-grid">
+    <div *ngFor="let product of products" class="product-card">
+      <div class="product-image">
+        <img *ngIf="product.image_url" [src]="product.image_url" alt="{{ product.product_name }}" />
+        <div *ngIf="!product.image_url" class="no-image">📦</div>
+      </div>
+      <div class="product-info">
+        <h3>{{ product.product_name }}</h3>
+        <p class="product-sku" *ngIf="product.product_sku">SKU: {{ product.product_sku }}</p>
+        <p class="product-description" *ngIf="product.description">{{ product.description }}</p>
+        <div class="product-price" *ngIf="product.price">
+          {{ product.currency || 'USD' }} {{ product.price }}
+        </div>
+        <span class="status-badge" [class.active]="product.is_active" [class.inactive]="!product.is_active">
+          {{ product.is_active ? 'Active' : 'Inactive' }}
+        </span>
+      </div>
+      <div class="product-actions">
+        <button (click)="editProduct(product)" class="btn-secondary">Edit</button>
+        <button (click)="confirmDelete(product)" class="btn-danger">Delete</button>
+      </div>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div *ngIf="showDeleteModal" class="modal-overlay" (click)="closeDeleteModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <h3>Delete Product</h3>
+    <p>Are you sure you want to delete "{{ selectedProduct?.product_name }}"?</p>
+    <p class="warning-text">This action cannot be undone.</p>
+    <div class="modal-actions">
+      <button (click)="deleteProduct()" class="btn-danger">Delete</button>
+      <button (click)="closeDeleteModal()" class="btn-secondary">Cancel</button>
+    </div>
+  </div>
+</div>

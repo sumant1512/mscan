@@ -1,0 +1,118 @@
+<div class="approval-container">
+  <div class="header">
+    <h2>Credit Request Approvals</h2>
+    <select [(ngModel)]="statusFilter" (change)="onFilterChange()" class="filter-select">
+      <option value="all">All Requests</option>
+      <option value="pending">Pending</option>
+      <option value="approved">Approved</option>
+      <option value="rejected">Rejected</option>
+    </select>
+  </div>
+
+  <div *ngIf="loading" class="loading">Loading credit requests...</div>
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <div *ngIf="!loading && !error" class="requests-grid">
+    <div *ngFor="let request of requests" class="request-card">
+      <div class="card-header">
+        <div class="tenant-info">
+          <h3>{{ request.tenant_name }}</h3>
+          <span class="request-id">#{{ request.id }}</span>
+        </div>
+        <span [class]="getStatusClass(request.status)" class="status-badge">
+          {{ request.status }}
+        </span>
+      </div>
+
+      <div class="card-body">
+        <div class="amount-display">
+          <div class="amount-label">Requested Amount</div>
+          <div class="amount-value">{{ request.requested_amount }}</div>
+          <div class="amount-unit">credits</div>
+        </div>
+
+        <div class="info-section">
+          <div class="info-item">
+            <span class="label">Requested On:</span>
+            <span class="value">{{ request.requested_at | date: 'short' }}</span>
+          </div>
+        </div>
+
+        <div class="justification-section">
+          <div class="label">Justification:</div>
+          <p class="justification-text">{{ request.justification }}</p>
+        </div>
+
+        <div *ngIf="request.status === 'approved'" class="approval-info">
+          <div class="info-item">
+            <span class="label">Approved By:</span>
+            <span class="value">{{ request.processed_by_name || 'System' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Approved On:</span>
+            <span class="value">{{ request.processed_at | date: 'short' }}</span>
+          </div>
+        </div>
+
+        <div *ngIf="request.status === 'rejected'" class="rejection-info">
+          <div class="info-item">
+            <span class="label">Rejected By:</span>
+            <span class="value">{{ request.processed_by_name || 'System' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Rejected On:</span>
+            <span class="value">{{ request.processed_at | date: 'short' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Rejection Reason:</span>
+            <p class="rejection-reason">{{ request.rejection_reason }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="request.status === 'pending'" class="card-actions">
+        <button 
+          (click)="approveRequest(request)" 
+          class="btn-approve"
+          [disabled]="processingId === request.id">
+          {{ processingId === request.id ? 'Approving...' : '✓ Approve' }}
+        </button>
+        <button 
+          (click)="openRejectModal(request)" 
+          class="btn-reject"
+          [disabled]="processingId === request.id">
+          ✗ Reject
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="requests.length === 0" class="no-data">
+      No {{ statusFilter !== 'all' ? statusFilter : '' }} requests found
+    </div>
+  </div>
+</div>
+
+<!-- Reject Modal -->
+<div *ngIf="showRejectModal" class="modal-overlay" (click)="closeRejectModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <h3>Reject Credit Request</h3>
+    <p>Request from <strong>{{ selectedRequest?.tenant_name }}</strong> for <strong>{{ selectedRequest?.requested_amount }}</strong> credits</p>
+    
+    <div class="form-group">
+      <label for="rejectReason">Rejection Reason <span class="required">*</span></label>
+      <textarea 
+        id="rejectReason" 
+        [(ngModel)]="rejectReason"
+        rows="4"
+        placeholder="Explain why this request is being rejected..."
+        class="modal-textarea"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button (click)="closeRejectModal()" class="btn-cancel">Cancel</button>
+      <button (click)="confirmReject()" class="btn-confirm-reject" [disabled]="!rejectReason.trim()">
+        Confirm Rejection
+      </button>
+    </div>
+  </div>
+</div>

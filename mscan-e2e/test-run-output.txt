@@ -1,0 +1,408 @@
+
+> mscan-e2e@1.0.0 test
+> playwright test
+
+
+Running 117 tests using 1 worker
+
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 499459
+🔢 Entering OTP: 499459
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓    1 [chromium] › tests/auth/authentication.spec.ts:16:9 › Authentication Tests › Super Admin Authentication › should login successfully as super admin (4.7s)
+  ✓    2 [chromium] › tests/auth/authentication.spec.ts:27:9 › Authentication Tests › Super Admin Authentication › should display error for invalid email (1.9s)
+  ✓    3 [chromium] › tests/auth/authentication.spec.ts:39:9 › Authentication Tests › Super Admin Authentication › should display error for invalid OTP (1.9s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 614798
+🔢 Entering OTP: 614798
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓    4 [chromium] › tests/auth/authentication.spec.ts:55:9 › Authentication Tests › Super Admin Authentication › should logout successfully (5.4s)
+🔐 Starting Tenant Admin login for harsh@mscan.com...
+✅ Connected to database
+📧 Entering email: harsh@mscan.com
+⚠️  OTP input did not appear - will use API fallback
+⚠️  No OTP found for harsh@mscan.com
+⚠️  No OTP found in database for harsh@mscan.com, using TEST_CONFIG.testOTP
+🔄 Using API fallback to verify OTP via root domain...
+📡 Calling: http://localhost:3000/api/auth/verify-otp
+🔌 Disconnected from database
+❌ Tenant admin login failed: Error: API verification failed: HTTP 401: {"success":false,"message":"Invalid or expired OTP"}
+    at AuthHelper.loginAsTenantAdmin [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mutils/helpers.ts:200:15[90m)[39m
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mtests/auth/authentication.spec.ts:76:7
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:322:9
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/testInfo.js:311:11
+    at TimeoutManager.withRunnable [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/timeoutManager.js:67:14[90m)[39m
+    at TestInfoImpl._runWithTimeout [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/testInfo.js:309:7[90m)[39m
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:320:7
+    at WorkerMain._runTest [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:295:5[90m)[39m
+    at WorkerMain.runTestGroup [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:199:11[90m)[39m
+    at process.<anonymous> [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/common/process.js:65:22[90m)[39m
+  ✘    5 [chromium] › tests/auth/authentication.spec.ts:75:9 › Authentication Tests › Tenant Admin Authentication › should login successfully as tenant admin (14.9s)
+🔐 Starting Tenant Admin login for harsh@mscan.com...
+✅ Connected to database
+📧 Entering email: harsh@mscan.com
+⚠️  OTP input did not appear - will use API fallback
+⚠️  No OTP found for harsh@mscan.com
+⚠️  No OTP found in database for harsh@mscan.com, using TEST_CONFIG.testOTP
+🔄 Using API fallback to verify OTP via root domain...
+📡 Calling: http://localhost:3000/api/auth/verify-otp
+🔌 Disconnected from database
+❌ Tenant admin login failed: Error: API verification failed: HTTP 401: {"success":false,"message":"Invalid or expired OTP"}
+    at AuthHelper.loginAsTenantAdmin [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mutils/helpers.ts:200:15[90m)[39m
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mtests/auth/authentication.spec.ts:94:7
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:322:9
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/testInfo.js:311:11
+    at TimeoutManager.withRunnable [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/timeoutManager.js:67:14[90m)[39m
+    at TestInfoImpl._runWithTimeout [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/testInfo.js:309:7[90m)[39m
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:320:7
+    at WorkerMain._runTest [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:295:5[90m)[39m
+    at WorkerMain.runTestGroup [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:199:11[90m)[39m
+    at process.<anonymous> [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/common/process.js:65:22[90m)[39m
+  ✘    6 [chromium] › tests/auth/authentication.spec.ts:93:9 › Authentication Tests › Tenant Admin Authentication › should logout and stay on tenant subdomain (14.9s)
+🔐 Starting Tenant Admin login for harsh@mscan.com...
+✅ Connected to database
+📧 Entering email: harsh@mscan.com
+⚠️  OTP input did not appear - will use API fallback
+⚠️  No OTP found for harsh@mscan.com
+⚠️  No OTP found in database for harsh@mscan.com, using TEST_CONFIG.testOTP
+🔄 Using API fallback to verify OTP via root domain...
+📡 Calling: http://localhost:3000/api/auth/verify-otp
+🔌 Disconnected from database
+❌ Tenant admin login failed: Error: API verification failed: HTTP 401: {"success":false,"message":"Invalid or expired OTP"}
+    at AuthHelper.loginAsTenantAdmin [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mutils/helpers.ts:200:15[90m)[39m
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mtests/auth/authentication.spec.ts:104:7
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:322:9
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/testInfo.js:311:11
+    at TimeoutManager.withRunnable [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/timeoutManager.js:67:14[90m)[39m
+    at TestInfoImpl._runWithTimeout [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/testInfo.js:309:7[90m)[39m
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:320:7
+    at WorkerMain._runTest [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:295:5[90m)[39m
+    at WorkerMain.runTestGroup [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:199:11[90m)[39m
+    at process.<anonymous> [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/common/process.js:65:22[90m)[39m
+  ✘    7 [chromium] › tests/auth/authentication.spec.ts:102:9 › Authentication Tests › Tenant Admin Authentication › should clear tokens on subdomain mismatch (15.1s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 257939
+🔢 Entering OTP: 257939
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓    8 [chromium] › tests/auth/authentication.spec.ts:118:9 › Authentication Tests › Session Management › should maintain session after page reload (4.4s)
+  ✓    9 [chromium] › tests/auth/authentication.spec.ts:130:9 › Authentication Tests › Session Management › should redirect to login when accessing protected route without auth (1.9s)
+🔐 Starting Tenant Admin login for harsh@mscan.com...
+✅ Connected to database
+📧 Entering email: harsh@mscan.com
+⚠️  OTP input did not appear - will use API fallback
+⚠️  No OTP found for harsh@mscan.com
+⚠️  No OTP found in database for harsh@mscan.com, using TEST_CONFIG.testOTP
+🔄 Using API fallback to verify OTP via root domain...
+📡 Calling: http://localhost:3000/api/auth/verify-otp
+🔌 Disconnected from database
+❌ Tenant admin login failed: Error: API verification failed: HTTP 401: {"success":false,"message":"Invalid or expired OTP"}
+    at AuthHelper.loginAsTenantAdmin [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mutils/helpers.ts:200:15[90m)[39m
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mtests/data-isolation.spec.ts:18:5
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:322:9
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/testInfo.js:311:11
+    at TimeoutManager.withRunnable [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/timeoutManager.js:67:14[90m)[39m
+    at TestInfoImpl._runWithTimeout [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/testInfo.js:309:7[90m)[39m
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:320:7
+    at WorkerMain._runTest [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:295:5[90m)[39m
+    at WorkerMain.runTestGroup [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:199:11[90m)[39m
+    at process.<anonymous> [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/common/process.js:65:22[90m)[39m
+  ✘   10 [chromium] › tests/data-isolation.spec.ts:6:7 › Data Isolation Tests › should isolate data between tenants (14.5s)
+🔐 Starting Tenant Admin login for harsh@mscan.com...
+✅ Connected to database
+📧 Entering email: harsh@mscan.com
+⚠️  OTP input did not appear - will use API fallback
+⚠️  No OTP found for harsh@mscan.com
+⚠️  No OTP found in database for harsh@mscan.com, using TEST_CONFIG.testOTP
+🔄 Using API fallback to verify OTP via root domain...
+📡 Calling: http://localhost:3000/api/auth/verify-otp
+🔌 Disconnected from database
+❌ Tenant admin login failed: Error: API verification failed: HTTP 401: {"success":false,"message":"Invalid or expired OTP"}
+    at AuthHelper.loginAsTenantAdmin [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mutils/helpers.ts:200:15[90m)[39m
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mtests/data-isolation.spec.ts:51:5
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:322:9
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/testInfo.js:311:11
+    at TimeoutManager.withRunnable [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/timeoutManager.js:67:14[90m)[39m
+    at TestInfoImpl._runWithTimeout [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/testInfo.js:309:7[90m)[39m
+    at [90m/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:320:7
+    at WorkerMain._runTest [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:295:5[90m)[39m
+    at WorkerMain.runTestGroup [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/worker/workerMain.js:199:11[90m)[39m
+    at process.<anonymous> [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mnode_modules/[4mplaywright[24m/lib/common/process.js:65:22[90m)[39m
+  ✘   11 [chromium] › tests/data-isolation.spec.ts:49:7 › Data Isolation Tests › should not access other tenant data with manipulated requests (14.6s)
+✅ Backend is accessible
+   Status: [33m404[39m
+  ✓   12 [chromium] › tests/environment-check.spec.ts:13:7 › Environment Checks › should verify backend is accessible (20ms)
+✅ Frontend is accessible
+  ✓   13 [chromium] › tests/environment-check.spec.ts:35:7 › Environment Checks › should verify frontend is accessible (2.1s)
+✅ Login page loaded successfully
+  Email input visible: [33mtrue[39m
+  Send OTP button visible: [33mtrue[39m
+  ✓   14 [chromium] › tests/environment-check.spec.ts:50:7 › Environment Checks › should load login page successfully (2.0s)
+✅ No console errors detected
+  ✓   15 [chromium] › tests/environment-check.spec.ts:66:7 › Environment Checks › should verify console for network errors (2.0s)
+📨 OTP Request Response Status: [33m200[39m
+✅ OTP request API is working
+Response: {
+  success: [33mtrue[39m,
+  message: [32m'OTP sent to your email address'[39m,
+  expiresIn: [33m5[39m
+}
+  ✓   16 [chromium] › tests/environment-check.spec.ts:93:7 › Environment Checks › should test API endpoint directly (8ms)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 952415
+🔢 Entering OTP: 952415
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓   17 [chromium] › tests/super-admin/credit-approval.spec.ts:18:7 › Super Admin - Credit Approval Management › should display credit approval list (5.2s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 882191
+🔢 Entering OTP: 882191
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓   18 [chromium] › tests/super-admin/credit-approval.spec.ts:29:7 › Super Admin - Credit Approval Management › should filter credit requests by status (4.4s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 462080
+🔢 Entering OTP: 462080
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓   19 [chromium] › tests/super-admin/credit-approval.spec.ts:40:7 › Super Admin - Credit Approval Management › should view credit request details (5.5s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 216003
+🔢 Entering OTP: 216003
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓   20 [chromium] › tests/super-admin/credit-approval.spec.ts:54:7 › Super Admin - Credit Approval Management › should approve credit request (5.3s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 635177
+🔢 Entering OTP: 635177
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓   21 [chromium] › tests/super-admin/credit-approval.spec.ts:75:7 › Super Admin - Credit Approval Management › should reject credit request with reason (5.1s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 230077
+🔢 Entering OTP: 230077
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓   22 [chromium] › tests/super-admin/credit-approval.spec.ts:97:7 › Super Admin - Credit Approval Management › should display credit transaction history (4.3s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 243147
+🔢 Entering OTP: 243147
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓   23 [chromium] › tests/super-admin/credit-approval.spec.ts:108:7 › Super Admin - Credit Approval Management › should handle pagination in credit approvals (5.2s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 502933
+🔢 Entering OTP: 502933
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓   24 [chromium] › tests/super-admin/dashboard.spec.ts:18:7 › Super Admin - Dashboard › should display dashboard statistics (4.6s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 581312
+🔢 Entering OTP: 581312
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓   25 [chromium] › tests/super-admin/dashboard.spec.ts:29:7 › Super Admin - Dashboard › should display recent tenants (4.6s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 226251
+🔢 Entering OTP: 226251
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓   26 [chromium] › tests/super-admin/dashboard.spec.ts:39:7 › Super Admin - Dashboard › should display system health status (4.1s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 852330
+🔢 Entering OTP: 852330
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓   27 [chromium] › tests/super-admin/dashboard.spec.ts:49:7 › Super Admin - Dashboard › should navigate to different sections from dashboard (4.6s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 901765
+🔢 Entering OTP: 901765
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓   28 [chromium] › tests/super-admin/dashboard.spec.ts:62:7 › Super Admin - Dashboard › should refresh dashboard data (3.9s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 972099
+🔢 Entering OTP: 972099
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓   29 [chromium] › tests/super-admin/tenant-management.spec.ts:18:7 › Super Admin - Tenant Management › should display tenant list (5.2s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 756929
+🔢 Entering OTP: 756929
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓   30 [chromium] › tests/super-admin/tenant-management.spec.ts:29:7 › Super Admin - Tenant Management › should create new tenant successfully (9.8s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 677479
+🔢 Entering OTP: 677479
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓   31 [chromium] › tests/super-admin/tenant-management.spec.ts:67:7 › Super Admin - Tenant Management › should edit tenant details (6.8s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 548756
+🔢 Entering OTP: 548756
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓   32 [chromium] › tests/super-admin/tenant-management.spec.ts:94:7 › Super Admin - Tenant Management › should view tenant details (5.4s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 625326
+🔢 Entering OTP: 625326
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓   33 [chromium] › tests/super-admin/tenant-management.spec.ts:115:7 › Super Admin - Tenant Management › should toggle tenant status (5.1s)
+🔐 Starting Super Admin login...
+✅ Login page loaded
+✅ Connected to database
+📧 Entering email: admin@mscan.com
+📨 Clicked Send OTP button, waiting for response...
+✅ OTP input screen appeared
+🔐 Retrieved OTP for admin@mscan.com: 247295
+🔢 Entering OTP: 247295
+✅ Clicked Verify & Login
+✅ Successfully navigated to dashboard
+🔌 Disconnected from database
+🎉 Super Admin login successful!
+  ✓   34 [chromium] › tests/super-admin/tenant-management.spec.ts:140:7 › Super Admin - Tenant Management › should display validation errors for invalid tenant data (5.2s)
+🔐 Starting Super Admin login...

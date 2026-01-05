@@ -1,0 +1,313 @@
+<div class="batch-wizard-container">
+  <div class="wizard-header">
+    <h2>Create Coupon Batch</h2>
+    <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+  </div>
+
+  <!-- Progress Steps -->
+  <div class="progress-steps">
+    <div class="step" [class.active]="currentStep() >= 1" [class.completed]="currentStep() > 1">
+      <div class="step-number">1</div>
+      <div class="step-label">Create Batch</div>
+    </div>
+    <div class="step-line" [class.active]="currentStep() >= 2"></div>
+    <div class="step" [class.active]="currentStep() >= 2" [class.completed]="currentStep() > 2">
+      <div class="step-number">2</div>
+      <div class="step-label">Assign Codes</div>
+    </div>
+    <div class="step-line" [class.active]="currentStep() >= 3"></div>
+    <div class="step" [class.active]="currentStep() >= 3" [class.completed]="currentStep() > 3">
+      <div class="step-number">3</div>
+      <div class="step-label">Activate</div>
+    </div>
+    <div class="step-line" [class.active]="currentStep() >= 4"></div>
+    <div class="step" [class.active]="currentStep() >= 4" [class.completed]="currentStep() > 4">
+      <div class="step-number">4</div>
+      <div class="step-label">Reward Campaign</div>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  @if (success()) {
+    <div class="alert alert-success">{{ success() }}</div>
+  }
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  <!-- Step 1: Create Batch -->
+  @if (currentStep() === 1) {
+    <div class="step-content">
+      <h3>Step 1: Create Batch</h3>
+      <p class="step-description">Enter batch details to create a new coupon batch.</p>
+
+      <form (submit)="createBatch(); $event.preventDefault()">
+        <div class="form-group">
+          <label for="dealerName">Dealer Name *</label>
+          <input
+            type="text"
+            id="dealerName"
+            [value]="dealerName()"
+            (input)="dealerName.set($any($event.target).value)"
+            placeholder="e.g., Dealer A"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="zone">Zone *</label>
+          <select
+            id="zone"
+            [value]="zone()"
+            (change)="zone.set($any($event.target).value)"
+            required
+          >
+            <option value="">Select Zone</option>
+            <option value="North">North</option>
+            <option value="South">South</option>
+            <option value="East">East</option>
+            <option value="West">West</option>
+            <option value="Central">Central</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="quantity">Quantity *</label>
+          <input
+            type="number"
+            id="quantity"
+            [value]="quantity()"
+            (input)="quantity.set(+$any($event.target).value)"
+            min="1"
+            step="1"
+            required
+          />
+          <small>Number of coupons to generate</small>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="loading()">
+            {{ loading() ? 'Creating...' : 'Create Batch' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  <!-- Step 2: Assign Codes -->
+  @if (currentStep() === 2) {
+    <div class="step-content">
+      <h3>Step 2: Assign Serial Codes</h3>
+      <p class="step-description">Assigning unique serial codes to each coupon...</p>
+
+      @if (loading()) {
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+          <p>Generating {{ batch()?.quantity }} coupon codes...</p>
+        </div>
+      }
+
+      @if (serialRange()) {
+        <div class="success-card">
+          <h4>✓ Serial Codes Assigned</h4>
+          <div class="serial-info">
+            <div class="info-item">
+              <label>Start Serial:</label>
+              <span class="serial-number">{{ serialRange()?.start }}</span>
+            </div>
+            <div class="info-item">
+              <label>End Serial:</label>
+              <span class="serial-number">{{ serialRange()?.end }}</span>
+            </div>
+            <div class="info-item">
+              <label>Total Codes:</label>
+              <span class="serial-number">{{ batch()?.quantity }}</span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Step 3: Activate Batch -->
+  @if (currentStep() === 3) {
+    <div class="step-content">
+      <h3>Step 3: Activate Batch</h3>
+      <p class="step-description">Confirm that the coupons have been printed and are ready for distribution.</p>
+
+      <div class="info-card">
+        <h4>Batch Summary</h4>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <label>Dealer Name:</label>
+            <span>{{ batch()?.dealer_name }}</span>
+          </div>
+          <div class="summary-item">
+            <label>Zone:</label>
+            <span>{{ batch()?.zone }}</span>
+          </div>
+          <div class="summary-item">
+            <label>Total Coupons:</label>
+            <span>{{ batch()?.quantity }}</span>
+          </div>
+          <div class="summary-item">
+            <label>Serial Range:</label>
+            <span>{{ batch()?.serial_range?.start }} - {{ batch()?.serial_range?.end }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="activateBatch()"
+          [disabled]="loading()"
+        >
+          {{ loading() ? 'Activating...' : 'Activate Batch' }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="previousStep()"
+          [disabled]="loading()"
+        >
+          Back
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Step 4: Reward Campaign -->
+  @if (currentStep() === 4) {
+    <div class="step-content">
+      <h3>Step 4: Create Reward Campaign</h3>
+      <p class="step-description">Configure reward amounts for the coupons.</p>
+
+      <!-- Campaign Type Selection -->
+      <div class="campaign-type-selector">
+        <button
+          class="type-btn"
+          [class.active]="campaignType() === 'common'"
+          (click)="campaignType.set('common')"
+        >
+          Common Reward
+          <small>Same reward for all coupons</small>
+        </button>
+        <button
+          class="type-btn"
+          [class.active]="campaignType() === 'custom'"
+          (click)="campaignType.set('custom')"
+        >
+          Custom Distribution
+          <small>Different rewards with percentages</small>
+        </button>
+      </div>
+
+      <!-- Common Reward Form -->
+      @if (campaignType() === 'common') {
+        <div class="form-group">
+          <label for="commonReward">Reward Amount (₹) *</label>
+          <input
+            type="number"
+            id="commonReward"
+            [value]="commonReward()"
+            (input)="commonReward.set(+$any($event.target).value)"
+            min="1"
+            step="1"
+            required
+          />
+          <small>All {{ batch()?.quantity }} coupons will get ₹{{ commonReward() }}</small>
+        </div>
+      }
+
+      <!-- Custom Reward Form -->
+      @if (campaignType() === 'custom') {
+        <div class="custom-rewards-section">
+          <h4>Reward Variations</h4>
+          
+          @for (reward of customRewards(); track $index) {
+            <div class="reward-row">
+              <div class="form-group">
+                <label>Reward Amount (₹)</label>
+                <input
+                  type="number"
+                  [value]="reward.amount"
+                  (input)="updateRewardVariation($index, 'amount', +$any($event.target).value)"
+                  min="1"
+                  step="1"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label>Quantity</label>
+                <input
+                  type="number"
+                  [value]="reward.quantity"
+                  (input)="updateRewardVariation($index, 'quantity', +$any($event.target).value)"
+                  min="0"
+                  step="1"
+                  required
+                />
+              </div>
+
+              <button
+                type="button"
+                class="btn btn-sm btn-danger"
+                (click)="removeRewardVariation($index)"
+                [disabled]="customRewards().length <= 1"
+              >
+                Remove
+              </button>
+            </div>
+          }
+
+          <button
+            type="button"
+            class="btn btn-sm btn-secondary"
+            (click)="addRewardVariation()"
+          >
+            + Add Variation
+          </button>
+
+          <div class="validation-info">
+            <div class="validation-row">
+              <span>Total Quantity:</span>
+              <span
+                [class.valid]="isCustomRewardsValid()"
+                [class.invalid]="!isCustomRewardsValid()"
+              >
+                {{ totalCustomQuantity() }} / {{ batch()?.quantity }}
+              </span>
+            </div>
+            @if (!isCustomRewardsValid()) {
+              <p class="error-text">
+                Total quantity must equal batch quantity ({{ batch()?.quantity }})
+              </p>
+            }
+          </div>
+        </div>
+      }
+
+      <div class="form-actions">
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="createCampaign()"
+          [disabled]="loading() || (campaignType() === 'custom' && !isCustomRewardsValid())"
+        >
+          {{ loading() ? 'Creating...' : 'Create Campaign & Go Live' }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="previousStep()"
+          [disabled]="loading()"
+        >
+          Back
+        </button>
+      </div>
+    </div>
+  }
+</div>

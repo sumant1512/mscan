@@ -1,0 +1,100 @@
+<div class="profile-container">
+  <div class="profile-header">
+    <h1>My Profile</h1>
+    <p>Manage your account information</p>
+  </div>
+
+  <div class="profile-content">
+    <div class="profile-card">
+      <div class="user-info-section">
+        <div class="avatar">
+          <span class="material-icons">account_circle</span>
+        </div>
+        <div class="user-details" *ngIf="currentUser">
+          <h2>{{ currentUser.fullName }}</h2>
+          <p class="role-badge">{{ currentUser.role }}</p>
+          <div class="tenant-info" *ngIf="currentUser.tenant">
+            <span class="material-icons">business</span>
+            <span>{{ currentUser.tenant.companyName }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>Account Information</h3>
+        
+        <form [formGroup]="profileForm" (ngSubmit)="onSubmit()">
+          <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+          <div *ngIf="success" class="alert alert-success">{{ success }}</div>
+
+          <div class="form-group">
+            <label for="full_name">Full Name *</label>
+            <input
+              id="full_name"
+              type="text"
+              formControlName="full_name"
+              class="form-input"
+              placeholder="Enter your full name"
+            />
+            <span class="error-msg" *ngIf="profileForm.get('full_name')?.invalid && profileForm.get('full_name')?.touched">
+              Full name is required (min 2 characters)
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="email">Email Address *</label>
+            <input
+              id="email"
+              type="email"
+              formControlName="email"
+              class="form-input"
+              placeholder="your.email@example.com"
+            />
+            <span class="info-msg">Email cannot be changed</span>
+          </div>
+
+          <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input
+              id="phone"
+              type="tel"
+              formControlName="phone"
+              class="form-input"
+              placeholder="+1234567890"
+            />
+            <span class="error-msg" *ngIf="profileForm.get('phone')?.invalid && profileForm.get('phone')?.touched">
+              Please enter a valid phone number
+            </span>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary" [disabled]="loading || profileForm.invalid">
+              <span *ngIf="!loading">
+                <span class="material-icons">save</span>
+                Save Changes
+              </span>
+              <span *ngIf="loading">Saving...</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="security-card">
+      <h3>Security</h3>
+      <div class="security-item">
+        <div>
+          <h4>Password</h4>
+          <p>This system uses OTP-based authentication. No password required.</p>
+        </div>
+      </div>
+      <div class="security-item">
+        <div>
+          <h4>Two-Factor Authentication</h4>
+          <p>Email OTP is enabled by default for all logins.</p>
+        </div>
+        <span class="status-badge enabled">Enabled</span>
+      </div>
+    </div>
+  </div>
+</div>

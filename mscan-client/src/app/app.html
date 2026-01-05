@@ -1,0 +1,8 @@
+<div class="app-container">
+  <app-side-nav *ngIf="showNav" (collapseChange)="onNavCollapseChange($event)"></app-side-nav>
+  <div class="main-content" 
+       [class.with-nav]="showNav" 
+       [class.nav-collapsed]="navCollapsed">
+    <router-outlet />
+  </div>
+</div>

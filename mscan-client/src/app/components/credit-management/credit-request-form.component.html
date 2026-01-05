@@ -1,0 +1,66 @@
+<div class="request-form-container">
+  <div class="balance-card">
+    <div class="balance-label">Current Credit Balance</div>
+    <div class="balance-value">{{ currentBalance }}</div>
+  </div>
+
+  <div class="form-card">
+    <h2>Request Credits</h2>
+    <p class="form-description">
+      Submit a request to purchase credits for creating coupons. Requests must be approved by a Super Admin.
+    </p>
+
+    <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+    <div *ngIf="success" class="alert alert-success">{{ success }}</div>
+
+    <form [formGroup]="requestForm" (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label for="amount">
+          Credit Amount <span class="required">*</span>
+          <span class="hint">(Min: 100, Max: 100,000)</span>
+        </label>
+        <input 
+          type="number" 
+          id="amount" 
+          formControlName="amount"
+          [class.invalid]="isFieldInvalid('amount')"
+          placeholder="Enter credit amount">
+        <span *ngIf="isFieldInvalid('amount')" class="error-text">
+          {{ getFieldError('amount') }}
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label for="justification">
+          Justification <span class="required">*</span>
+          <span class="hint">(Min: 20 characters)</span>
+        </label>
+        <textarea 
+          id="justification" 
+          formControlName="justification"
+          [class.invalid]="isFieldInvalid('justification')"
+          rows="5"
+          placeholder="Explain why you need these credits and how you plan to use them..."></textarea>
+        <span *ngIf="isFieldInvalid('justification')" class="error-text">
+          {{ getFieldError('justification') }}
+        </span>
+      </div>
+
+      <button type="submit" class="btn-submit" [disabled]="loading || requestForm.invalid">
+        {{ loading ? 'Submitting...' : 'Request Credits' }}
+      </button>
+    </form>
+  </div>
+
+  <div class="info-card">
+    <h3>📋 Request Guidelines</h3>
+    <ul>
+      <li>Minimum request: 100 credits</li>
+      <li>Maximum request: 100,000 credits</li>
+      <li>Provide detailed justification (min 20 characters)</li>
+      <li>Only one pending request allowed at a time</li>
+      <li>Super Admin will review and approve/reject</li>
+      <li>Approved credits will be added to your balance instantly</li>
+    </ul>
+  </div>
+</div>

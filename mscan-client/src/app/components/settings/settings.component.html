@@ -1,0 +1,115 @@
+<div class="settings-container">
+  <div class="settings-header">
+    <h1>System Settings</h1>
+    <p>Configure system-wide settings and preferences</p>
+  </div>
+
+  <div class="settings-content">
+    <div class="settings-section">
+      <h2>General Settings</h2>
+      <div class="settings-group">
+        <div class="setting-item">
+          <label for="systemName">System Name</label>
+          <input 
+            id="systemName" 
+            type="text" 
+            [(ngModel)]="settings.systemName"
+            class="form-input"
+            disabled
+          />
+        </div>
+        <div class="setting-item">
+          <label for="version">Version</label>
+          <input 
+            id="version" 
+            type="text" 
+            [(ngModel)]="settings.version"
+            class="form-input"
+            disabled
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h2>Notification Settings</h2>
+      <div class="settings-group">
+        <div class="setting-item checkbox-item">
+          <input 
+            id="emailNotif" 
+            type="checkbox" 
+            [(ngModel)]="settings.emailNotifications"
+            class="form-checkbox"
+          />
+          <label for="emailNotif">Email Notifications</label>
+        </div>
+        <div class="setting-item checkbox-item">
+          <input 
+            id="smsNotif" 
+            type="checkbox" 
+            [(ngModel)]="settings.smsNotifications"
+            class="form-checkbox"
+          />
+          <label for="smsNotif">SMS Notifications</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h2>Credit Management</h2>
+      <div class="settings-group">
+        <div class="setting-item checkbox-item">
+          <input 
+            id="autoApprove" 
+            type="checkbox" 
+            [(ngModel)]="settings.autoApproveCredits"
+            class="form-checkbox"
+          />
+          <label for="autoApprove">Auto-approve credit requests below limit</label>
+        </div>
+        <div class="setting-item">
+          <label for="creditLimit">Maximum Credit Limit per Request</label>
+          <input 
+            id="creditLimit" 
+            type="number" 
+            [(ngModel)]="settings.maxCreditLimit"
+            class="form-input"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h2>Security Settings</h2>
+      <div class="settings-group">
+        <div class="setting-item">
+          <label for="sessionTimeout">Session Timeout (minutes)</label>
+          <input 
+            id="sessionTimeout" 
+            type="number" 
+            [(ngModel)]="settings.sessionTimeout"
+            class="form-input"
+            min="5"
+            max="120"
+          />
+        </div>
+        <div class="setting-item checkbox-item">
+          <input 
+            id="maintenanceMode" 
+            type="checkbox" 
+            [(ngModel)]="settings.maintenanceMode"
+            class="form-checkbox"
+          />
+          <label for="maintenanceMode">Maintenance Mode</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-actions">
+      <button class="btn-save" (click)="saveSettings()">
+        <span class="material-icons">save</span>
+        Save Settings
+      </button>
+    </div>
+  </div>
+</div>

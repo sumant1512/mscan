@@ -1,0 +1,147 @@
+<div class="configure-container">
+  <div class="header">
+    <h1>{{ isEditMode ? 'Edit' : 'Create' }} Verification App</h1>
+  </div>
+
+  <div *ngIf="loading" class="loading">Loading verification app...</div>
+
+  <div class="form-card" *ngIf="!loading">
+    <form [formGroup]="configForm" (ngSubmit)="onSubmit()">
+      <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+      <div *ngIf="success" class="alert alert-success">{{ success }}</div>
+
+      <div class="form-section">
+        <h2>Basic Information</h2>
+        
+        <div class="form-group">
+          <label for="app_name">App Name *</label>
+          <input
+            id="app_name"
+            type="text"
+            formControlName="app_name"
+            class="form-input"
+            placeholder="e.g., My Loyalty App"
+          />
+          <span class="error-msg" *ngIf="configForm.get('app_name')?.invalid && configForm.get('app_name')?.touched">
+            App name is required (min 3 characters)
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea
+            id="description"
+            formControlName="description"
+            class="form-input"
+            rows="3"
+            placeholder="Brief description of your verification app"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="logo_url">Logo URL</label>
+          <input
+            id="logo_url"
+            type="url"
+            formControlName="logo_url"
+            class="form-input"
+            placeholder="https://example.com/logo.png"
+          />
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h2>Branding</h2>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="primary_color">Primary Color</label>
+            <input
+              id="primary_color"
+              type="color"
+              formControlName="primary_color"
+              class="form-color"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="secondary_color">Secondary Color</label>
+            <input
+              id="secondary_color"
+              type="color"
+              formControlName="secondary_color"
+              class="form-color"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h2>Messages</h2>
+        
+        <div class="form-group">
+          <label for="welcome_message">Welcome Message</label>
+          <textarea
+            id="welcome_message"
+            formControlName="welcome_message"
+            class="form-input"
+            rows="2"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="scan_success_message">Success Message</label>
+          <textarea
+            id="scan_success_message"
+            formControlName="scan_success_message"
+            class="form-input"
+            rows="2"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="scan_failure_message">Failure Message</label>
+          <textarea
+            id="scan_failure_message"
+            formControlName="scan_failure_message"
+            class="form-input"
+            rows="2"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="post_scan_redirect_url">Post-Scan Redirect URL</label>
+          <input
+            id="post_scan_redirect_url"
+            type="url"
+            formControlName="post_scan_redirect_url"
+            class="form-input"
+            placeholder="https://example.com/thank-you"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              formControlName="enable_analytics"
+              class="form-checkbox"
+            />
+            Enable Analytics
+          </label>
+          <small class="hint">Track scan statistics for this verification app</small>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading">
+          Cancel
+        </button>
+        <button type="submit" class="btn-primary" [disabled]="loading || configForm.invalid">
+          <span *ngIf="!loading">{{ isEditMode ? 'Update' : 'Create' }} App</span>
+          <span *ngIf="loading">Saving...</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

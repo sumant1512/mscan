@@ -39,6 +39,34 @@ export class DatabaseHelper {
   }
 
   /**
+   * Execute a raw SQL query (for advanced test scenarios)
+   */
+  async query(queryText: string, params?: any[]): Promise<any> {
+    try {
+      return await this.client.query(queryText, params);
+    } catch (error) {
+      console.error('❌ Query failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clean up tenant and all related data
+   */
+  async cleanupTenant(tenantId: string): Promise<void> {
+    try {
+      // Delete in order due to foreign key constraints
+      await this.client.query('DELETE FROM audit_logs WHERE metadata->>\'tenant_id\' = $1', [tenantId]);
+      await this.client.query('DELETE FROM permission_assignments WHERE tenant_id = $1', [tenantId]);
+      await this.client.query('DELETE FROM users WHERE tenant_id = $1', [tenantId]);
+      await this.client.query('DELETE FROM tenants WHERE id = $1', [tenantId]);
+      console.log(`🧹 Cleaned up tenant ${tenantId}`);
+    } catch (error) {
+      console.error(`❌ Failed to cleanup tenant ${tenantId}:`, error);
+    }
+  }
+
+  /**
    * Get the most recent OTP for an email
    */
   async getLatestOTP(email: string): Promise<string | null> {

@@ -1,0 +1,37 @@
+.shared-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5000rem;
+  background: white;
+  border-bottom: 0.0625rem solid #e0e0e0;
+  box-shadow: 0 0.1250rem 0.2500rem rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2500rem;
+}
+
+.tenant-name {
+  font-size: 1.2500rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.welcome-text {
+  font-size: 0.8750rem;
+  color: #7f8c8d;
+  margin: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}

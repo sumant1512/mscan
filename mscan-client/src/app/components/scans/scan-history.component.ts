@@ -58,12 +58,8 @@ export class ScanHistoryComponent implements OnInit {
     this.stats.totalScans = this.scans.length;
     this.stats.successfulScans = this.scans.filter(s => s.scan_status === 'SUCCESS').length;
     this.stats.failedScans = this.stats.totalScans - this.stats.successfulScans;
-    this.stats.successRate = this.stats.totalScans > 0 
-      ? Math.round((this.stats.successfulScans / this.stats.totalScans) * 100) 
+    this.stats.successRate = this.stats.totalScans > 0
+      ? Math.round((this.stats.successfulScans / this.stats.totalScans) * 100)
       : 0;
-  }
-
-  viewAnalytics() {
-    this.router.navigate(['/tenant/scans/analytics']);
   }
 }

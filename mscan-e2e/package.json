@@ -8,8 +8,11 @@
     "test:debug": "playwright test --debug",
     "test:ui": "playwright test --ui",
     "test:super-admin": "playwright test tests/super-admin --headed",
+    "test:super-admin:headless": "playwright test tests/super-admin",
     "test:tenant-admin": "playwright test tests/tenant-admin --headed",
+    "test:tenant-admin:headless": "playwright test tests/tenant-admin",
     "test:auth": "playwright test tests/auth --headed",
+    "test:auth:headless": "playwright test tests/auth",
     "report": "playwright show-report",
     "codegen": "playwright codegen"
   },

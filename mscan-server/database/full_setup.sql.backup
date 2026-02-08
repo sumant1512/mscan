@@ -1,0 +1,1056 @@
+-- MScan Full Database Setup (One-shot)
+-- Run this on a fresh database to create all schema, triggers, indexes, and seed data
+-- Includes base schema, batch/coupon workflow, mobile tables, and product/category catalog
+
+-- ============================================
+-- EXTENSIONS
+-- ============================================
+
+
+-- ============================================
+-- BASE SCHEMA
+-- ============================================
+-- From schema.sql
+
+-- TENANTS
+CREATE TABLE IF NOT EXISTS tenants (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    phone VARCHAR(50),
+    address TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    contact_name VARCHAR(255),
+    status VARCHAR(20) DEFAULT 'active',
+    created_by UUID,
+    contact_person VARCHAR(255),
+    subdomain_slug VARCHAR(100) NOT NULL,
+    CONSTRAINT check_subdomain_slug_format CHECK (subdomain_slug IS NULL OR subdomain_slug ~ '^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$'),
+    CONSTRAINT tenants_status_check CHECK (status IN ('active', 'inactive')),
+    CONSTRAINT unique_tenant_subdomain_slug UNIQUE (subdomain_slug)
+);
+
+-- CUSTOMERS (created early to avoid FK reference errors in scans table)
+CREATE TABLE IF NOT EXISTS customers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  phone_e164 VARCHAR(20),
+  email VARCHAR(255),
+  full_name VARCHAR(120),
+  phone_verified BOOLEAN DEFAULT false,
+  email_verified BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT chk_phone_or_email CHECK (phone_e164 IS NOT NULL OR email IS NOT NULL),
+  CONSTRAINT uq_tenant_phone UNIQUE (tenant_id, phone_e164),
+  CONSTRAINT uq_tenant_email UNIQUE (tenant_id, email)
+);
+CREATE INDEX IF NOT EXISTS idx_customers_tenant ON customers(tenant_id);
+
+-- USERS
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    full_name VARCHAR(255) NOT NULL,
+    phone VARCHAR(50),
+    role VARCHAR(50) NOT NULL CHECK (role IN ('SUPER_ADMIN', 'TENANT_ADMIN', 'TENANT_USER')),
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT check_super_admin_no_tenant CHECK (
+        (role = 'SUPER_ADMIN' AND tenant_id IS NULL) OR 
+        (role != 'SUPER_ADMIN' AND tenant_id IS NOT NULL)
+    )
+);
+
+-- OTP
+CREATE TABLE IF NOT EXISTS otps (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) NOT NULL,
+    otp_code VARCHAR(6) NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    attempts INTEGER DEFAULT 0,
+    is_used BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_active_otp UNIQUE (email, otp_code)
+);
+
+-- TOKEN BLACKLIST
+CREATE TABLE IF NOT EXISTS token_blacklist (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    token_jti VARCHAR(255) NOT NULL UNIQUE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_type VARCHAR(20) NOT NULL CHECK (token_type IN ('ACCESS', 'REFRESH')),
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    blacklisted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- AUDIT LOGS
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    action VARCHAR(100) NOT NULL,
+    resource_type VARCHAR(100),
+    resource_id UUID,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- INDEXES
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_otps_email ON otps(email);
+CREATE INDEX IF NOT EXISTS idx_otps_expires_at ON otps(expires_at);
+CREATE INDEX IF NOT EXISTS idx_otps_email_not_used ON otps(email, is_used) WHERE is_used = false;
+CREATE INDEX IF NOT EXISTS idx_token_blacklist_jti ON token_blacklist(token_jti);
+CREATE INDEX IF NOT EXISTS idx_token_blacklist_expires_at ON token_blacklist(expires_at);
+CREATE INDEX IF NOT EXISTS idx_tenants_email ON tenants(email);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
+
+-- TRIGGER FUNCTION
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- TRIGGERS
+DROP TRIGGER IF EXISTS update_tenants_updated_at ON tenants;
+CREATE TRIGGER update_tenants_updated_at BEFORE UPDATE ON tenants
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- PRE-REQUISITES: Verification Apps and Coupons
+-- ============================================
+-- Create verification_apps first (used by coupons and coupon_batches)
+CREATE TABLE IF NOT EXISTS verification_apps (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  app_name VARCHAR(255) NOT NULL,
+  code VARCHAR(100),
+  api_key VARCHAR(255),
+  display_name VARCHAR(255),
+  description TEXT,
+  business_type VARCHAR(100),
+  logo_url TEXT,
+  primary_color VARCHAR(7),
+  secondary_color VARCHAR(7),
+  welcome_message TEXT,
+  scan_success_message TEXT DEFAULT 'Coupon verified successfully!',
+  scan_failure_message TEXT DEFAULT 'Invalid or expired coupon.',
+  post_scan_redirect_url TEXT,
+  enable_scanning BOOLEAN DEFAULT true,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_verification_apps_tenant ON verification_apps(tenant_id);
+
+-- Add template_id to verification_apps (will be added after product_templates is created)
+-- This is handled later in the PRODUCT TEMPLATES section
+
+-- Create coupons next (referencing verification_apps)
+CREATE TABLE IF NOT EXISTS coupons (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  verification_app_id UUID REFERENCES verification_apps(id) ON DELETE SET NULL,
+  coupon_code VARCHAR(50) UNIQUE NOT NULL,
+  discount_type VARCHAR(20) NOT NULL CHECK (discount_type IN ('PERCENTAGE', 'FIXED_AMOUNT', 'BUY_X_GET_Y')),
+  discount_value DECIMAL(10,2) NOT NULL CHECK (discount_value > 0),
+  discount_currency VARCHAR(3) DEFAULT 'USD',
+  buy_quantity INTEGER CHECK (buy_quantity IS NULL OR buy_quantity > 0),
+  get_quantity INTEGER CHECK (get_quantity IS NULL OR get_quantity > 0),
+  min_purchase_amount DECIMAL(10,2) CHECK (min_purchase_amount IS NULL OR min_purchase_amount >= 0),
+  expiry_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  total_usage_limit INTEGER CHECK (total_usage_limit IS NULL OR total_usage_limit > 0),
+  per_user_usage_limit INTEGER DEFAULT 1 CHECK (per_user_usage_limit > 0),
+  current_usage_count INTEGER DEFAULT 0 CHECK (current_usage_count >= 0),
+  status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'expired', 'exhausted', 'inactive')),
+  qr_code_url TEXT,
+  description TEXT,
+  terms TEXT,
+  credit_cost INTEGER NOT NULL CHECK (credit_cost > 0),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT chk_expiry_future CHECK (expiry_date > created_at),
+  CONSTRAINT chk_buy_get_consistency CHECK (
+    (discount_type = 'BUY_X_GET_Y' AND buy_quantity IS NOT NULL AND get_quantity IS NOT NULL) OR
+    (discount_type != 'BUY_X_GET_Y' AND buy_quantity IS NULL AND get_quantity IS NULL)
+  )
+);
+CREATE INDEX IF NOT EXISTS idx_coupons_tenant ON coupons(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_coupons_code ON coupons(coupon_code);
+CREATE INDEX IF NOT EXISTS idx_coupons_status ON coupons(status);
+CREATE INDEX IF NOT EXISTS idx_coupons_expiry ON coupons(expiry_date);
+CREATE INDEX IF NOT EXISTS idx_coupons_app ON coupons(verification_app_id);
+CREATE INDEX IF NOT EXISTS idx_coupons_created_at ON coupons(created_at);
+
+-- ============================================
+-- 001 BASELINE: coupon_batches + scan_history
+-- ============================================
+-- From 001_create_coupon_batches_and_scan_history.sql
+CREATE TABLE IF NOT EXISTS coupon_batches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  verification_app_id UUID REFERENCES verification_apps(id) ON DELETE SET NULL,
+  batch_name VARCHAR(255) NOT NULL,
+  dealer_name VARCHAR(255),
+  zone VARCHAR(100),
+  total_coupons INTEGER NOT NULL CHECK (total_coupons > 0),
+  serial_number_start INTEGER,
+  serial_number_end INTEGER,
+  batch_status VARCHAR(50) DEFAULT 'draft',
+  activated_at TIMESTAMP,
+  activation_note TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_coupon_batches_tenant ON coupon_batches(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_coupon_batches_status ON coupon_batches(batch_status);
+CREATE INDEX IF NOT EXISTS idx_coupon_batches_created_at ON coupon_batches(created_at);
+DROP TRIGGER IF EXISTS update_coupon_batches_updated_at ON coupon_batches;
+CREATE TRIGGER update_coupon_batches_updated_at
+  BEFORE UPDATE ON coupon_batches
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS scan_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  coupon_id UUID REFERENCES coupons(id) ON DELETE SET NULL,
+  customer_id UUID,
+  scanned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  status VARCHAR(50),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_scan_history_tenant ON scan_history(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_scan_history_coupon ON scan_history(coupon_id);
+CREATE INDEX IF NOT EXISTS idx_scan_history_scanned_at ON scan_history(scanned_at);
+
+-- ============================================
+-- 002 Navigation, Tenant Rewards, Coupons, Scans
+-- ============================================
+-- From 002_add_navigation_tenant_rewards.sql
+-- NOTE: These columns are already in CREATE TABLE statement (lines 25-27)
+-- ALTER TABLE tenants ADD COLUMN IF NOT EXISTS contact_name VARCHAR(255);
+-- ALTER TABLE tenants ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive'));
+-- ALTER TABLE tenants ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id);
+UPDATE tenants SET status = CASE WHEN is_active THEN 'active' ELSE 'inactive' END WHERE status IS NULL;
+CREATE INDEX IF NOT EXISTS idx_tenants_status ON tenants(status);
+CREATE INDEX IF NOT EXISTS idx_tenants_contact_email ON tenants(email);
+
+CREATE TABLE IF NOT EXISTS credit_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    requested_amount INTEGER NOT NULL CHECK (requested_amount > 0),
+    justification TEXT,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    requested_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP WITH TIME ZONE,
+    processed_by UUID REFERENCES users(id),
+    rejection_reason TEXT,
+    CONSTRAINT chk_rejection_reason CHECK (
+        (status = 'rejected' AND rejection_reason IS NOT NULL) OR 
+        (status != 'rejected')
+    )
+);
+CREATE INDEX IF NOT EXISTS idx_credit_requests_tenant ON credit_requests(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_credit_requests_status ON credit_requests(status);
+CREATE INDEX IF NOT EXISTS idx_credit_requests_requested_at ON credit_requests(requested_at);
+
+CREATE TABLE IF NOT EXISTS tenant_credit_balance (
+    tenant_id UUID PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,
+    balance INTEGER DEFAULT 0 CHECK (balance >= 0),
+    total_received INTEGER DEFAULT 0 CHECK (total_received >= 0),
+    total_spent INTEGER DEFAULT 0 CHECK (total_spent >= 0),
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS credit_transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    transaction_type VARCHAR(20) NOT NULL CHECK (transaction_type IN ('CREDIT', 'DEBIT')),
+    amount INTEGER NOT NULL CHECK (amount > 0),
+    balance_before INTEGER NOT NULL,
+    balance_after INTEGER NOT NULL,
+    reference_id UUID,
+    reference_type VARCHAR(50) CHECK (reference_type IN ('CREDIT_APPROVAL', 'COUPON_CREATION', 'COUPON_EDIT')),
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_credit_trans_tenant ON credit_transactions(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_credit_trans_type ON credit_transactions(transaction_type);
+CREATE INDEX IF NOT EXISTS idx_credit_trans_created_at ON credit_transactions(created_at);
+
+CREATE TABLE IF NOT EXISTS scans (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    coupon_id UUID NOT NULL REFERENCES coupons(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+    scan_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    scan_status VARCHAR(20) NOT NULL CHECK (scan_status IN ('SUCCESS', 'EXPIRED', 'EXHAUSTED', 'INVALID', 'INACTIVE')),
+    location_lat DECIMAL(10,8),
+    location_lng DECIMAL(11,8),
+    device_info TEXT,
+    user_agent TEXT,
+    ip_address INET,
+    customer_identifier VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_scans_coupon ON scans(coupon_id);
+CREATE INDEX IF NOT EXISTS idx_scans_tenant ON scans(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_scans_customer_id ON scans(customer_id);
+CREATE INDEX IF NOT EXISTS idx_scans_timestamp ON scans(scan_timestamp);
+CREATE INDEX IF NOT EXISTS idx_scans_status ON scans(scan_status);
+CREATE INDEX IF NOT EXISTS idx_scans_customer ON scans(customer_identifier);
+
+-- Triggers and status function
+CREATE OR REPLACE FUNCTION update_coupon_status()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.expiry_date <= CURRENT_TIMESTAMP THEN
+        NEW.status = 'expired';
+    ELSIF NEW.total_usage_limit IS NOT NULL AND NEW.current_usage_count >= NEW.total_usage_limit THEN
+        NEW.status = 'exhausted';
+    ELSIF NEW.status = 'expired' OR NEW.status = 'exhausted' THEN
+        IF OLD.status != NEW.status AND NEW.status = 'active' THEN
+            IF NEW.expiry_date > CURRENT_TIMESTAMP AND 
+               (NEW.total_usage_limit IS NULL OR NEW.current_usage_count < NEW.total_usage_limit) THEN
+                NEW.status = 'active';
+            END IF;
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+DROP TRIGGER IF EXISTS update_verification_apps_updated_at ON verification_apps;
+CREATE TRIGGER update_verification_apps_updated_at BEFORE UPDATE ON verification_apps
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_coupons_updated_at ON coupons;
+CREATE TRIGGER update_coupons_updated_at BEFORE UPDATE ON coupons
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS trigger_update_coupon_status ON coupons;
+CREATE TRIGGER trigger_update_coupon_status BEFORE INSERT OR UPDATE ON coupons
+    FOR EACH ROW EXECUTE FUNCTION update_coupon_status();
+
+-- Seed tenant_credit_balance for existing tenants
+INSERT INTO tenant_credit_balance (tenant_id, balance, total_received, total_spent)
+SELECT id, 0, 0, 0 FROM tenants
+ON CONFLICT (tenant_id) DO NOTHING;
+
+-- ============================================
+-- 003 Batch coupon support
+-- ============================================
+ALTER TABLE coupons ADD COLUMN IF NOT EXISTS max_scans_per_code INTEGER;
+ALTER TABLE coupons ADD COLUMN IF NOT EXISTS batch_id UUID;
+ALTER TABLE coupons ADD COLUMN IF NOT EXISTS batch_quantity INTEGER;
+CREATE INDEX IF NOT EXISTS idx_coupons_batch ON coupons(batch_id);
+CREATE INDEX IF NOT EXISTS idx_coupons_scan_limit ON coupons(max_scans_per_code) WHERE max_scans_per_code IS NOT NULL;
+COMMENT ON COLUMN coupons.max_scans_per_code IS 'Maximum scans per code. NULL = unlimited, 1 = single-use, N = limited';
+COMMENT ON COLUMN coupons.batch_id IS 'UUID grouping coupons in the same batch';
+COMMENT ON COLUMN coupons.batch_quantity IS 'Total coupons in the batch (stored on first record)';
+
+-- ============================================
+-- 004 Rename tenant columns (SKIPPED - already using correct names)
+-- ============================================
+-- ALTER TABLE tenants RENAME COLUMN company_name TO tenant_name;
+-- ALTER TABLE tenants RENAME COLUMN contact_email TO email;
+-- ALTER TABLE tenants RENAME COLUMN contact_phone TO phone;
+-- ALTER TABLE tenants ADD COLUMN IF NOT EXISTS contact_person VARCHAR(255); -- Already in CREATE at line 28
+
+-- ============================================
+-- 005 Tenant subdomain slug
+-- ============================================
+-- NOTE: subdomain_slug column and constraints are already in CREATE TABLE statement (lines 29-32)
+-- Commenting out redundant ALTER statements to avoid errors on fresh database
+-- ALTER TABLE tenants ADD COLUMN IF NOT EXISTS subdomain_slug VARCHAR(100);
+-- ALTER TABLE tenants ADD CONSTRAINT unique_tenant_subdomain_slug UNIQUE (subdomain_slug);
+-- ALTER TABLE tenants ADD CONSTRAINT check_subdomain_slug_format
+--   CHECK (subdomain_slug IS NULL OR subdomain_slug ~ '^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$');
+CREATE INDEX IF NOT EXISTS idx_tenants_subdomain_slug ON tenants(subdomain_slug) WHERE subdomain_slug IS NOT NULL;
+UPDATE tenants
+SET subdomain_slug = LOWER(REGEXP_REPLACE(
+  REGEXP_REPLACE(tenant_name, '[^a-zA-Z0-9]+', '-', 'g'),
+  '(^-+|-+$)', '', 'g'
+))
+WHERE subdomain_slug IS NULL;
+DO $$
+DECLARE
+  tenant_record RECORD;
+  new_slug VARCHAR(100);
+  counter INT;
+BEGIN
+  FOR tenant_record IN
+    SELECT id, subdomain_slug
+    FROM tenants
+    WHERE subdomain_slug IN (
+      SELECT subdomain_slug
+      FROM tenants
+      WHERE subdomain_slug IS NOT NULL
+      GROUP BY subdomain_slug
+      HAVING COUNT(*) > 1
+    )
+    ORDER BY created_at
+  LOOP
+    counter := 2;
+    new_slug := tenant_record.subdomain_slug;
+    WHILE EXISTS (SELECT 1 FROM tenants WHERE subdomain_slug = new_slug AND id != tenant_record.id) LOOP
+      new_slug := tenant_record.subdomain_slug || '-' || counter;
+      counter := counter + 1;
+    END LOOP;
+    IF new_slug != tenant_record.subdomain_slug THEN
+      UPDATE tenants SET subdomain_slug = new_slug WHERE id = tenant_record.id;
+    END IF;
+  END LOOP;
+END $$;
+-- ALTER TABLE tenants ALTER COLUMN subdomain_slug SET NOT NULL; -- Already NOT NULL in CREATE
+COMMENT ON COLUMN tenants.subdomain_slug IS 'Unique subdomain for tenant access';
+
+-- ============================================
+-- 006 Sequential coupon codes
+-- ============================================
+CREATE TABLE IF NOT EXISTS coupon_code_sequences (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    prefix VARCHAR(20) NOT NULL,
+    next_number INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(tenant_id, prefix)
+);
+CREATE INDEX IF NOT EXISTS idx_coupon_sequences_tenant_prefix ON coupon_code_sequences(tenant_id, prefix);
+ALTER TABLE coupons 
+ADD COLUMN IF NOT EXISTS code_type VARCHAR(20) DEFAULT 'random' CHECK (code_type IN ('random', 'sequential')),
+ADD COLUMN IF NOT EXISTS code_prefix VARCHAR(20);
+CREATE INDEX IF NOT EXISTS idx_coupons_code_type ON coupons(code_type);
+CREATE INDEX IF NOT EXISTS idx_coupons_code_prefix ON coupons(tenant_id, code_prefix) WHERE code_prefix IS NOT NULL;
+CREATE OR REPLACE FUNCTION get_next_coupon_sequence(p_tenant_id UUID, p_prefix VARCHAR)
+RETURNS INTEGER AS $$
+DECLARE
+    v_next_number INTEGER;
+BEGIN
+    INSERT INTO coupon_code_sequences (tenant_id, prefix, next_number)
+    VALUES (p_tenant_id, p_prefix, 2)
+    ON CONFLICT (tenant_id, prefix) 
+    DO UPDATE SET 
+        next_number = coupon_code_sequences.next_number + 1,
+        updated_at = CURRENT_TIMESTAMP
+    RETURNING next_number - 1 INTO v_next_number;
+    RETURN v_next_number;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================
+-- 007 Coupon reference
+-- ============================================
+ALTER TABLE coupons ADD COLUMN IF NOT EXISTS coupon_reference VARCHAR(20) UNIQUE;
+CREATE INDEX IF NOT EXISTS idx_coupons_reference ON coupons(coupon_reference);
+CREATE INDEX IF NOT EXISTS idx_coupons_tenant_reference ON coupons(tenant_id, coupon_reference);
+CREATE OR REPLACE FUNCTION get_next_coupon_reference(p_tenant_id UUID)
+RETURNS VARCHAR AS $$
+DECLARE
+    v_next_number INTEGER;
+BEGIN
+    SELECT get_next_coupon_sequence(p_tenant_id, 'CP') INTO v_next_number;
+    RETURN 'CP-' || LPAD(v_next_number::TEXT, 3, '0');
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================
+-- PRODUCTS CATALOG (from create-products-table.js)
+-- ============================================
+CREATE TABLE IF NOT EXISTS products (
+  id SERIAL PRIMARY KEY,
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  product_name VARCHAR(255) NOT NULL,
+  product_sku VARCHAR(100),
+  description TEXT,
+  category VARCHAR(100),
+  price DECIMAL(10,2),
+  currency VARCHAR(3) DEFAULT 'INR',
+  image_url TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT unique_tenant_sku UNIQUE (tenant_id, product_sku)
+);
+CREATE INDEX IF NOT EXISTS idx_products_tenant ON products(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_products_sku ON products(tenant_id, product_sku);
+CREATE INDEX IF NOT EXISTS idx_products_name ON products(tenant_id, product_name);
+-- CREATE INDEX IF NOT EXISTS idx_products_category ON products(tenant_id, category); -- Commented out: category column is dropped later (line 537)
+DROP TRIGGER IF EXISTS update_products_updated_at ON products;
+CREATE TRIGGER update_products_updated_at 
+BEFORE UPDATE ON products
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+ALTER TABLE coupons 
+ADD COLUMN IF NOT EXISTS product_id INTEGER REFERENCES products(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_coupons_product ON coupons(product_id);
+COMMENT ON TABLE products IS 'Product catalog for tenants';
+COMMENT ON COLUMN products.product_sku IS 'Stock Keeping Unit - unique per tenant';
+COMMENT ON COLUMN coupons.product_id IS 'Link to product in catalog (optional)';
+
+-- ============================================
+-- PRODUCT TEMPLATES & DYNAMIC ATTRIBUTES
+-- ============================================
+-- From migration 003, 004, 013, 014 - Unified template system
+
+-- 1. Product Templates Table (with variant_config and custom_fields)
+CREATE TABLE IF NOT EXISTS product_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  template_name VARCHAR(255) NOT NULL,  -- IMPORTANT: template_name not "name"
+  industry_type VARCHAR(100) NOT NULL,
+  description TEXT,
+  icon VARCHAR(50),
+  variant_config JSONB NOT NULL DEFAULT '{
+    "variant_label": "Variant",
+    "dimensions": [],
+    "common_fields": []
+  }'::jsonb,  -- From migration 014
+  custom_fields JSONB NOT NULL DEFAULT '[]'::jsonb,  -- From migration 014
+  is_system_template BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT unique_tenant_template_name UNIQUE (tenant_id, template_name),
+  CONSTRAINT check_industry_type CHECK (
+    industry_type IN ('basic', 'clothing', 'footwear', 'jewelry', 'paint',
+                      'bags', 'electronics', 'cosmetics', 'food', 'furniture',
+                      'sports', 'custom')
+  )
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_templates_tenant ON product_templates(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_product_templates_industry ON product_templates(industry_type);
+CREATE INDEX IF NOT EXISTS idx_product_templates_active ON product_templates(is_active) WHERE is_active = true;
+
+COMMENT ON TABLE product_templates IS 'Template definitions for different product industries';
+COMMENT ON COLUMN product_templates.template_name IS 'Name of the template (e.g., "Wall Paint", "T-Shirt")';
+COMMENT ON COLUMN product_templates.variant_config IS 'JSONB configuration for product variants (dimensions + common fields)';
+COMMENT ON COLUMN product_templates.custom_fields IS 'JSONB array of custom field definitions';
+
+-- 2. Template Attributes Table
+CREATE TABLE IF NOT EXISTS template_attributes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_id UUID NOT NULL REFERENCES product_templates(id) ON DELETE CASCADE,
+  attribute_name VARCHAR(100) NOT NULL,
+  attribute_key VARCHAR(100) NOT NULL,
+  data_type VARCHAR(50) NOT NULL,
+  is_required BOOLEAN DEFAULT false,
+  validation_rules JSONB,
+  default_value TEXT,
+  display_order INTEGER DEFAULT 0,
+  field_group VARCHAR(100),
+  help_text TEXT,
+  placeholder TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT unique_template_attr_key UNIQUE (template_id, attribute_key),
+  CONSTRAINT check_data_type CHECK (
+    data_type IN ('string', 'number', 'boolean', 'date', 'select', 'multi-select', 'url', 'email')
+  )
+);
+
+CREATE INDEX IF NOT EXISTS idx_template_attributes_template ON template_attributes(template_id);
+CREATE INDEX IF NOT EXISTS idx_template_attributes_order ON template_attributes(template_id, display_order);
+CREATE INDEX IF NOT EXISTS idx_template_attributes_validation ON template_attributes USING GIN (validation_rules);
+
+COMMENT ON TABLE template_attributes IS 'Defines attributes (fields) for each product template';
+COMMENT ON COLUMN template_attributes.attribute_key IS 'Machine-readable key used in API and storage';
+
+-- 3. Product Attribute Values Table
+CREATE TABLE IF NOT EXISTS product_attribute_values (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  attribute_key VARCHAR(100) NOT NULL,
+  attribute_value JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT unique_product_attribute UNIQUE (product_id, attribute_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_attribute_product ON product_attribute_values(product_id);
+CREATE INDEX IF NOT EXISTS idx_product_attribute_key ON product_attribute_values(attribute_key);
+CREATE INDEX IF NOT EXISTS idx_product_attribute_value ON product_attribute_values USING GIN (attribute_value);
+
+COMMENT ON TABLE product_attribute_values IS 'Stores actual attribute values for each product';
+
+-- 4. Update products table with template_id and verification_app_id
+ALTER TABLE products ADD COLUMN IF NOT EXISTS template_id UUID REFERENCES product_templates(id) ON DELETE SET NULL;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS verification_app_id UUID REFERENCES verification_apps(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_products_template ON products(template_id);
+CREATE INDEX IF NOT EXISTS idx_products_verification_app ON products(verification_app_id);
+
+COMMENT ON COLUMN products.template_id IS 'References the product template used for this product';
+COMMENT ON COLUMN products.verification_app_id IS 'Links product to a specific verification app';
+
+-- 5. Update verification_apps table with template_id
+ALTER TABLE verification_apps ADD COLUMN IF NOT EXISTS template_id UUID REFERENCES product_templates(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_verification_apps_template ON verification_apps(template_id);
+
+COMMENT ON COLUMN verification_apps.template_id IS 'Default product template for this verification app';
+
+-- ============================================
+-- TAGS SYSTEM
+-- ============================================
+-- From migration 015 - Tags for product organization
+
+CREATE TABLE IF NOT EXISTS tags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  verification_app_id UUID NOT NULL REFERENCES verification_apps(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  icon VARCHAR(50),
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT unique_tag_name_per_app UNIQUE (verification_app_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tags_tenant_id ON tags(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_tags_verification_app_id ON tags(verification_app_id);
+CREATE INDEX IF NOT EXISTS idx_tags_is_active ON tags(is_active);
+CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
+
+COMMENT ON TABLE tags IS 'Tags for organizing and categorizing products within verification apps';
+COMMENT ON COLUMN tags.verification_app_id IS 'Tags belong to a specific verification app';
+
+-- ============================================
+-- CATEGORIES (from create-categories-table.js)
+-- ============================================
+CREATE TABLE IF NOT EXISTS categories (
+  id SERIAL PRIMARY KEY,
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  verification_app_id UUID REFERENCES verification_apps(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  icon VARCHAR(50),
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT unique_tenant_app_category UNIQUE (tenant_id, verification_app_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_categories_tenant ON categories(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_categories_app ON categories(verification_app_id);
+CREATE INDEX IF NOT EXISTS idx_categories_name ON categories(tenant_id, name);
+DROP TRIGGER IF EXISTS update_categories_updated_at ON categories;
+CREATE TRIGGER update_categories_updated_at 
+BEFORE UPDATE ON categories
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+ALTER TABLE products 
+ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_products_category_id ON products(category_id);
+-- Drop legacy text category column and its index if present
+DO $$
+BEGIN
+  -- Drop index first if it exists
+  IF EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE tablename = 'products'
+      AND indexname = 'idx_products_category'
+  ) THEN
+    EXECUTE 'DROP INDEX IF EXISTS idx_products_category';
+  END IF;
+
+  -- Then drop the column if it exists
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'products'
+      AND column_name = 'category'
+  ) THEN
+    EXECUTE 'ALTER TABLE products DROP COLUMN category';
+  END IF;
+END $$;
+COMMENT ON TABLE categories IS 'Product categories for tenant organization';
+COMMENT ON COLUMN categories.name IS 'Category name - unique per tenant';
+COMMENT ON COLUMN products.category_id IS 'Link to category (optional)';
+
+-- ============================================
+-- 010 Batch workflow and product catalog schema
+-- ============================================
+-- From 010_add_tenant_analytics_schema.sql
+CREATE TABLE IF NOT EXISTS product_categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(tenant_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_product_categories_tenant ON product_categories(tenant_id);
+ALTER TABLE products 
+ADD COLUMN IF NOT EXISTS category_id UUID REFERENCES product_categories(id) ON DELETE SET NULL,
+ADD COLUMN IF NOT EXISTS image_url TEXT,
+ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active';
+-- idx_products_category_id already exists above; avoid duplicate name
+-- CREATE INDEX idx_products_category ON products(category_id);
+DO $$ BEGIN
+  CREATE TYPE batch_status AS ENUM ('draft', 'code_assigned', 'activated', 'live', 'completed');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+ALTER TABLE coupon_batches 
+ADD COLUMN IF NOT EXISTS dealer_name VARCHAR(255),
+ADD COLUMN IF NOT EXISTS zone VARCHAR(100),
+ADD COLUMN IF NOT EXISTS serial_number_start INTEGER,
+ADD COLUMN IF NOT EXISTS serial_number_end INTEGER,
+ADD COLUMN IF NOT EXISTS batch_status batch_status DEFAULT 'draft',
+ADD COLUMN IF NOT EXISTS activated_at TIMESTAMP,
+ADD COLUMN IF NOT EXISTS activation_note TEXT;
+DO $$ 
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns 
+             WHERE table_name='coupon_batches' AND column_name='status' 
+             AND data_type != 'USER-DEFINED') THEN
+    UPDATE coupon_batches SET batch_status = 'activated' WHERE status = 'active';
+    ALTER TABLE coupon_batches DROP COLUMN IF EXISTS status;
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_batches_status ON coupon_batches(batch_status);
+CREATE INDEX IF NOT EXISTS idx_batches_dealer ON coupon_batches(dealer_name);
+CREATE TABLE IF NOT EXISTS serial_number_tracker (
+  tenant_id UUID PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,
+  last_serial_number INTEGER DEFAULT 30000,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+ALTER TABLE coupons 
+ADD COLUMN IF NOT EXISTS serial_number INTEGER,
+ADD COLUMN IF NOT EXISTS campaign_id UUID,
+ADD COLUMN IF NOT EXISTS reward_amount DECIMAL(10,2) DEFAULT 0,
+ADD COLUMN IF NOT EXISTS printed_at TIMESTAMP,
+ADD COLUMN IF NOT EXISTS expiry_date TIMESTAMP;
+DO $$ 
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns 
+             WHERE table_name='coupons' AND column_name='status' 
+             AND data_type = 'character varying') THEN
+    UPDATE coupons SET status = 'generated' WHERE status NOT IN ('generated', 'printed', 'active', 'scanned', 'expired');
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_coupons_serial ON coupons(serial_number);
+CREATE INDEX IF NOT EXISTS idx_coupons_campaign ON coupons(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_coupons_status ON coupons(status);
+CREATE TABLE IF NOT EXISTS reward_campaigns (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  batch_id UUID NOT NULL REFERENCES coupon_batches(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  start_date TIMESTAMP NOT NULL,
+  end_date TIMESTAMP NOT NULL,
+  reward_type VARCHAR(50) CHECK (reward_type IN ('common', 'custom')),
+  common_amount DECIMAL(10,2),
+  custom_variations JSONB,
+  status VARCHAR(50) DEFAULT 'scheduled',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT valid_dates CHECK (end_date > start_date)
+);
+CREATE INDEX IF NOT EXISTS idx_campaigns_tenant ON reward_campaigns(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_campaigns_batch ON reward_campaigns(batch_id);
+CREATE INDEX IF NOT EXISTS idx_campaigns_status ON reward_campaigns(status);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_coupons_campaign' AND conrelid = 'coupons'::regclass
+  ) THEN
+    ALTER TABLE coupons
+    ADD CONSTRAINT fk_coupons_campaign
+    FOREIGN KEY (campaign_id) REFERENCES reward_campaigns(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+ALTER TABLE scan_history 
+ADD COLUMN IF NOT EXISTS latitude DECIMAL(10,7),
+ADD COLUMN IF NOT EXISTS longitude DECIMAL(10,7),
+ADD COLUMN IF NOT EXISTS location_address TEXT,
+ADD COLUMN IF NOT EXISTS customer_city VARCHAR(255),
+ADD COLUMN IF NOT EXISTS customer_state VARCHAR(100);
+CREATE INDEX IF NOT EXISTS idx_scan_history_tenant_date ON scan_history(tenant_id, scanned_at);
+CREATE INDEX IF NOT EXISTS idx_scan_history_city ON scan_history(tenant_id, customer_city);
+CREATE INDEX IF NOT EXISTS idx_scan_history_location ON scan_history(tenant_id, latitude, longitude);
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS update_product_categories_updated_at ON product_categories;
+CREATE TRIGGER update_product_categories_updated_at
+  BEFORE UPDATE ON product_categories
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_reward_campaigns_updated_at ON reward_campaigns;
+CREATE TRIGGER update_reward_campaigns_updated_at
+  BEFORE UPDATE ON reward_campaigns
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- 011 Defaults for coupon usage limits
+-- ============================================
+BEGIN;
+UPDATE coupons SET total_usage_limit = COALESCE(total_usage_limit, 1);
+UPDATE coupons SET per_user_usage_limit = COALESCE(per_user_usage_limit, 1);
+UPDATE coupons SET max_scans_per_code = COALESCE(max_scans_per_code, 1);
+ALTER TABLE coupons ALTER COLUMN total_usage_limit SET DEFAULT 1;
+ALTER TABLE coupons ALTER COLUMN per_user_usage_limit SET DEFAULT 1;
+ALTER TABLE coupons ALTER COLUMN max_scans_per_code SET DEFAULT 1;
+DO $$
+BEGIN
+  -- Set NOT NULL only if not already set
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'coupons' AND column_name = 'total_usage_limit' AND is_nullable = 'YES'
+  ) THEN
+    ALTER TABLE coupons ALTER COLUMN total_usage_limit SET NOT NULL;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'coupons' AND column_name = 'per_user_usage_limit' AND is_nullable = 'YES'
+  ) THEN
+    ALTER TABLE coupons ALTER COLUMN per_user_usage_limit SET NOT NULL;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'coupons' AND column_name = 'max_scans_per_code' AND is_nullable = 'YES'
+  ) THEN
+    ALTER TABLE coupons ALTER COLUMN max_scans_per_code SET NOT NULL;
+  END IF;
+END $$;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_total_usage_limit_positive' AND conrelid = 'coupons'::regclass) THEN
+    ALTER TABLE coupons ADD CONSTRAINT chk_total_usage_limit_positive CHECK (total_usage_limit > 0);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_per_user_usage_limit_positive' AND conrelid = 'coupons'::regclass) THEN
+    ALTER TABLE coupons ADD CONSTRAINT chk_per_user_usage_limit_positive CHECK (per_user_usage_limit > 0);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_max_scans_per_code_positive' AND conrelid = 'coupons'::regclass) THEN
+    ALTER TABLE coupons ADD CONSTRAINT chk_max_scans_per_code_positive CHECK (max_scans_per_code > 0);
+  END IF;
+END $$;
+COMMIT;
+
+-- ============================================
+-- 012 Product/SKU fields on coupons
+-- ============================================
+ALTER TABLE coupons ADD COLUMN IF NOT EXISTS product_name VARCHAR(255);
+ALTER TABLE coupons ADD COLUMN IF NOT EXISTS product_sku VARCHAR(100);
+CREATE INDEX IF NOT EXISTS idx_coupons_product_sku ON coupons(product_sku);
+CREATE INDEX IF NOT EXISTS idx_coupons_product_name ON coupons(product_name);
+COMMENT ON COLUMN coupons.product_name IS 'Name of the product this coupon applies to';
+COMMENT ON COLUMN coupons.product_sku IS 'SKU identifier for the product';
+
+-- ============================================
+-- 013 Coupon points
+-- ============================================
+ALTER TABLE coupons ADD COLUMN IF NOT EXISTS coupon_points INTEGER;
+CREATE INDEX IF NOT EXISTS idx_coupons_points ON coupons(coupon_points);
+
+-- ============================================
+-- 014 Scan sessions
+-- ============================================
+CREATE TABLE IF NOT EXISTS scan_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  coupon_code VARCHAR(50) NOT NULL,
+  device_id TEXT,
+  mobile_e164 VARCHAR(20),
+  otp_code VARCHAR(6),
+  attempts INTEGER DEFAULT 0,
+  status VARCHAR(32) NOT NULL CHECK (status IN ('pending-verification','otp-sent','completed','verification-failed')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_scan_sessions_tenant ON scan_sessions(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_scan_sessions_coupon ON scan_sessions(coupon_code);
+CREATE INDEX IF NOT EXISTS idx_scan_sessions_status ON scan_sessions(status);
+
+-- ============================================
+-- 015 Points ledger
+-- ============================================
+CREATE TABLE IF NOT EXISTS user_points (
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  mobile_e164 VARCHAR(20) NOT NULL,
+  balance INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (tenant_id, mobile_e164)
+);
+CREATE TABLE IF NOT EXISTS points_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  mobile_e164 VARCHAR(20) NOT NULL,
+  amount INTEGER NOT NULL,
+  reason TEXT NOT NULL,
+  session_id UUID,
+  coupon_code VARCHAR(50),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_points_tx_tenant_mobile ON points_transactions(tenant_id, mobile_e164);
+
+-- ============================================
+-- 016 Customers (moved earlier in file - see line ~34)
+-- ============================================
+
+-- ============================================
+-- 017 Customer devices
+-- ============================================
+CREATE TABLE IF NOT EXISTS customer_devices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  device_id TEXT NOT NULL,
+  last_seen TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_customer_devices_cust ON customer_devices(customer_id);
+CREATE INDEX IF NOT EXISTS idx_customer_devices_tenant ON customer_devices(tenant_id);
+
+-- ============================================
+-- 018 Mobile OTPs
+-- ============================================
+CREATE TABLE IF NOT EXISTS mobile_otps (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  mobile_e164 VARCHAR(20) NOT NULL,
+  otp_code VARCHAR(6) NOT NULL,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  attempts INTEGER DEFAULT 0,
+  is_used BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_mobile_otps_tenant ON mobile_otps(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_mobile_otps_mobile ON mobile_otps(mobile_e164);
+
+-- ============================================
+-- 019 Scan events
+-- ============================================
+CREATE TABLE IF NOT EXISTS scan_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID REFERENCES tenants(id) ON DELETE SET NULL,
+  session_id UUID REFERENCES scan_sessions(id) ON DELETE SET NULL,
+  event_type VARCHAR(50) NOT NULL,
+  coupon_code VARCHAR(50),
+  mobile_e164 VARCHAR(20),
+  device_id TEXT,
+  metadata JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_scan_events_tenant ON scan_events(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_scan_events_session ON scan_events(session_id);
+CREATE INDEX IF NOT EXISTS idx_scan_events_type ON scan_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_scan_events_coupon ON scan_events(coupon_code);
+CREATE INDEX IF NOT EXISTS idx_scan_events_created_at ON scan_events(created_at);
+
+-- ============================================
+-- Coupon lifecycle
+-- ============================================
+ALTER TABLE coupons DROP CONSTRAINT IF EXISTS coupons_status_check;
+ALTER TABLE coupons 
+    DROP CONSTRAINT IF EXISTS coupons_status_check,
+    ADD CONSTRAINT coupons_status_check 
+    CHECK (status IN ('draft', 'printed', 'active', 'used', 'inactive', 'expired', 'exhausted'));
+ALTER TABLE coupons ADD COLUMN IF NOT EXISTS printed_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE coupons ADD COLUMN IF NOT EXISTS activated_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE coupons ADD COLUMN IF NOT EXISTS printed_count INTEGER DEFAULT 0;
+ALTER TABLE coupons ADD COLUMN IF NOT EXISTS activation_note TEXT;
+ALTER TABLE coupons ADD COLUMN IF NOT EXISTS deactivation_reason TEXT;
+ALTER TABLE coupons ALTER COLUMN status SET DEFAULT 'draft';
+CREATE INDEX IF NOT EXISTS idx_coupons_status_lifecycle ON coupons(status) WHERE status IN ('draft', 'printed', 'active');
+CREATE INDEX IF NOT EXISTS idx_coupons_printed_at ON coupons(printed_at);
+CREATE INDEX IF NOT EXISTS idx_coupons_activated_at ON coupons(activated_at);
+UPDATE coupons 
+SET activated_at = created_at 
+WHERE status = 'active' AND activated_at IS NULL;
+ALTER TABLE scans DROP CONSTRAINT IF EXISTS scans_scan_status_check;
+ALTER TABLE scans 
+    ADD CONSTRAINT scans_scan_status_check 
+    CHECK (scan_status IN ('SUCCESS', 'EXPIRED', 'EXHAUSTED', 'INVALID', 'INACTIVE', 'NOT_ACTIVE', 'USED', 'NOT_PRINTED'));
+CREATE OR REPLACE FUNCTION validate_coupon_status_transition()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.status IS NOT NULL AND NEW.status != OLD.status THEN
+        IF OLD.status = 'draft' AND NEW.status NOT IN ('printed', 'inactive') THEN
+            RAISE EXCEPTION 'Invalid transition from draft to %', NEW.status;
+        END IF;
+        IF OLD.status = 'printed' AND NEW.status NOT IN ('active', 'inactive') THEN
+            RAISE EXCEPTION 'Invalid transition from printed to %', NEW.status;
+        END IF;
+        IF OLD.status = 'active' AND NEW.status NOT IN ('used', 'inactive', 'expired', 'exhausted') THEN
+            RAISE EXCEPTION 'Invalid transition from active to %', NEW.status;
+        END IF;
+        IF OLD.status = 'used' AND NEW.status NOT IN ('used', 'inactive') THEN
+            RAISE EXCEPTION 'Invalid transition from used to %', NEW.status;
+        END IF;
+    END IF;
+    IF NEW.status = 'printed' AND OLD.status = 'draft' THEN
+        NEW.printed_at = COALESCE(NEW.printed_at, CURRENT_TIMESTAMP);
+        NEW.printed_count = COALESCE(NEW.printed_count, 0) + 1;
+    END IF;
+    IF NEW.status = 'active' AND OLD.status IN ('draft', 'printed') THEN
+        NEW.activated_at = COALESCE(NEW.activated_at, CURRENT_TIMESTAMP);
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trigger_validate_coupon_status_transition ON coupons;
+CREATE TRIGGER trigger_validate_coupon_status_transition
+BEFORE UPDATE ON coupons
+FOR EACH ROW
+WHEN (OLD.status IS DISTINCT FROM NEW.status)
+EXECUTE FUNCTION validate_coupon_status_transition();
+CREATE OR REPLACE FUNCTION update_coupon_status()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status = 'active' THEN
+        IF NEW.expiry_date <= CURRENT_TIMESTAMP THEN
+            NEW.status = 'expired';
+        END IF;
+        IF NEW.total_usage_limit IS NOT NULL 
+           AND NEW.current_usage_count >= NEW.total_usage_limit THEN
+            NEW.status = 'exhausted';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trigger_update_coupon_status ON coupons;
+CREATE TRIGGER trigger_update_coupon_status
+BEFORE UPDATE ON coupons
+FOR EACH ROW
+EXECUTE FUNCTION update_coupon_status();
+
+-- ============================================
+-- SEED
+-- ============================================
+-- From seed.sql
+INSERT INTO users (email, full_name, role, is_active)
+VALUES ('admin@mscan.com', 'Super Admin', 'SUPER_ADMIN', true)
+ON CONFLICT (email) DO NOTHING;
+
+-- Verify credit balance for tenants
+INSERT INTO tenant_credit_balance (tenant_id, balance, total_received, total_spent)
+SELECT id, 0, 0, 0 FROM tenants
+ON CONFLICT (tenant_id) DO NOTHING;

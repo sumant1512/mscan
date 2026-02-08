@@ -94,14 +94,7 @@ test.describe('Tenant Admin - Catalogue Products', () => {
       await currencySelect.selectOption(productData.currency);
     }
     
-    // Select category (if dropdown exists and has options)
-    const categorySelect = page.locator('select#category_id, select[name="category_id"], select[formControlName="category_id"]').first();
-    if (await categorySelect.isVisible({ timeout: 2000 }).catch(() => false)) {
-      const options = await categorySelect.locator('option').count();
-      if (options > 1) {
-        await categorySelect.selectOption({ index: 1 });
-      }
-    }
+    // Note: Category selection removed as categories feature was deprecated
     
     // Wait for validation
     await page.waitForTimeout(500);
@@ -226,33 +219,33 @@ test.describe('Tenant Admin - Catalogue Products', () => {
     await expect(firstProduct).toBeVisible();
   });
 
-  test('should filter products by category', async ({ page }) => {
+  test('should filter products by tags', async ({ page }) => {
     await cataloguePage.navigateToProductList();
-    
-    // Check if category filter exists
-    const categoryFilter = page.locator('select[name*="category"], select[id*="category"], .category-filter select').first();
-    const hasFilter = await categoryFilter.isVisible({ timeout: 3000 }).catch(() => false);
-    
+
+    // Check if tag filter exists
+    const tagFilter = page.locator('select[name*="tag"], select[id*="tag"], .tag-filter select').first();
+    const hasFilter = await tagFilter.isVisible({ timeout: 3000 }).catch(() => false);
+
     if (!hasFilter) {
-      test.skip(true, 'Category filter not available');
+      test.skip(true, 'Tag filter not available');
     }
-    
-    // Check if there are category options
-    const options = await categoryFilter.locator('option').count();
+
+    // Check if there are tag options
+    const options = await tagFilter.locator('option').count();
     if (options <= 1) {
-      test.skip(true, 'No categories available to filter');
+      test.skip(true, 'No tags available to filter');
     }
-    
-    // Select a category
-    await categoryFilter.selectOption({ index: 1 });
-    
+
+    // Select a tag
+    await tagFilter.selectOption({ index: 1 });
+
     // Wait for filtered results
     await page.waitForTimeout(1000);
-    
-    // Verify some products are displayed (or empty state if no products in category)
+
+    // Verify some products are displayed (or empty state if no products with tag)
     const hasProducts = await page.locator('.product-card, .card').first().isVisible({ timeout: 3000 }).catch(() => false);
     const hasEmptyState = await page.locator('text=/no products|empty/i').isVisible({ timeout: 3000 }).catch(() => false);
-    
+
     expect(hasProducts || hasEmptyState).toBeTruthy();
   });
 
@@ -281,7 +274,7 @@ test.describe('Tenant Admin - Catalogue Products', () => {
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     
     // Verify we're on a detail page or modal opened
-    const hasDetails = await page.locator('text=/description|price|SKU|category/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasDetails = await page.locator('text=/description|price|SKU|tag/i').isVisible({ timeout: 3000 }).catch(() => false);
     expect(hasDetails).toBeTruthy();
   });
 
@@ -381,22 +374,22 @@ test.describe('Tenant Admin - Catalogue Products', () => {
     await expect(deletedProduct).not.toBeVisible({ timeout: 5000 });
   });
 
-  test('should display product with category name', async ({ page }) => {
+  test('should display product with tags', async ({ page }) => {
     await cataloguePage.navigateToProductList();
-    
-    // Check if products display category information
-    const productWithCategory = page.locator('.product-card, .card').filter({ 
-      has: page.locator('text=/category/i') 
+
+    // Check if products display tag information
+    const productWithTags = page.locator('.product-card, .card').filter({
+      has: page.locator('text=/tag|label/i')
     }).first();
-    
-    const hasProduct = await productWithCategory.isVisible({ timeout: 3000 }).catch(() => false);
-    
+
+    const hasProduct = await productWithTags.isVisible({ timeout: 3000 }).catch(() => false);
+
     if (!hasProduct) {
-      test.skip(true, 'No products with categories found');
+      test.skip(true, 'No products with tags found');
     }
-    
-    // Verify category is displayed
-    await expect(productWithCategory).toBeVisible();
+
+    // Verify tags are displayed
+    await expect(productWithTags).toBeVisible();
   });
 
   test('should display product pricing with currency', async ({ page }) => {

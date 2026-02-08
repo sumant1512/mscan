@@ -1,0 +1,158 @@
+<div class="add-tenant-admin">
+  <div class="page-header">
+    <button class="btn-back" (click)="cancel()">
+      <span class="material-icons">arrow_back</span>
+    </button>
+    <h1>Add Tenant Admin</h1>
+  </div>
+
+  <div class="form-container">
+    <form (ngSubmit)="onSubmit()" #adminForm="ngForm">
+      
+      <!-- Success Message -->
+      <div *ngIf="successMessage" class="alert alert-success">
+        <span class="material-icons">check_circle</span>
+        {{ successMessage }}
+      </div>
+
+      <!-- Error Message -->
+      <div *ngIf="error" class="alert alert-error">
+        <span class="material-icons">error</span>
+        {{ error }}
+      </div>
+
+      <!-- Tenant Selection -->
+      <div class="form-group">
+        <label for="tenant">Tenant <span class="required">*</span></label>
+        <div class="autocomplete-wrapper">
+          <input
+            id="tenant"
+            type="text"
+            [(ngModel)]="tenantSearch"
+            name="tenantSearch"
+            (ngModelChange)="onTenantSearchChange()"
+            (focus)="onTenantFocus()"
+            (blur)="onTenantBlur()"
+            placeholder="Search for a tenant..."
+            autocomplete="off"
+            required
+          />
+          <span class="material-icons search-icon">search</span>
+          
+          <ng-container *ngIf="filteredTenants$ | async as filteredTenants">
+            <div *ngIf="showTenantDropdown && filteredTenants.length > 0" class="dropdown-list">
+              <div
+                *ngFor="let tenant of filteredTenants"
+                class="dropdown-item"
+                (click)="selectTenant(tenant)"
+              >
+                <div class="tenant-info">
+                  <div class="tenant-name">{{ tenant.tenant_name }}</div>
+                  <div class="tenant-domain">{{ tenant.subdomain_slug }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="showTenantDropdown && filteredTenants.length === 0 && tenantSearch" class="dropdown-list">
+              <div class="dropdown-item no-results">
+                No tenants found
+              </div>
+            </div>
+          </ng-container>
+        </div>
+        <small *ngIf="selectedTenantName" class="selected-tenant">
+          Selected: <strong>{{ selectedTenantName }}</strong>
+        </small>
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label for="email">Email Address <span class="required">*</span></label>
+        <input
+          id="email"
+          type="email"
+          [(ngModel)]="formData.email"
+          name="email"
+          placeholder="admin@example.com"
+          required
+          email
+        />
+      </div>
+
+      <!-- Full Name -->
+      <div class="form-group">
+        <label for="fullName">Full Name <span class="required">*</span></label>
+        <input
+          id="fullName"
+          type="text"
+          [(ngModel)]="formData.full_name"
+          name="fullName"
+          placeholder="John Doe"
+          required
+        />
+      </div>
+
+      <!-- Phone -->
+      <div class="form-group">
+        <label for="phone">Phone (optional)</label>
+        <input
+          id="phone"
+          type="tel"
+          [(ngModel)]="formData.phone_number"
+          name="phone"
+          placeholder="+1 (555) 123-4567"
+        />
+      </div>
+
+      <!-- Role (Read-only) -->
+      <div class="form-group">
+        <label for="role">Role</label>
+        <input
+          id="role"
+          type="text"
+          value="TENANT_ADMIN"
+          readonly
+          class="readonly-input"
+        />
+      </div>
+
+      <!-- Info Box -->
+      <div class="info-box">
+        <span class="material-icons">info</span>
+        <div>
+          <strong>Tenant Admins automatically have full access to all tenant features.</strong>
+          <p>They can manage coupons, batches, products, users, and all other tenant resources.</p>
+        </div>
+      </div>
+
+      <!-- Welcome Email Checkbox -->
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            [(ngModel)]="formData.send_welcome_email"
+            name="sendWelcomeEmail"
+          />
+          <span>Send welcome email with login instructions</span>
+        </label>
+        <small class="help-text">
+          The email will include the tenant URL and getting started instructions.
+        </small>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="cancel()" [disabled]="saving">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving || !adminForm.form.valid || !selectedTenantId">
+          <span *ngIf="!saving">Create Tenant Admin</span>
+          <span *ngIf="saving" class="loading">
+            <span class="spinner-small"></span>
+            Creating...
+          </span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

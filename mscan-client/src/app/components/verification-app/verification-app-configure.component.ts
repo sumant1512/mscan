@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { RewardsService } from '../../services/rewards.service';
+import { TemplateService } from '../../services/template.service';
+import { ProductTemplate } from '../../models/templates.model';
 import { finalize } from 'rxjs/operators';
 
 @Component({
@@ -19,12 +21,14 @@ export class VerificationAppConfigureComponent implements OnInit {
   success = '';
   isEditMode = false;
   appId?: string;
+  templates: ProductTemplate[] = [];
 
   constructor(
     private fb: FormBuilder,
     private router: Router,
     private route: ActivatedRoute,
     private rewardsService: RewardsService,
+    private templateService: TemplateService,
     private cdr: ChangeDetectorRef
   ) {
     this.configForm = this.fb.group({
@@ -37,13 +41,38 @@ export class VerificationAppConfigureComponent implements OnInit {
       scan_success_message: ['Coupon verified successfully!'],
       scan_failure_message: ['Invalid or expired coupon.'],
       post_scan_redirect_url: [''],
-      enable_analytics: [true]
+      template_id: ['', Validators.required]  // Made required
     });
   }
 
   ngOnInit() {
+    this.loadTemplates();
     const id = this.route.snapshot.paramMap.get('id');
     console.log('VerificationAppConfigureComponent - Route ID:', id);
+    this.setFormMode(id as string)
+  }
+
+  loadTemplates(): void {
+    this.templateService.getTemplates({ include_system: true, limit: 100 }).subscribe({
+      next: (response) => {
+        this.templates = response.templates;
+
+        // If no templates exist, show error and disable form
+        if (this.templates.length === 0 && !this.isEditMode) {
+          this.error = 'No product templates found. Please create a product template first before creating a verification app.';
+          this.configForm.disable();
+        }
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Failed to load templates:', err);
+        this.error = 'Failed to load templates. Please try again.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  setFormMode(id: string) {
     if (id) {
       this.isEditMode = true;
       this.appId = id;
@@ -56,10 +85,10 @@ export class VerificationAppConfigureComponent implements OnInit {
 
   loadApp(appId: string) {
     if (!appId) return;
-    
+
     console.log('Loading verification app with ID:', appId);
     this.loading = true;
-    
+
     this.rewardsService.getVerificationAppById(appId)
       .pipe(finalize(() => {
         this.loading = false;

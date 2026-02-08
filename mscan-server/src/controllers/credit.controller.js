@@ -8,13 +8,27 @@ const emailService = require('../services/email.service');
 
 class CreditController {
   /**
-   * Request credits (Tenant)
+   * Request credits (Tenant Admin only)
    * POST /api/credits/request
+   * Super admins cannot request credits (they approve them)
    */
   async requestCredits(req, res) {
     try {
+      // This endpoint is only for tenant admins
+      if (req.user.role === 'SUPER_ADMIN') {
+        return res.status(403).json({
+          error: 'Super admins cannot request credits. This endpoint is for tenant admins only.'
+        });
+      }
+
       const { requested_amount, justification } = req.body;
       const tenantId = req.user.tenant_id;
+
+      if (!tenantId) {
+        return res.status(400).json({
+          error: 'Tenant ID not found. This endpoint requires tenant context.'
+        });
+      }
 
       // Validation
       if (!requested_amount || requested_amount <= 0) {
@@ -124,12 +138,26 @@ class CreditController {
   }
 
   /**
-   * Get own credit requests (Tenant)
+   * Get own credit requests (Tenant Admin only)
    * GET /api/credits/requests/my
+   * Super admins should NOT call this endpoint
    */
   async getMyCreditRequests(req, res) {
     try {
+      // This endpoint is ONLY for tenant admins
+      if (req.user.role === 'SUPER_ADMIN') {
+        return res.status(403).json({
+          error: 'Access denied. This endpoint is for tenant admins only.'
+        });
+      }
+
       const tenantId = req.user.tenant_id;
+
+      if (!tenantId) {
+        return res.status(400).json({
+          error: 'Tenant ID not found. This endpoint requires tenant context.'
+        });
+      }
 
       const result = await db.query(
         `SELECT cr.*, u.full_name as processed_by_name
@@ -337,12 +365,26 @@ class CreditController {
   }
 
   /**
-   * Get credit balance (Tenant)
+   * Get credit balance (Tenant Admin only)
    * GET /api/credits/balance
+   * Super admins should NOT call this endpoint
    */
   async getCreditBalance(req, res) {
     try {
+      // This endpoint is ONLY for tenant admins
+      if (req.user.role === 'SUPER_ADMIN') {
+        return res.status(403).json({
+          error: 'Access denied. This endpoint is for tenant admins only.'
+        });
+      }
+
       const tenantId = req.user.tenant_id;
+
+      if (!tenantId) {
+        return res.status(400).json({
+          error: 'Tenant ID not found. This endpoint requires tenant context.'
+        });
+      }
 
       const balanceResult = await db.query(
         'SELECT * FROM tenant_credit_balance WHERE tenant_id = $1',
@@ -378,45 +420,222 @@ class CreditController {
   /**
    * Get credit transactions
    * GET /api/credits/transactions
+   * SUPER_ADMIN: Returns all tenant transactions + rejected requests (no tenant_id required)
+   * TENANT_ADMIN: Returns transactions + rejected requests for their tenant only
+   * Supports filtering by app_id to show transactions for specific verification apps
    */
   async getCreditTransactions(req, res) {
     try {
-      const { page = 1, limit = 20, type } = req.query;
+      const { page = 1, limit = 20, type, tenant_id, app_id } = req.query;
       const offset = (page - 1) * limit;
-      
-      let tenantId;
+
+      let transactionsQuery, rejectedQuery, tenantId;
+
       if (req.user.role === 'SUPER_ADMIN') {
-        tenantId = req.query.tenant_id; // Admin can view any tenant
+        // Super Admin: Get all transactions or filter by tenant_id if provided
+        if (tenant_id) {
+          // Filter by specific tenant
+          const appFilter = app_id ? `AND (b.verification_app_id = $2 OR c.verification_app_id = $2 OR ct.reference_type = 'CREDIT_APPROVAL')` : '';
+          transactionsQuery = `
+            SELECT DISTINCT
+              ct.id,
+              ct.tenant_id,
+              t.tenant_name,
+              ct.transaction_type,
+              ct.amount,
+              ct.balance_before,
+              ct.balance_after,
+              ct.description,
+              ct.reference_type,
+              ct.reference_id,
+              ct.created_at,
+              u.full_name as created_by_name,
+              NULL as rejection_reason,
+              NULL as justification
+            FROM credit_transactions ct
+            JOIN tenants t ON ct.tenant_id = t.id
+            LEFT JOIN users u ON ct.created_by = u.id
+            LEFT JOIN batches b ON ct.reference_id = b.id AND ct.reference_type = 'COUPON_CREATION'
+            LEFT JOIN coupons c ON ct.reference_id = c.id AND ct.reference_type IN ('COUPON_CREATION', 'COUPON_EDIT')
+            WHERE ct.tenant_id = $1 ${appFilter}
+          `;
+          rejectedQuery = `
+            SELECT
+              cr.id,
+              cr.tenant_id,
+              t.tenant_name,
+              'REJECTED' as transaction_type,
+              cr.requested_amount as amount,
+              NULL as balance_before,
+              NULL as balance_after,
+              'Credit Request Rejected' as description,
+              'CREDIT_REQUEST' as reference_type,
+              cr.id as reference_id,
+              cr.processed_at as created_at,
+              u.full_name as created_by_name,
+              cr.rejection_reason,
+              cr.justification
+            FROM credit_requests cr
+            JOIN tenants t ON cr.tenant_id = t.id
+            LEFT JOIN users u ON cr.processed_by = u.id
+            WHERE cr.tenant_id = $1 AND cr.status = 'rejected'
+          `;
+          tenantId = tenant_id;
+        } else {
+          // Get all tenants' transactions
+          const appFilter = app_id ? `WHERE (b.verification_app_id = $1 OR c.verification_app_id = $1 OR ct.reference_type = 'CREDIT_APPROVAL')` : '';
+          transactionsQuery = `
+            SELECT DISTINCT
+              ct.id,
+              ct.tenant_id,
+              t.tenant_name,
+              ct.transaction_type,
+              ct.amount,
+              ct.balance_before,
+              ct.balance_after,
+              ct.description,
+              ct.reference_type,
+              ct.reference_id,
+              ct.created_at,
+              u.full_name as created_by_name,
+              NULL as rejection_reason,
+              NULL as justification
+            FROM credit_transactions ct
+            JOIN tenants t ON ct.tenant_id = t.id
+            LEFT JOIN users u ON ct.created_by = u.id
+            LEFT JOIN batches b ON ct.reference_id = b.id AND ct.reference_type = 'COUPON_CREATION'
+            LEFT JOIN coupons c ON ct.reference_id = c.id AND ct.reference_type IN ('COUPON_CREATION', 'COUPON_EDIT')
+            ${appFilter}
+          `;
+          rejectedQuery = `
+            SELECT
+              cr.id,
+              cr.tenant_id,
+              t.tenant_name,
+              'REJECTED' as transaction_type,
+              cr.requested_amount as amount,
+              NULL as balance_before,
+              NULL as balance_after,
+              'Credit Request Rejected' as description,
+              'CREDIT_REQUEST' as reference_type,
+              cr.id as reference_id,
+              cr.processed_at as created_at,
+              u.full_name as created_by_name,
+              cr.rejection_reason,
+              cr.justification
+            FROM credit_requests cr
+            JOIN tenants t ON cr.tenant_id = t.id
+            LEFT JOIN users u ON cr.processed_by = u.id
+            WHERE cr.status = 'rejected'
+          `;
+          tenantId = null;
+        }
       } else {
-        tenantId = req.user.tenant_id; // Tenant can only view own
+        // Tenant Admin: Only their own transactions
+        tenantId = req.user.tenant_id;
+
+        if (!tenantId) {
+          return res.status(400).json({ error: 'Tenant ID not found in user context' });
+        }
+
+        const appFilter = app_id ? `AND (b.verification_app_id = $2 OR c.verification_app_id = $2 OR ct.reference_type = 'CREDIT_APPROVAL')` : '';
+        transactionsQuery = `
+          SELECT DISTINCT
+            ct.id,
+            ct.tenant_id,
+            t.tenant_name,
+            ct.transaction_type,
+            ct.amount,
+            ct.balance_before,
+            ct.balance_after,
+            ct.description,
+            ct.reference_type,
+            ct.reference_id,
+            ct.created_at,
+            u.full_name as created_by_name,
+            NULL as rejection_reason,
+            NULL as justification
+          FROM credit_transactions ct
+          JOIN tenants t ON ct.tenant_id = t.id
+          LEFT JOIN users u ON ct.created_by = u.id
+          LEFT JOIN batches b ON ct.reference_id = b.id AND ct.reference_type = 'COUPON_CREATION'
+          LEFT JOIN coupons c ON ct.reference_id = c.id AND ct.reference_type IN ('COUPON_CREATION', 'COUPON_EDIT')
+          WHERE ct.tenant_id = $1 ${appFilter}
+        `;
+        rejectedQuery = `
+          SELECT
+            cr.id,
+            cr.tenant_id,
+            t.tenant_name,
+            'REJECTED' as transaction_type,
+            cr.requested_amount as amount,
+            NULL as balance_before,
+            NULL as balance_after,
+            'Credit Request Rejected' as description,
+            'CREDIT_REQUEST' as reference_type,
+            cr.id as reference_id,
+            cr.processed_at as created_at,
+            u.full_name as created_by_name,
+            cr.rejection_reason,
+            cr.justification
+          FROM credit_requests cr
+          JOIN tenants t ON cr.tenant_id = t.id
+          LEFT JOIN users u ON cr.processed_by = u.id
+          WHERE cr.tenant_id = $1 AND cr.status = 'rejected'
+        `;
       }
 
-      if (!tenantId) {
-        return res.status(400).json({ error: 'Tenant ID is required' });
-      }
+      // Combine transactions and rejected requests using UNION ALL
+      // Calculate parameter positions based on what filters are active
+      let paramCount = 0;
+      if (tenantId) paramCount++; // $1 for tenant_id
+      if (app_id) paramCount++; // $2 for app_id (or $1 if no tenant_id)
 
-      let query = `
-        SELECT ct.*, t.tenant_name, u.full_name as created_by_name
-        FROM credit_transactions ct
-        JOIN tenants t ON ct.tenant_id = t.id
-        LEFT JOIN users u ON ct.created_by = u.id
-        WHERE ct.tenant_id = $1
+      const limitParam = `$${paramCount + 1}`;
+      const offsetParam = `$${paramCount + 2}`;
+
+      const combinedQuery = `
+        WITH combined_data AS (
+          ${transactionsQuery}
+          UNION ALL
+          ${rejectedQuery}
+        )
+        SELECT * FROM combined_data
+        ORDER BY created_at DESC
+        LIMIT ${limitParam} OFFSET ${offsetParam}
       `;
-      const params = [tenantId];
-      let paramIndex = 2;
 
-      if (type) {
-        query += ` AND ct.transaction_type = $${paramIndex}`;
-        params.push(type);
-        paramIndex++;
-      }
+      // Build query parameters array
+      const queryParams = [];
+      if (tenantId) queryParams.push(tenantId);
+      if (app_id) queryParams.push(app_id);
+      queryParams.push(parseInt(limit), parseInt(offset));
 
-      query += ` ORDER BY ct.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-      params.push(limit, offset);
+      const result = await db.query(combinedQuery, queryParams);
 
-      const result = await db.query(query, params);
+      // Get total count for pagination
+      const countQuery = `
+        SELECT COUNT(*) as total FROM (
+          ${transactionsQuery}
+          UNION ALL
+          ${rejectedQuery}
+        ) as combined_count
+      `;
 
-      res.json({ transactions: result.rows });
+      // Build count parameters array
+      const countParams = [];
+      if (tenantId) countParams.push(tenantId);
+      if (app_id) countParams.push(app_id);
+      const countResult = await db.query(countQuery, countParams);
+
+      res.json({
+        transactions: result.rows,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: parseInt(countResult.rows[0].total)
+        }
+      });
 
     } catch (error) {
       console.error('Get credit transactions error:', error);

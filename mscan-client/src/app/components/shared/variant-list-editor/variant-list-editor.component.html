@@ -1,0 +1,135 @@
+<div class="variant-list-editor">
+  <div class="editor-header">
+    <label class="editor-label">
+      {{ attribute.attribute_name }}
+      <span *ngIf="attribute.is_required" class="required">*</span>
+    </label>
+    <small *ngIf="attribute.help_text" class="help-text">{{ attribute.help_text }}</small>
+  </div>
+
+  <div class="variants-container" [formArray]="variantsForm">
+    <div
+      *ngFor="let variant of variants.controls; let i = index"
+      class="variant-card"
+      [formGroupName]="i"
+    >
+      <div class="variant-header">
+        <span class="variant-number">Variant {{ i + 1 }}</span>
+        <div class="variant-actions">
+          <button
+            type="button"
+            class="btn-icon btn-default"
+            [class.active]="variant.get('is_default')?.value"
+            (click)="setDefaultVariant(i)"
+            title="Set as default variant"
+            [disabled]="disabled"
+          >
+            <span class="icon">{{ variant.get('is_default')?.value ? '⭐' : '☆' }}</span>
+            Default
+          </button>
+          <button
+            type="button"
+            class="btn-icon btn-remove"
+            (click)="removeVariant(i)"
+            [disabled]="!canRemoveVariant || disabled"
+            title="Remove variant"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <div class="variant-fields">
+        <div
+          *ngFor="let field of variantFields"
+          class="form-group"
+          [class.full-width]="field.type === 'string' && field.attribute_key === 'sku'"
+        >
+          <label [for]="'variant-' + i + '-' + field.attribute_key">
+            {{ field.attribute_name }}
+            <span *ngIf="field.required" class="required">*</span>
+          </label>
+
+          <!-- Text Input -->
+          <input
+            *ngIf="field.type === 'string'"
+            type="text"
+            [id]="'variant-' + i + '-' + field.attribute_key"
+            [formControlName]="field.attribute_key"
+            [placeholder]="field.placeholder || ''"
+            class="form-input"
+            [class.input-error]="isFieldInvalid(i, field.attribute_key)"
+            [disabled]="disabled"
+          />
+
+          <!-- Number Input -->
+          <input
+            *ngIf="field.type === 'number'"
+            type="number"
+            [id]="'variant-' + i + '-' + field.attribute_key"
+            [formControlName]="field.attribute_key"
+            [placeholder]="field.placeholder || ''"
+            min="0"
+            step="0.01"
+            class="form-input"
+            [class.input-error]="isFieldInvalid(i, field.attribute_key)"
+            [disabled]="disabled"
+          />
+
+          <!-- Select Input -->
+          <select
+            *ngIf="field.type === 'select'"
+            [id]="'variant-' + i + '-' + field.attribute_key"
+            [formControlName]="field.attribute_key"
+            class="form-input"
+            [class.input-error]="isFieldInvalid(i, field.attribute_key)"
+            [disabled]="disabled"
+          >
+            <option value="">Select {{ field.attribute_name }}</option>
+            <option *ngFor="let option of field.options" [value]="option">
+              {{ option }}
+            </option>
+          </select>
+
+          <!-- Boolean Checkbox -->
+          <label
+            *ngIf="field.type === 'boolean'"
+            class="checkbox-label"
+          >
+            <input
+              type="checkbox"
+              [id]="'variant-' + i + '-' + field.attribute_key"
+              [formControlName]="field.attribute_key"
+              [disabled]="disabled"
+            />
+            <span>{{ field.attribute_name }}</span>
+          </label>
+
+          <!-- Error Message -->
+          <span *ngIf="isFieldInvalid(i, field.attribute_key)" class="error-message">
+            {{ getFieldError(i, field) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="variants.length === 0" class="empty-state">
+      <span class="icon">📦</span>
+      <p>No variants added yet</p>
+      <p class="small">Click "Add Variant" to create product variants</p>
+    </div>
+  </div>
+
+  <!-- Add Variant Button -->
+  <button
+    type="button"
+    class="btn-add-variant"
+    (click)="addVariant()"
+    [disabled]="!canAddVariant || disabled"
+  >
+    <span class="icon">+</span>
+    Add Variant
+    <span *ngIf="maxVariants" class="count-badge">({{ variants.length }}/{{ maxVariants }})</span>
+  </button>
+</div>

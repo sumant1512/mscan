@@ -1,0 +1,195 @@
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { TagService } from '../../services/tag.service';
+import { CreateTagRequest } from '../../models/templates.model';
+import { VerificationApp, VerificationAppsFacade } from '../../store/verification-apps';
+import { map } from 'rxjs/internal/operators/map';
+import { Observable } from 'rxjs/internal/Observable';
+import { tagsMaterialIcons } from './tags-icons';
+import { AppContextService } from '../../services/app-context.service';
+
+@Component({
+  selector: 'app-tag-form',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './tag-form.component.html',
+  styleUrls: ['./tag-form.component.css'],
+})
+export class TagFormComponent implements OnInit {
+  isEditMode = false;
+  tagId: string | null = null;
+  loading = false;
+  error: string | null = null;
+  availableApps$: Observable<VerificationApp[]>;
+
+  // Form model
+  tag = {
+    name: '',
+    description: '',
+    icon: 'label',
+    verification_app_id: '',
+    is_active: true,
+  };
+
+  // Icon picker
+  showIconPicker = false;
+  selectedIcon = 'label';
+  iconSearchTerm = '';
+
+  // Verification apps (would come from a service in production)
+  verificationApps: Array<{ id: string; name: string }> = [];
+
+  // Material Icons list (commonly used icons)
+  materialIcons = tagsMaterialIcons;
+
+  constructor(
+    private tagService: TagService,
+    private route: ActivatedRoute,
+    private router: Router,
+    private verificationAppsFacade: VerificationAppsFacade,
+    private appContextService: AppContextService,
+    private cdr: ChangeDetectorRef,
+  ) {
+    this.availableApps$ = this.verificationAppsFacade.allApps$;
+  }
+
+  ngOnInit(): void {
+    this.tagId = this.route.snapshot.paramMap.get('id');
+    this.isEditMode = !!this.tagId;
+
+    if (this.isEditMode && this.tagId) {
+      this.loadTag(this.tagId);
+    } else {
+      this.tag.verification_app_id = this.appContextService.getSelectedAppId() as string;
+    }
+  }
+
+  loadTag(id: string): void {
+    this.loading = true;
+    this.tagService.getTagById(id).subscribe({
+      next: (response) => {
+        const tag = response.data;
+        this.tag = {
+          name: tag.name,
+          description: tag.description || '',
+          icon: tag.icon || 'label',
+          verification_app_id: tag.verification_app_id,
+          is_active: tag.is_active,
+        };
+        this.selectedIcon = this.tag.icon;
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error loading tag:', error);
+        this.error = error.error?.message || 'Failed to load tag';
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  toggleIconPicker(): void {
+    this.showIconPicker = !this.showIconPicker;
+  }
+
+  selectIcon(icon: string): void {
+    this.selectedIcon = icon;
+    this.tag.icon = icon;
+    this.showIconPicker = false;
+  }
+
+  getFilteredIcons(): string[] {
+    if (!this.iconSearchTerm) {
+      return this.materialIcons;
+    }
+    return this.materialIcons.filter((icon) =>
+      icon.toLowerCase().includes(this.iconSearchTerm.toLowerCase()),
+    );
+  }
+
+  validateForm(): string | null {
+    if (!this.tag.name.trim()) {
+      return 'Tag name is required';
+    }
+
+    if (this.tag.name.length > 100) {
+      return 'Tag name must be 100 characters or less';
+    }
+
+    if (!this.tag.verification_app_id) {
+      return 'Please select a verification app';
+    }
+
+    if (this.tag.description && this.tag.description.length > 250) {
+      return 'Description must be 250 characters or less';
+    }
+
+    return null;
+  }
+
+  onSubmit(): void {
+    const validationError = this.validateForm();
+    if (validationError) {
+      this.error = validationError;
+      return;
+    }
+
+    this.loading = true;
+    this.error = null;
+
+    const request: CreateTagRequest = {
+      verification_app_id: this.tag.verification_app_id,
+      name: this.tag.name,
+      description: this.tag.description || undefined,
+      icon: this.tag.icon,
+      is_active: this.tag.is_active,
+    };
+
+    if (this.isEditMode && this.tagId) {
+      this.updateTag(request);
+    } else {
+      this.createTag(request);
+    }
+  }
+
+  createTag(request: CreateTagRequest): void {
+    this.tagService.createTag(request).subscribe({
+      next: (response) => {
+        alert('Tag created successfully');
+        this.router.navigate(['/tenant/tags']);
+      },
+      error: (error) => {
+        console.error('Error creating tag:', error);
+        this.error = error.error?.message || 'Failed to create tag';
+        this.loading = false;
+      },
+    });
+  }
+
+  updateTag(request: Partial<CreateTagRequest>): void {
+    if (!this.tagId) return;
+
+    this.tagService.updateTag(this.tagId, request).subscribe({
+      next: (response) => {
+        alert('Tag updated successfully');
+        this.router.navigate(['/tenant/tags']);
+      },
+      error: (error) => {
+        console.error('Error updating tag:', error);
+        this.error = error.error?.message || 'Failed to update tag';
+        this.loading = false;
+      },
+    });
+  }
+
+  cancel(): void {
+    this.router.navigate(['/tenant/tags']);
+  }
+
+  getRemainingChars(): number {
+    return 250 - (this.tag.description?.length || 0);
+  }
+}

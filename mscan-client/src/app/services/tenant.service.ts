@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '../../environments/environment';
-import { Tenant, PaginationParams } from '../models/rewards.model';
+import { PaginationParams } from '../models/rewards.model';
 import { SubdomainService } from './subdomain.service';
+import { Tenant } from '../models/tenant-admin.model';
 
 @Injectable({
   providedIn: 'root'
@@ -59,7 +59,7 @@ export class TenantService {
     return this.http.put<{ message: string; tenant: Tenant }>(`${this.apiUrl}/${id}`, tenant);
   }
 
-  toggleTenantStatus(id: number): Observable<{ message: string; tenant: Tenant }> {
+  toggleTenantStatus(id: string): Observable<{ message: string; tenant: Tenant }> {
     return this.http.patch<{ message: string; tenant: Tenant }>(
       `${this.apiUrl}/${id}/toggle-status`,
       {}

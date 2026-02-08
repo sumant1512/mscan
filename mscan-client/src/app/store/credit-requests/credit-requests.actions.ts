@@ -1,0 +1,81 @@
+/**
+ * Credit Requests Actions
+ */
+
+import { createAction, props } from '@ngrx/store';
+import { CreditRequest } from '../../models/rewards.model';
+
+// Load Actions
+export const loadPendingRequests = createAction(
+  '[Credit Requests] Load Pending Requests'
+);
+
+export const loadApprovedRequests = createAction(
+  '[Credit Requests] Load Approved Requests'
+);
+
+export const loadRejectedRequests = createAction(
+  '[Credit Requests] Load Rejected Requests'
+);
+
+export const loadAllRequests = createAction(
+  '[Credit Requests] Load All Requests'
+);
+
+// Success Actions
+export const loadPendingRequestsSuccess = createAction(
+  '[Credit Requests] Load Pending Requests Success',
+  props<{ requests: CreditRequest[] }>()
+);
+
+export const loadApprovedRequestsSuccess = createAction(
+  '[Credit Requests] Load Approved Requests Success',
+  props<{ requests: CreditRequest[] }>()
+);
+
+export const loadRejectedRequestsSuccess = createAction(
+  '[Credit Requests] Load Rejected Requests Success',
+  props<{ requests: CreditRequest[] }>()
+);
+
+// Failure Actions
+export const loadRequestsFailure = createAction(
+  '[Credit Requests] Load Requests Failure',
+  props<{ error: string }>()
+);
+
+// Approve Request
+export const approveRequest = createAction(
+  '[Credit Requests] Approve Request',
+  props<{ id: number }>()
+);
+
+export const approveRequestSuccess = createAction(
+  '[Credit Requests] Approve Request Success',
+  props<{ id: number }>()
+);
+
+export const approveRequestFailure = createAction(
+  '[Credit Requests] Approve Request Failure',
+  props<{ error: string }>()
+);
+
+// Reject Request
+export const rejectRequest = createAction(
+  '[Credit Requests] Reject Request',
+  props<{ id: number; reason: string }>()
+);
+
+export const rejectRequestSuccess = createAction(
+  '[Credit Requests] Reject Request Success',
+  props<{ id: number }>()
+);
+
+export const rejectRequestFailure = createAction(
+  '[Credit Requests] Reject Request Failure',
+  props<{ error: string }>()
+);
+
+export const clearError = createAction(
+  '[Credit Requests] Clear Error'
+);

@@ -360,10 +360,112 @@ const sendTenantStatusChangeEmail = async (email, companyName, isActive) => {
   }
 };
 
+/**
+ * Send Tenant Admin Welcome Email
+ */
+const sendTenantAdminWelcomeEmail = async (email, fullName, tenant) => {
+  if (!transporter) {
+    console.log(`\n📧 Welcome email would be sent to Tenant Admin: ${email} for ${tenant.name}\n`);
+    return true;
+  }
+
+  try {
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+    const baseDomain = process.env.DOMAIN_BASE || 'localhost';
+    const port = process.env.NODE_ENV === 'production' ? '' : ':4200';
+    const loginUrl = `${protocol}://${tenant.subdomain}.${baseDomain}${port}`;
+
+    const mailOptions = {
+      from: process.env.EMAIL_FROM,
+      to: email,
+      subject: `Welcome to MScan - You're now a Tenant Admin for ${tenant.name}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #007bff; color: white; padding: 30px; text-align: center; border-radius: 5px 5px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
+            .info-box { background: white; padding: 20px; border-left: 4px solid #007bff; margin: 20px 0; }
+            .btn { 
+              display: inline-block;
+              background: #007bff; 
+              color: white; 
+              padding: 12px 30px; 
+              text-decoration: none; 
+              border-radius: 5px;
+              margin: 20px 0;
+            }
+            .capabilities { background: white; padding: 20px; margin: 20px 0; border-radius: 5px; }
+            .capabilities li { margin: 10px 0; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🎉 Welcome to MScan!</h1>
+              <p>You're now a Tenant Admin</p>
+            </div>
+            <div class="content">
+              <p>Hi ${fullName},</p>
+              
+              <p>You've been added as a <strong>Tenant Admin</strong> for <strong>${tenant.name}</strong> on MScan.</p>
+              
+              <div class="info-box">
+                <h3>📍 Your Login Details:</h3>
+                <p><strong>URL:</strong> <a href="${loginUrl}">${loginUrl}</a></p>
+                <p><strong>Email:</strong> ${email}</p>
+                <p style="margin-top: 15px;">Please use the "Forgot Password" link on the login page to set your password.</p>
+              </div>
+
+              <div class="capabilities">
+                <h3>✨ As a Tenant Admin, you can:</h3>
+                <ul>
+                  <li>✓ Create and manage coupons and batches</li>
+                  <li>✓ Manage products and templates</li>
+                  <li>✓ View analytics and scan reports</li>
+                  <li>✓ Configure tenant settings</li>
+                  <li>✓ Manage tenant users</li>
+                  <li>✓ Request additional credits</li>
+                </ul>
+              </div>
+
+              <div style="text-align: center;">
+                <a href="${loginUrl}" class="btn">Login to Dashboard →</a>
+              </div>
+
+              <p style="margin-top: 30px;">If you have any questions or need assistance, please contact support.</p>
+              
+              <p>Best regards,<br>The MScan Team</p>
+            </div>
+            <div class="footer">
+              <p>This is an automated message, please do not reply.</p>
+              <p>© ${new Date().getFullYear()} MScan. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`📧 Tenant Admin welcome email sent to ${email}:`, info.messageId);
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to send Tenant Admin welcome email:', error.message);
+    console.log(`\n📧 Tenant Admin welcome email for ${email} (tenant: ${tenant.name})\n`);
+    throw error; // Throw to let caller know it failed
+  }
+};
+
 module.exports = {
   sendOTPEmail,
   sendWelcomeEmail,
   sendCreditApprovalEmail,
   sendCreditRejectionEmail,
-  sendTenantStatusChangeEmail
+  sendTenantStatusChangeEmail,
+  sendTenantAdminWelcomeEmail
 };

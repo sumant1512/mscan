@@ -4,33 +4,33 @@
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
+  padding: 1.2500rem;
 }
 
 .login-card {
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  border-radius: 0.7500rem;
+  box-shadow: 0 0.6250rem 2.5000rem rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 450px;
-  padding: 40px;
+  max-width: 28.1250rem;
+  padding: 2.5000rem;
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 1.8750rem;
 }
 
 .login-header h1 {
   color: #667eea;
-  font-size: 32px;
-  margin: 0 0 8px 0;
+  font-size: 2rem;
+  margin: 0 0 0.5000rem 0;
   font-weight: 700;
 }
 
 .login-header p {
   color: #666;
-  font-size: 14px;
+  font-size: 0.8750rem;
   margin: 0;
 }
 
@@ -38,56 +38,56 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-top: 16px;
-  padding: 10px 16px;
+  gap: 0.5000rem;
+  margin-top: 1rem;
+  padding: 0.6250rem 1rem;
   background: rgba(102, 126, 234, 0.1);
-  border-radius: 8px;
+  border-radius: 0.5000rem;
 }
 
 .subdomain-info .material-icons {
-  font-size: 18px;
+  font-size: 1.1250rem;
   color: #667eea;
 }
 
 .subdomain-text {
   color: #667eea;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 0.8750rem;
 }
 
 .root-domain-info {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-top: 16px;
-  padding: 10px 16px;
+  gap: 0.5000rem;
+  margin-top: 1rem;
+  padding: 0.6250rem 1rem;
   background: rgba(255, 215, 0, 0.1);
-  border-radius: 8px;
+  border-radius: 0.5000rem;
 }
 
 .root-domain-info .material-icons {
-  font-size: 18px;
+  font-size: 1.1250rem;
   color: #f59e0b;
 }
 
 .admin-text {
   color: #f59e0b;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 0.8750rem;
 }
 
 .login-form h2 {
   color: #333;
-  font-size: 24px;
-  margin: 0 0 8px 0;
+  font-size: 1.5000rem;
+  margin: 0 0 0.5000rem 0;
 }
 
 .subtitle {
   color: #666;
-  font-size: 14px;
-  margin: 0 0 24px 0;
+  font-size: 0.8750rem;
+  margin: 0 0 1.5000rem 0;
 }
 
 .subtitle strong {
@@ -95,23 +95,23 @@
 }
 
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 1.2500rem;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 0.5000rem;
   color: #333;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 0.8750rem;
 }
 
 .form-group input {
   width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 16px;
+  padding: 0.7500rem 1rem;
+  border: 0.1250rem solid #e0e0e0;
+  border-radius: 0.5000rem;
+  font-size: 1rem;
   transition: all 0.3s;
   box-sizing: border-box;
 }
@@ -128,10 +128,10 @@
 .countdown {
   background: #e3f2fd;
   color: #1976d2;
-  padding: 12px;
-  border-radius: 8px;
+  padding: 0.7500rem;
+  border-radius: 0.5000rem;
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 1.2500rem;
   font-weight: 500;
 }
 
@@ -142,20 +142,20 @@
 
 .btn-primary {
   width: 100%;
-  padding: 14px;
+  padding: 0.8750rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 16px;
+  border-radius: 0.5000rem;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
 }
 
 .btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+  transform: translateY(-0.1250rem);
+  box-shadow: 0 0.3125rem 0.9375rem rgba(102, 126, 234, 0.4);
 }
 
 .btn-primary:disabled {
@@ -166,16 +166,16 @@
 .form-actions {
   display: flex;
   justify-content: space-between;
-  margin-top: 16px;
+  margin-top: 1rem;
 }
 
 .btn-text {
   background: none;
   border: none;
   color: #667eea;
-  font-size: 14px;
+  font-size: 0.8750rem;
   cursor: pointer;
-  padding: 8px;
+  padding: 0.5000rem;
   transition: color 0.3s;
 }
 
@@ -191,26 +191,26 @@
 
 .error-message {
   color: #f44336;
-  font-size: 12px;
-  margin-top: 4px;
+  font-size: 0.7500rem;
+  margin-top: 0.2500rem;
 }
 
 .success-message {
   background: #e8f5e9;
   color: #2e7d32;
-  padding: 12px;
-  border-radius: 8px;
+  padding: 0.7500rem;
+  border-radius: 0.5000rem;
   text-align: center;
-  margin-top: 16px;
+  margin-top: 1rem;
   font-weight: 500;
 }
 
 .error-message-box {
   background: #ffebee;
   color: #c62828;
-  padding: 12px;
-  border-radius: 8px;
+  padding: 0.7500rem;
+  border-radius: 0.5000rem;
   text-align: center;
-  margin-top: 16px;
+  margin-top: 1rem;
   font-weight: 500;
 }

@@ -1,18 +1,23 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '../../environments/environment';
 import { Product } from '../models/rewards.model';
+import { SubdomainService } from './subdomain.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProductsService {
-  private apiUrl = `${environment.apiUrl}/products`;
+  private get apiUrl(): string {
+    return `${this.subdomainService.getApiBaseUrl()}/products`;
+  }
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private subdomainService: SubdomainService
+  ) {}
 
-  getProducts(params?: { page?: number; limit?: number; search?: string; category?: string }): Observable<any> {
+  getProducts(params?: { page?: number; limit?: number; search?: string; app_id?: string }): Observable<any> {
     return this.http.get(this.apiUrl, { params: params as any });
   }
 

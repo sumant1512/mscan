@@ -435,4 +435,105 @@ export class PageHelper {
     
     throw new Error(`Action button "${actionText}" not found in row "${rowText}"`);
   }
+
+  /**
+   * Login as Tenant User
+   * Similar to tenant admin login but for regular tenant users
+   */
+  async loginAsTenantUser(email: string, tenantId: string) {
+    console.log(`🔐 Starting Tenant User login for ${email}...`);
+    
+    // Get tenant subdomain
+    await this.dbHelper.connect();
+    const tenantResult = await this.dbHelper.query(
+      'SELECT subdomain FROM tenants WHERE id = $1',
+      [tenantId]
+    );
+    
+    if (tenantResult.rows.length === 0) {
+      await this.dbHelper.disconnect();
+      throw new Error(`Tenant not found: ${tenantId}`);
+    }
+    
+    const subdomain = tenantResult.rows[0].subdomain;
+    const tenantUrl = `http://${subdomain}.${TEST_CONFIG.domain}:${TEST_CONFIG.port}`;
+    
+    await this.page.goto(tenantUrl + '/login');
+    await this.page.waitForLoadState('networkidle');
+
+    // Enter email
+    console.log(`📧 Entering email: ${email}`);
+    await this.page.fill('input#email', email);
+    await this.page.click('button:has-text("Send OTP")');
+
+    // Wait for loading to complete
+    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForTimeout(2000);
+
+    // Fetch OTP from database
+    const actualOTP = await this.dbHelper.getLatestOTP(email);
+    if (!actualOTP) {
+      await this.dbHelper.disconnect();
+      throw new Error('Failed to retrieve OTP from database');
+    }
+
+    console.log(`🔢 Entering OTP: ${actualOTP}`);
+    await this.page.fill('input#otp', actualOTP);
+    await this.page.click('button:has-text("Verify & Login")');
+
+    // Wait for dashboard
+    await this.page.waitForURL('**/dashboard', { 
+      timeout: TEST_CONFIG.timeouts.navigation 
+    });
+
+    await this.dbHelper.disconnect();
+    console.log('🎉 Tenant User login successful!');
+    await expect(this.page).toHaveURL(/.*dashboard/);
+  }
+}
+
+/**
+ * Standalone helper functions for backward compatibility
+ */
+
+export async function loginAsSuperAdmin(page: Page) {
+  const authHelper = new AuthHelper(page);
+  await authHelper.loginAsSuperAdmin();
+}
+
+export async function loginAsTenantAdmin(page: Page, tenantId?: string) {
+  const authHelper = new AuthHelper(page);
+  
+  if (tenantId) {
+    // Custom tenant login - need to get subdomain from database
+    const dbHelper = new DatabaseHelper();
+    await dbHelper.connect();
+    const result = await dbHelper.query(
+      'SELECT subdomain FROM tenants WHERE id = $1',
+      [tenantId]
+    );
+    await dbHelper.disconnect();
+    
+    if (result.rows.length === 0) {
+      throw new Error(`Tenant not found: ${tenantId}`);
+    }
+    
+    const subdomain = result.rows[0].subdomain;
+    const customConfig = {
+      baseUrl: `http://${subdomain}.${TEST_CONFIG.domain}:${TEST_CONFIG.port}`,
+      email: TEST_CONFIG.tenant1.email, // Will need to be provided or queried
+      password: TEST_CONFIG.tenant1.password,
+      tenantId: tenantId
+    };
+    
+    await authHelper.loginAsTenantAdmin(customConfig);
+  } else {
+    // Use default tenant1 config
+    await authHelper.loginAsTenantAdmin(TEST_CONFIG.tenant1);
+  }
+}
+
+export async function loginAsTenantUser(page: Page, email: string, tenantId: string) {
+  const authHelper = new AuthHelper(page);
+  await authHelper.loginAsTenantUser(email, tenantId);
 }

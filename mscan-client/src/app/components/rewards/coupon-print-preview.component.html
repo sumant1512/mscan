@@ -1,0 +1,43 @@
+<!-- Print Preview Modal -->
+<div class="modal-overlay printing-modal-wrapper" *ngIf="show" (click)="handleCancel()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <!-- Modal Header (hidden during print) -->
+    <div class="modal-header no-print">
+      <h2>Print Preview</h2>
+      <button class="close-btn" (click)="handleCancel()" aria-label="Close">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+
+    <!-- Coupon Grid (printable content) -->
+    <div class="modal-body">
+      <div class="print-info no-print">
+        <p>Ready to print {{ coupons.length }} coupon{{ coupons.length !== 1 ? 's' : '' }}</p>
+        <p class="hint">Click "Print" to open the print dialog</p>
+      </div>
+
+      <div class="coupons-grid">
+        <div class="coupon-card" *ngFor="let coupon of coupons; let i = index">
+          <app-coupon-card
+            [amount]="getDiscountDisplay(coupon)"
+            [brandLogo]="'https://palspaint.com/logo/header_logo.webp'"
+            [productName]="coupon?.product_name"
+            [qrSrc]="coupon?.qr_code_url"
+          ></app-coupon-card>
+        </div>
+      </div>
+
+      <!-- Modal Footer (hidden during print) -->
+      <div class="modal-footer no-print">
+        <button class="btn btn-secondary" (click)="handleCancel()">
+          <span class="material-icons">close</span>
+          Cancel
+        </button>
+        <button class="btn btn-primary" (click)="handlePrint()">
+          <span class="material-icons">print</span>
+          Print
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

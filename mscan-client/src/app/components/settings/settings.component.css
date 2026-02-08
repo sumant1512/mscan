@@ -1,35 +1,35 @@
 .settings-container {
-  padding: 24px;
-  max-width: 1200px;
+  padding: 1.5000rem;
+  max-width: 75rem;
 }
 
 .settings-header {
-  margin-bottom: 32px;
+  margin-bottom: 2rem;
 }
 
 .settings-header h1 {
-  font-size: 28px;
+  font-size: 1.7500rem;
   font-weight: 600;
   color: #1a1a2e;
-  margin: 0 0 8px 0;
+  margin: 0 0 0.5000rem 0;
 }
 
 .settings-header p {
-  font-size: 14px;
+  font-size: 0.8750rem;
   color: #666;
   margin: 0;
 }
 
 .settings-content {
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 0.5000rem;
+  box-shadow: 0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
 
 .settings-section {
-  padding: 24px;
-  border-bottom: 1px solid #e5e5e5;
+  padding: 1.5000rem;
+  border-bottom: 0.0625rem solid #e5e5e5;
 }
 
 .settings-section:last-of-type {
@@ -37,26 +37,26 @@
 }
 
 .settings-section h2 {
-  font-size: 18px;
+  font-size: 1.1250rem;
   font-weight: 600;
   color: #1a1a2e;
-  margin: 0 0 20px 0;
+  margin: 0 0 1.2500rem 0;
 }
 
 .settings-group {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1rem;
 }
 
 .setting-item {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.5000rem;
 }
 
 .setting-item label {
-  font-size: 14px;
+  font-size: 0.8750rem;
   font-weight: 500;
   color: #333;
 }
@@ -64,7 +64,7 @@
 .checkbox-item {
   flex-direction: row;
   align-items: center;
-  gap: 12px;
+  gap: 0.7500rem;
 }
 
 .checkbox-item label {
@@ -73,18 +73,18 @@
 }
 
 .form-input {
-  padding: 10px 14px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 14px;
+  padding: 0.6250rem 0.8750rem;
+  border: 0.0625rem solid #d1d5db;
+  border-radius: 0.3750rem;
+  font-size: 0.8750rem;
   transition: all 0.2s;
-  max-width: 400px;
+  max-width: 25rem;
 }
 
 .form-input:focus {
   outline: none;
   border-color: #00d4ff;
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+  box-shadow: 0 0 0 0.1875rem rgba(0, 212, 255, 0.1);
 }
 
 .form-input:disabled {
@@ -93,46 +93,46 @@
 }
 
 .form-checkbox {
-  width: 18px;
-  height: 18px;
+  width: 1.1250rem;
+  height: 1.1250rem;
   cursor: pointer;
 }
 
 .settings-actions {
-  padding: 24px;
+  padding: 1.5000rem;
   background: #f9fafb;
   display: flex;
   justify-content: flex-end;
 }
 
 .btn-save {
-  padding: 12px 24px;
+  padding: 0.7500rem 1.5000rem;
   background: #00d4ff;
   color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 14px;
+  border-radius: 0.3750rem;
+  font-size: 0.8750rem;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5000rem;
   transition: all 0.2s;
 }
 
 .btn-save:hover {
   background: #00b8e6;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 212, 255, 0.3);
+  transform: translateY(-0.0625rem);
+  box-shadow: 0 0.2500rem 0.5000rem rgba(0, 212, 255, 0.3);
 }
 
 .btn-save .material-icons {
-  font-size: 18px;
+  font-size: 1.1250rem;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 48rem) {
   .settings-container {
-    padding: 16px;
+    padding: 1rem;
   }
 
   .form-input {

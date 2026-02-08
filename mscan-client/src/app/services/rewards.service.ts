@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '../../environments/environment';
 import { VerificationApp, Coupon, Scan, ScanAnalytics } from '../models/rewards.model';
 import { SubdomainService } from './subdomain.service';
 
@@ -24,10 +23,6 @@ export class RewardsService {
       `${this.apiUrl}/verification-apps`,
       app
     );
-  }
-
-  getVerificationApps(): Observable<{ apps: VerificationApp[] }> {
-    return this.http.get<{ apps: VerificationApp[] }>(`${this.apiUrl}/verification-apps`);
   }
 
   getVerificationAppById(id: string): Observable<{ app: VerificationApp }> {
@@ -97,9 +92,6 @@ export class RewardsService {
     return this.http.get<{ scans: Scan[] }>(`${this.apiUrl}/scans/history`, { params: httpParams });
   }
 
-  getScanAnalytics(): Observable<{ analytics: ScanAnalytics }> {
-    return this.http.get<{ analytics: ScanAnalytics }>(`${this.apiUrl}/scans/analytics`);
-  }
 
   // Coupon lifecycle operations
   activateCouponRange(data: { from_reference: string; to_reference: string; status_filter?: string; activation_note?: string }): Observable<{ success: boolean; activated_count: number; skipped_count: number; message: string; activated_codes: string[]; activated_references: string[] }> {
@@ -127,6 +119,13 @@ export class RewardsService {
     return this.http.post<{ success: boolean; printed_count: number; message: string; coupons: any[] }>(
       `${this.apiUrl}/coupons/bulk-print`,
       { coupon_ids: couponIds }
+    );
+  }
+
+  bulkActivateCoupons(couponIds: string[], activationNote?: string): Observable<{ success: boolean; activated_count: number; skipped_count: number; message: string; activated_coupons: any[] }> {
+    return this.http.post<{ success: boolean; activated_count: number; skipped_count: number; message: string; activated_coupons: any[] }>(
+      `${this.apiUrl}/coupons/bulk-activate`,
+      { coupon_ids: couponIds, activation_note: activationNote }
     );
   }
 

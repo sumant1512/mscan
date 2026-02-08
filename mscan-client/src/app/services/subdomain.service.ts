@@ -84,18 +84,22 @@ export class SubdomainService {
    */
   getApiBaseUrl(): string {
     if (!environment.enableSubdomainRouting) {
+      console.log('[SubdomainService] Subdomain routing disabled, using default API URL:', environment.apiUrl);
       return environment.apiUrl;
     }
-    
+
     const subdomain = this.getCurrentSubdomain();
     if (!subdomain) {
+      console.log('[SubdomainService] No subdomain detected, using default API URL:', environment.apiUrl);
       return environment.apiUrl;
     }
-    
+
     const protocol = window.location.protocol;
     const port = window.location.port ? `:${window.location.port.replace('4200', '3000')}` : ':3000';
     const baseDomain = environment.domainBase;
-    
-    return `${protocol}//${subdomain}.${baseDomain}${port}/api`;
+    const apiUrl = `${protocol}//${subdomain}.${baseDomain}${port}/api`;
+
+    console.log('[SubdomainService] Subdomain detected:', subdomain, '| API URL:', apiUrl);
+    return apiUrl;
   }
 }

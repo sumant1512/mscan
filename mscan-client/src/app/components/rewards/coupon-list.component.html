@@ -2,14 +2,15 @@
   <div class="header">
     <h2>My Coupons</h2>
     <div class="header-actions">
-      <button (click)="openRangeActivationModal()" class="btn-secondary">🎯 Activate Range</button>
-      <button (click)="openDeactivationModal()" class="btn-warning">🚫 Deactivate Range</button>
-      <button (click)="createCoupon()" class="btn-primary">+ Create Coupon</button>
+      <button *ngIf="canEditCoupon" (click)="openRangeActivationModal()" class="btn-secondary">🎯 Activate Range</button>
+      <button *ngIf="canEditCoupon" (click)="openDeactivationModal()" class="btn-warning">🚫 Deactivate Range</button>
+      <button *ngIf="canCreateCoupon" (click)="createCoupon()" class="btn-primary">+ Create Coupon</button>
+      <span *ngIf="!canCreateCoupon && !canEditCoupon" class="read-only-badge">Read-Only Access</span>
     </div>
   </div>
 
   <!-- Bulk Actions Toolbar -->
-  <div class="bulk-actions-bar" *ngIf="getSelectedCount() > 0">
+  <div class="bulk-actions-bar" *ngIf="getSelectedCount() > 0 && canEditCoupon">
     <div class="bulk-info">
       <span class="selection-count">{{ getSelectedCount() }} selected</span>
       <button (click)="clearSelection()" class="btn-link">Clear</button>
@@ -32,11 +33,6 @@
       <button (click)="onSearch()" class="btn-search">Search</button>
     </div>
 
-    <select [(ngModel)]="appFilter" (change)="onFilterChange()" class="filter-select">
-      <option value="all">All Apps</option>
-      <option *ngFor="let app of verificationApps" [value]="app.id">{{ app.app_name }}</option>
-    </select>
-
     <select [(ngModel)]="statusFilter" (change)="onFilterChange()" class="filter-select">
       <option value="all">All Status</option>
       <option value="draft">📝 Draft</option>
@@ -52,7 +48,7 @@
   <div *ngIf="error" class="error">{{ error }}</div>
 
   <!-- Selection Controls -->
-  <div *ngIf="!loading && !error && coupons.length > 0" class="selection-controls">
+  <div *ngIf="!loading && !error && coupons.length > 0 && canEditCoupon" class="selection-controls">
     <label class="checkbox-label">
       <input type="checkbox" [checked]="selectAll" (change)="toggleSelectAll()" />
       <span>Select All</span>
@@ -68,7 +64,7 @@
     >
       <div class="card-main-line" (click)="toggleCoupon(coupon.id)" style="cursor: pointer">
         <!-- Checkbox -->
-        <div class="card-checkbox" (click)="$event.stopPropagation()">
+        <div class="card-checkbox" (click)="$event.stopPropagation()" *ngIf="canEditCoupon">
           <input
             type="checkbox"
             [checked]="isCouponSelected(coupon.id)"
@@ -156,7 +152,7 @@
           <button
             (click)="markAsPrinted(coupon)"
             class="btn-action btn-align"
-            *ngIf="coupon.status === 'draft'"
+            *ngIf="coupon.status === 'draft' && canEditCoupon"
           >
             <span class="material-icons me-1">print</span>
             Mark Printed
@@ -164,13 +160,14 @@
           <button
             (click)="toggleStatus(coupon)"
             class="btn-action btn-align"
-            *ngIf="coupon.status === 'active' || coupon.status === 'inactive'"
+            *ngIf="(coupon.status === 'active' || coupon.status === 'inactive') && canEditCoupon"
           >
             <span class="material-icons me-1">{{
               coupon.status === 'active' ? 'pause' : 'play_arrow'
             }}</span>
             {{ coupon.status === 'active' ? 'Deactivate' : 'Activate' }}
           </button>
+          <span *ngIf="!canEditCoupon" class="info-text">View-only mode</span>
         </div>
       </div>
     </div>
@@ -393,3 +390,4 @@
     </div>
   </div>
 </div>
+

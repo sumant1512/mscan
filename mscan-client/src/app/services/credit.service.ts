@@ -34,12 +34,13 @@ export class CreditService {
     return this.http.get<CreditBalance>(`${this.apiUrl}/balance`);
   }
 
-  getTransactions(params?: { page?: number; limit?: number; type?: string; tenant_id?: string }): Observable<{ transactions: CreditTransaction[] }> {
+  getTransactions(params?: { page?: number; limit?: number; type?: string; tenant_id?: string; app_id?: string }): Observable<{ transactions: CreditTransaction[] }> {
     let httpParams = new HttpParams();
     if (params?.page) httpParams = httpParams.set('page', params.page.toString());
     if (params?.limit) httpParams = httpParams.set('limit', params.limit.toString());
     if (params?.type) httpParams = httpParams.set('type', params.type);
     if (params?.tenant_id) httpParams = httpParams.set('tenant_id', params.tenant_id);
+    if (params?.app_id) httpParams = httpParams.set('app_id', params.app_id);
 
     return this.http.get<{ transactions: CreditTransaction[] }>(
       `${this.apiUrl}/transactions`,
@@ -49,6 +50,7 @@ export class CreditService {
 
   // Super Admin operations
   getAllRequests(status: string = 'pending', page: number = 1, limit: number = 20): Observable<{ requests: CreditRequest[]; pagination: any }> {
+    console.log('Fetching all requests with status:', status);
     const params = new HttpParams()
       .set('status', status)
       .set('page', page.toString())

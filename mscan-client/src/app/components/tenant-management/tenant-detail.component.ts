@@ -2,8 +2,8 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TenantService } from '../../services/tenant.service';
-import { Tenant } from '../../models/rewards.model';
 import { finalize } from 'rxjs/operators';
+import { Tenant } from '../../models/tenant-admin.model';
 
 @Component({
   selector: 'app-tenant-detail',

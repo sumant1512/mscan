@@ -173,6 +173,111 @@ Response:
 }
 ```
 
+## Permission-Based Authorization
+
+MScan implements granular permission-based access control. All authenticated endpoints check for specific permissions.
+
+### Permission System Overview
+
+- **SUPER_ADMIN**: Bypasses all permission checks (full system access)
+- **TENANT_ADMIN**: Full CRUD permissions for all tenant resources
+- **TENANT_USER**: Read-only permissions (view-only access)
+
+### Permissions in JWT Token
+
+User permissions are included in the JWT token payload:
+
+```json
+{
+  "userId": "uuid",
+  "role": "TENANT_ADMIN",
+  "tenantId": "uuid",
+  "permissions": [
+    "create_app",
+    "edit_app",
+    "delete_app",
+    "view_apps",
+    "create_coupon",
+    "edit_coupon",
+    // ... more permissions
+  ]
+}
+```
+
+### Permission Error Response
+
+When a user lacks required permission, endpoints return:
+
+```json
+{
+  "success": false,
+  "message": "Insufficient permissions to perform this action",
+  "code": "PERMISSION_DENIED",
+  "details": {
+    "required": ["create_coupon"],
+    "mode": "any"
+  }
+}
+```
+
+### Common Permissions
+
+#### Verification App Permissions
+- `create_app` - Create verification apps
+- `edit_app` - Modify verification apps
+- `delete_app` - Delete verification apps
+- `view_apps` - View verification apps (read-only)
+
+#### Coupon Permissions
+- `create_coupon` - Create coupons
+- `edit_coupon` - Modify/activate/deactivate coupons
+- `delete_coupon` - Delete coupons
+- `view_coupons` - View coupons (read-only)
+- `create_batch` - Create coupon batches
+- `edit_batch` - Modify batches
+- `view_batches` - View batches
+
+#### Product & Category Permissions
+- `create_product` / `edit_product` / `delete_product` / `view_products`
+- `create_category` / `edit_category` / `delete_category` / `view_categories`
+
+#### Credit Permissions
+- `request_credits` - Request credit top-ups (TENANT_ADMIN only)
+- `view_credit_balance` - View credit balance
+- `view_credit_transactions` - View credit history
+
+#### Analytics Permissions
+- `view_analytics` - Access analytics dashboard
+- `view_scans` - View scan history
+
+#### User Management Permissions
+- `create_tenant_user` / `edit_tenant_user` / `delete_tenant_user`
+- `assign_permissions` - Assign permissions to users
+- `view_tenant_users` / `view_permissions` - View users and permissions
+
+**For complete permission list, see:** `mscan-server/PERMISSIONS.md`
+
+### Testing Permissions
+
+Use the `/auth/context` endpoint to see current user's permissions:
+
+```bash
+GET /auth/context
+Authorization: Bearer {accessToken}
+
+Response:
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "role": "TENANT_ADMIN",
+    "permissions": ["create_app", "edit_app", ...],
+    "tenant": { ... }
+  }
+}
+```
+
 ## User Management (Super Admin Only)
 
 ### Create Customer (Tenant)
@@ -596,6 +701,635 @@ Response (Subdomain Mismatch):
 
 ---
 
+---
+
+## Multi-App Architecture (Verification Apps)
+
+### Overview
+Tenants can create multiple verification applications (mobile apps, web apps) with isolated data but shared user credits. Each app gets a unique API key for external integration.
+
+**Key Features:**
+- Isolated categories, products, and coupons per app
+- Shared user credits across all tenant apps
+- Secure API key authentication for external apps
+- "All Apps" vs single app filtering in dashboard
+
+### Internal APIs (Tenant Dashboard)
+
+#### Get Verification Apps
+```bash
+GET /api/rewards/verification-apps
+Authorization: Bearer {accessToken}
+
+Response:
+{
+  "success": true,
+  "data": [
+    {
+      "verification_app_id": 1,
+      "app_name": "Mobile App",
+      "code": "mobile-app-1",
+      "api_key": "a1b2c3...",
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### Create Verification App
+**Required Permission:** `create_app`
+
+```bash
+POST /api/rewards/verification-apps
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+
+{
+  "app_name": "Mobile App"
+}
+
+Response:
+{
+  "success": true,
+  "message": "Verification app created successfully",
+  "data": {
+    "verification_app_id": 1,
+    "app_name": "Mobile App",
+    "code": "mobile-app-1",
+    "api_key": "64-character-hex-string",
+    "is_active": true
+  }
+}
+```
+
+#### Regenerate API Key
+**Required Permission:** `edit_app`
+
+```bash
+POST /api/rewards/verification-apps/:id/regenerate-api-key
+Authorization: Bearer {accessToken}
+
+Response:
+{
+  "success": true,
+  "message": "API key regenerated successfully",
+  "data": {
+    "verification_app_id": 1,
+    "api_key": "new-64-character-hex-string"
+  }
+}
+```
+
+#### Toggle App Status
+**Required Permission:** `edit_app`
+
+```bash
+PATCH /api/rewards/verification-apps/:id/toggle-status
+Authorization: Bearer {accessToken}
+
+Response:
+{
+  "success": true,
+  "message": "App activated/deactivated successfully",
+  "data": {
+    "verification_app_id": 1,
+    "is_active": true
+  }
+}
+```
+
+#### Delete Verification App
+**Required Permission:** `delete_app`
+
+```bash
+DELETE /api/rewards/verification-apps/:id
+Authorization: Bearer {accessToken}
+
+Response:
+{
+  "success": true,
+  "message": "Verification app deleted successfully",
+  "stats": {
+    "categories_deleted": 5,
+    "products_deleted": 20,
+    "batches_affected": 3,
+    "coupons_affected": 100
+  }
+}
+```
+
+#### Get Categories (App-Filtered)
+```bash
+GET /api/categories?app_id=1
+Authorization: Bearer {accessToken}
+
+# app_id=1 returns only categories for app 1
+# Omit app_id to see all categories across all apps
+
+Response:
+{
+  "success": true,
+  "categories": [
+    {
+      "category_id": 1,
+      "category_name": "Electronics",
+      "verification_app_id": 1,
+      "app_name": "Mobile App"
+    }
+  ]
+}
+```
+
+#### Get Products (App-Filtered)
+```bash
+GET /api/products?app_id=1
+Authorization: Bearer {accessToken}
+
+Response:
+{
+  "success": true,
+  "products": [
+    {
+      "product_id": 1,
+      "product_name": "Headphones",
+      "points": 500,
+      "verification_app_id": 1,
+      "app_name": "Mobile App"
+    }
+  ]
+}
+```
+
+### User Credits API (Internal)
+
+#### Get User Credits
+```bash
+GET /api/user-credits/:userId
+Authorization: Bearer {accessToken}
+
+Response:
+{
+  "success": true,
+  "data": {
+    "user_id": 123,
+    "balance": 1500,
+    "created_at": "2024-01-01T00:00:00.000Z",
+    "updated_at": "2024-01-15T10:30:00.000Z"
+  }
+}
+```
+
+#### Add Credits (Admin)
+```bash
+POST /api/user-credits/:userId/add
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+
+{
+  "amount": 500,
+  "description": "Bonus credits",
+  "verification_app_id": 1
+}
+
+Response:
+{
+  "success": true,
+  "message": "Credits added successfully",
+  "data": {
+    "transaction_id": 1,
+    "user_id": 123,
+    "amount": 500,
+    "new_balance": 2000
+  }
+}
+```
+
+#### Deduct Credits (Admin)
+```bash
+POST /api/user-credits/:userId/deduct
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+
+{
+  "amount": 200,
+  "description": "Refund processing",
+  "verification_app_id": 1
+}
+
+Response:
+{
+  "success": true,
+  "message": "Credits deducted successfully",
+  "data": {
+    "transaction_id": 2,
+    "user_id": 123,
+    "amount": 200,
+    "new_balance": 1800
+  }
+}
+```
+
+#### Adjust Credits (Admin)
+```bash
+POST /api/user-credits/:userId/adjust
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+
+{
+  "amount": -100,
+  "reason": "Correction for double entry",
+  "verification_app_id": 1
+}
+
+Response:
+{
+  "success": true,
+  "message": "Credits adjusted successfully",
+  "data": {
+    "transaction_id": 3,
+    "user_id": 123,
+    "adjustment": -100,
+    "new_balance": 1700
+  }
+}
+```
+
+#### Get Credit Transactions
+```bash
+GET /api/user-credits/:userId/transactions?limit=50&offset=0
+Authorization: Bearer {accessToken}
+
+Response:
+{
+  "success": true,
+  "data": [
+    {
+      "transaction_id": 1,
+      "transaction_type": "earn",
+      "amount": 100,
+      "balance_after": 1700,
+      "description": "Earned from scanning",
+      "verification_app_id": 1,
+      "created_at": "2024-01-15T10:30:00.000Z"
+    }
+  ],
+  "pagination": {
+    "total": 25,
+    "limit": 50,
+    "offset": 0,
+    "hasMore": false
+  }
+}
+```
+
+#### Get Credit Stats
+```bash
+GET /api/user-credits/:userId/stats
+Authorization: Bearer {accessToken}
+
+Response:
+{
+  "success": true,
+  "data": {
+    "total_earned": 2500,
+    "total_spent": 800,
+    "current_balance": 1700,
+    "by_app": [
+      {
+        "verification_app_id": 1,
+        "app_name": "Mobile App",
+        "earned": 1500,
+        "spent": 500
+      }
+    ]
+  }
+}
+```
+
+### External App APIs
+
+**Authentication:** All external app endpoints require API key authentication via Bearer token.
+
+```
+Authorization: Bearer {api_key}
+```
+
+For complete external API documentation, see [EXTERNAL_APP_API.md](./EXTERNAL_APP_API.md)
+
+#### External Endpoints Summary
+- `GET /api/app/:appCode/categories` - Get app categories
+- `GET /api/app/:appCode/products` - Get app products
+- `GET /api/app/:appCode/users/:userId/credits` - Get user balance
+- `GET /api/app/:appCode/users/:userId/credit-transactions` - Transaction history
+- `POST /api/app/:appCode/scans` - Scan coupon and earn credits
+- `POST /api/app/:appCode/redeem` - Redeem credits for product
+
+**Example External Request:**
+```bash
+curl -X GET \
+  "https://tenant.mscan.com/api/app/mobile-app-1/categories" \
+  -H "Authorization: Bearer a1b2c3d4e5f6..."
+```
+
+---
+
+## Multi-App Architecture APIs
+
+### Verification Apps Management (Internal - Tenant Admin)
+
+#### Create Verification App
+```bash
+POST /api/rewards/verification-apps
+Authorization: Bearer {tenant_jwt}
+Content-Type: application/json
+
+{
+  "app_name": "iOS Loyalty App",
+  "description": "Main customer-facing iOS app"
+}
+
+Response:
+{
+  "success": true,
+  "app": {
+    "id": "uuid",
+    "app_name": "iOS Loyalty App",
+    "code": "ios-loyalty-app",
+    "api_key": "generated-secure-key",
+    "description": "Main customer-facing iOS app",
+    "is_active": true,
+    "created_at": "2024-01-10T...",
+    "updated_at": "2024-01-10T..."
+  }
+}
+```
+
+#### List Verification Apps
+```bash
+GET /api/rewards/verification-apps
+Authorization: Bearer {tenant_jwt}
+
+Response:
+{
+  "success": true,
+  "apps": [
+    {
+      "id": "uuid",
+      "app_name": "iOS Loyalty App",
+      "code": "ios-loyalty-app",
+      "description": "Main customer-facing iOS app",
+      "is_active": true,
+      "created_at": "2024-01-10T..."
+    }
+  ]
+}
+```
+
+#### Update Verification App
+```bash
+PUT /api/rewards/verification-apps/:id
+Authorization: Bearer {tenant_jwt}
+Content-Type: application/json
+
+{
+  "app_name": "Updated iOS App",
+  "description": "Updated description",
+  "is_active": true
+}
+
+Response:
+{
+  "success": true,
+  "app": { ...updated app object }
+}
+```
+
+#### Regenerate API Key
+```bash
+POST /api/rewards/verification-apps/:id/regenerate-key
+Authorization: Bearer {tenant_jwt}
+
+Response:
+{
+  "success": true,
+  "api_key": "new-generated-secure-key"
+}
+```
+
+#### Toggle App Status
+```bash
+PATCH /api/rewards/verification-apps/:id/toggle
+Authorization: Bearer {tenant_jwt}
+
+Response:
+{
+  "success": true,
+  "is_active": false
+}
+```
+
+#### Delete Verification App
+```bash
+DELETE /api/rewards/verification-apps/:id
+Authorization: Bearer {tenant_jwt}
+
+Response:
+{
+  "success": true,
+  "message": "Verification app deleted successfully"
+}
+```
+
+### User Credits Management
+
+#### Get User Credits
+```bash
+GET /api/user-credits/:userId
+Authorization: Bearer {tenant_jwt}
+
+Response:
+{
+  "success": true,
+  "credits": {
+    "user_credit_id": "uuid",
+    "user_id": "uuid",
+    "tenant_id": "uuid",
+    "balance": 150,
+    "created_at": "2024-01-10T...",
+    "updated_at": "2024-01-10T..."
+  }
+}
+```
+
+#### Get Credit Transactions
+```bash
+GET /api/user-credits/:userId/transactions?page=1&limit=20
+Authorization: Bearer {tenant_jwt}
+
+Response:
+{
+  "success": true,
+  "transactions": [
+    {
+      "transaction_id": "uuid",
+      "user_credit_id": "uuid",
+      "transaction_type": "earn",
+      "amount": 10,
+      "balance_after": 150,
+      "reference_type": "coupon_scan",
+      "reference_id": "coupon-uuid",
+      "description": "Scanned coupon ABC123",
+      "created_at": "2024-01-10T..."
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 45,
+    "pages": 3
+  }
+}
+```
+
+#### Add Credits (Admin)
+```bash
+POST /api/user-credits/:userId/add
+Authorization: Bearer {tenant_jwt}
+Content-Type: application/json
+
+{
+  "amount": 50,
+  "description": "Bonus credits for referral"
+}
+
+Response:
+{
+  "success": true,
+  "credits": {
+    "balance": 200,
+    "transaction_id": "uuid"
+  }
+}
+```
+
+#### Deduct Credits (Admin)
+```bash
+POST /api/user-credits/:userId/deduct
+Authorization: Bearer {tenant_jwt}
+Content-Type: application/json
+
+{
+  "amount": 25,
+  "description": "Manual adjustment"
+}
+
+Response:
+{
+  "success": true,
+  "credits": {
+    "balance": 175,
+    "transaction_id": "uuid"
+  }
+}
+```
+
+#### Adjust Credits (Admin)
+```bash
+POST /api/user-credits/:userId/adjust
+Authorization: Bearer {tenant_jwt}
+Content-Type: application/json
+
+{
+  "amount": -10,
+  "description": "Correction for duplicate scan"
+}
+
+Response:
+{
+  "success": true,
+  "credits": {
+    "balance": 165,
+    "transaction_id": "uuid"
+  }
+}
+```
+
+#### Get Credit Stats
+```bash
+GET /api/user-credits/:userId/stats
+Authorization: Bearer {tenant_jwt}
+
+Response:
+{
+  "success": true,
+  "stats": {
+    "total_earned": 250,
+    "total_spent": 85,
+    "current_balance": 165,
+    "transaction_count": 23,
+    "last_transaction_date": "2024-01-10T..."
+  }
+}
+```
+
+### App-Scoped Data Filtering
+
+All categories and products APIs now support filtering by app:
+
+#### Get Categories (with app filter)
+```bash
+GET /api/categories?app_id=uuid
+GET /api/categories?app_id=all  # Show all apps
+Authorization: Bearer {tenant_jwt}
+
+Response:
+{
+  "success": true,
+  "categories": [
+    {
+      "id": "uuid",
+      "name": "Electronics",
+      "icon": "phone_iphone",
+      "description": "Electronic devices",
+      "verification_app_id": "uuid",
+      "app_name": "iOS Loyalty App",
+      "app_code": "ios-loyalty-app",
+      "product_count": 15,
+      "created_at": "2024-01-10T..."
+    }
+  ]
+}
+```
+
+#### Get Products (with app filter)
+```bash
+GET /api/products?app_id=uuid
+GET /api/products?app_id=all  # Show all apps
+Authorization: Bearer {tenant_jwt}
+
+Response:
+{
+  "success": true,
+  "products": [
+    {
+      "id": "uuid",
+      "name": "iPhone 15",
+      "sku": "IPH15-128",
+      "category_id": "uuid",
+      "category_name": "Electronics",
+      "verification_app_id": "uuid",
+      "app_name": "iOS Loyalty App",
+      "points_required": 1000,
+      "stock": 50,
+      "created_at": "2024-01-10T..."
+    }
+  ]
+}
+```
+
+---
+
 ## Default Users
 
 ### Super Admin
@@ -638,3 +1372,426 @@ TOKEN=$(echo $LOGIN_RESPONSE | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
 curl -s http://localhost:3000/api/dashboard/stats \
   -H "Authorization: Bearer $TOKEN"
 ```
+
+---
+
+## Analytics Dashboard API
+
+The Analytics API provides comprehensive insights into tenant scan activity, customer behavior, geographic trends, and campaign performance.
+
+### Base Path
+```
+/api/v1/tenants/:tenantId/analytics
+```
+
+### Authentication
+All analytics endpoints require authentication with one of the following roles:
+- `SUPER_ADMIN`
+- `TENANT_ADMIN`
+- `TENANT_USER`
+
+Users can only access analytics for their own tenant (verified by `tenant_id` in JWT token).
+
+---
+
+### 1. Overview Dashboard Statistics
+
+Get high-level statistics for the tenant dashboard.
+
+**Endpoint:** `GET /api/v1/tenants/:tenantId/analytics/overview`
+
+**Query Parameters:**
+- `dateFrom` (optional): ISO 8601 date string (e.g., "2026-01-01T00:00:00Z")
+- `dateTo` (optional): ISO 8601 date string
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "total_scans": 15420,
+    "unique_customers": 3245,
+    "successful_scans": 14890,
+    "failed_scans": 530,
+    "total_rewards_given": "154500.00",
+    "total_coupons_created": 50000,
+    "active_coupons": 48670,
+    "total_campaigns": 12,
+    "active_campaigns": 3,
+    "success_rate": "96.56"
+  }
+}
+```
+
+**Example:**
+```bash
+curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/overview?dateFrom=2026-01-01T00:00:00Z&dateTo=2026-01-17T23:59:59Z" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+### 2. Scan Trends Over Time
+
+Get time-series data for scan trends visualization (line charts).
+
+**Endpoint:** `GET /api/v1/tenants/:tenantId/analytics/trends`
+
+**Query Parameters:**
+- `dateFrom` (optional): ISO 8601 date string (default: 30 days ago)
+- `dateTo` (optional): ISO 8601 date string (default: now)
+- `interval` (optional): `hour`, `day`, or `week` (default: `day`)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "period": "2026-01-15T00:00:00.000Z",
+      "total_scans": 450,
+      "successful_scans": 432,
+      "failed_scans": 18,
+      "total_rewards": "4500.00",
+      "unique_customers": 287
+    },
+    {
+      "period": "2026-01-16T00:00:00.000Z",
+      "total_scans": 523,
+      "successful_scans": 510,
+      "failed_scans": 13,
+      "total_rewards": "5200.00",
+      "unique_customers": 312
+    }
+  ]
+}
+```
+
+**Example:**
+```bash
+curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/trends?interval=day" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+### 3. Top Cities by Scan Volume
+
+Get geographic insights showing top performing cities.
+
+**Endpoint:** `GET /api/v1/tenants/:tenantId/analytics/top-cities`
+
+**Query Parameters:**
+- `limit` (optional): Number of cities to return (default: 10, max: 50)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "scan_count": 2450,
+      "successful_scans": 2380,
+      "total_rewards": "24500.00",
+      "unique_customers": 856
+    },
+    {
+      "city": "Delhi",
+      "state": "Delhi",
+      "scan_count": 1890,
+      "successful_scans": 1845,
+      "total_rewards": "18900.00",
+      "unique_customers": 623
+    }
+  ]
+}
+```
+
+---
+
+### 4. Enhanced Scan History
+
+Get paginated scan history with advanced filtering.
+
+**Endpoint:** `GET /api/v1/tenants/:tenantId/analytics/scans`
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 50, max: 100)
+- `status` (optional): Filter by scan status (`success` or `failed`)
+- `city` (optional): Filter by customer city (partial match)
+- `dateFrom` (optional): ISO 8601 date string
+- `dateTo` (optional): ISO 8601 date string
+- `customerId` (optional): Filter by specific customer UUID
+- `productId` (optional): Filter by specific product UUID
+- `campaignId` (optional): Filter by specific campaign UUID
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "scan_timestamp": "2026-01-17T10:30:00Z",
+      "scan_status": "success",
+      "customer_id": "uuid",
+      "customer_name": "John Doe",
+      "customer_email": "john@example.com",
+      "customer_phone": "+919876543210",
+      "customer_city": "Mumbai",
+      "customer_state": "Maharashtra",
+      "product_id": "uuid",
+      "product_name": "Product A",
+      "coupon_code": "ABC123",
+      "campaign_name": "New Year Campaign",
+      "reward_amount": "10.00",
+      "location_address": "123 Street, Mumbai",
+      "latitude": "19.0760",
+      "longitude": "72.8777"
+    }
+  ],
+  "pagination": {
+    "total": 15420,
+    "page": 1,
+    "limit": 50,
+    "totalPages": 309
+  }
+}
+```
+
+**Example:**
+```bash
+curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/scans?page=1&limit=50&status=success&city=Mumbai" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+### 5. Export Scan History to Excel
+
+Download scan history as Excel file (.xlsx).
+
+**Endpoint:** `GET /api/v1/tenants/:tenantId/analytics/scans/export`
+
+**Query Parameters:** (Same as scan history filters)
+- `status`, `city`, `dateFrom`, `dateTo`, `customerId`, `productId`, `campaignId`
+
+**Response:** Excel file download (Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet)
+
+**Note:** Export is limited to 10,000 records. Requires `SUPER_ADMIN` or `TENANT_ADMIN` role.
+
+**Example:**
+```bash
+curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/scans/export?dateFrom=2026-01-01T00:00:00Z" \
+  -H "Authorization: Bearer $TOKEN" \
+  --output scan-history.xlsx
+```
+
+---
+
+### 6. Customer Analytics
+
+Get customer insights with ranking and behavior metrics.
+
+**Endpoint:** `GET /api/v1/tenants/:tenantId/analytics/customers`
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 50, max: 100)
+- `sortBy` (optional): Sort column - `total_rewards_won`, `total_codes_redeemed`, `avg_reward_per_scan`, `member_since` (default: `total_rewards_won`)
+- `sortOrder` (optional): `ASC` or `DESC` (default: `DESC`)
+- `minScans` (optional): Minimum number of scans to include customer (default: 0)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "customer_id": "uuid",
+      "tenant_id": "uuid",
+      "full_name": "John Doe",
+      "email": "john@example.com",
+      "phone": "+919876543210",
+      "total_products_purchased": 0,
+      "total_codes_redeemed": 45,
+      "total_rewards_won": "450.00",
+      "first_scan_location": "123 Street, Mumbai",
+      "first_scan_city": "Mumbai",
+      "first_scan_state": "Maharashtra",
+      "last_scan_date": "2026-01-17T10:30:00Z",
+      "favorite_product_id": "uuid",
+      "favorite_product_name": "Product A",
+      "avg_reward_per_scan": "10.00",
+      "member_since": "2025-12-01T08:00:00Z",
+      "updated_at": "2026-01-17T10:30:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 3245,
+    "page": 1,
+    "limit": 50,
+    "totalPages": 65
+  }
+}
+```
+
+**Example:**
+```bash
+curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/customers?sortBy=total_rewards_won&sortOrder=DESC&minScans=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+### 7. Scan Map Data
+
+Get location data for map-based visualization.
+
+**Endpoint:** `GET /api/v1/tenants/:tenantId/analytics/map`
+
+**Query Parameters:**
+- `dateFrom` (optional): ISO 8601 date string
+- `dateTo` (optional): ISO 8601 date string
+- `limit` (optional): Maximum locations to return (default: 1000, max: 5000)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "latitude": "19.0760",
+      "longitude": "72.8777",
+      "location_address": "123 Street, Mumbai",
+      "customer_city": "Mumbai",
+      "customer_state": "Maharashtra",
+      "reward_amount": "10.00",
+      "scan_timestamp": "2026-01-17T10:30:00Z",
+      "scan_status": "success"
+    }
+  ]
+}
+```
+
+**Example:**
+```bash
+curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/map?limit=500" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+### 8. Campaign Performance Metrics
+
+Get performance metrics for reward campaigns.
+
+**Get All Campaigns:**
+`GET /api/v1/tenants/:tenantId/analytics/campaigns`
+
+**Get Specific Campaign:**
+`GET /api/v1/tenants/:tenantId/analytics/campaigns/:campaignId`
+
+**Response (all campaigns):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "name": "New Year Campaign",
+      "start_date": "2026-01-01T00:00:00Z",
+      "end_date": "2026-01-31T23:59:59Z",
+      "status": "active",
+      "reward_type": "custom",
+      "common_amount": null,
+      "total_scans": 4523,
+      "successful_scans": 4401,
+      "total_rewards_distributed": "44010.00",
+      "unique_participants": 1234
+    }
+  ]
+}
+```
+
+**Response (single campaign):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "name": "New Year Campaign",
+    "start_date": "2026-01-01T00:00:00Z",
+    "end_date": "2026-01-31T23:59:59Z",
+    "status": "active",
+    "reward_type": "custom",
+    "common_amount": null,
+    "total_scans": 4523,
+    "successful_scans": 4401,
+    "total_rewards_distributed": "44010.00",
+    "unique_participants": 1234
+  }
+}
+```
+
+**Example:**
+```bash
+# Get all campaigns
+curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/campaigns" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Get specific campaign
+curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/campaigns/{campaignId}" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+## Error Responses
+
+All analytics endpoints follow the standard error response format:
+
+```json
+{
+  "success": false,
+  "message": "Error description",
+  "error": "Technical error details"
+}
+```
+
+**Common HTTP Status Codes:**
+- `200 OK`: Success
+- `403 Forbidden`: User doesn't have access to this tenant
+- `404 Not Found`: Campaign/resource not found
+- `500 Internal Server Error`: Database or server error
+
+---
+
+## Performance Considerations
+
+1. **Customer Analytics Cache**: Customer metrics are pre-computed and cached in `customer_analytics_cache` table, updated automatically via triggers on successful scans.
+
+2. **Date Range Queries**: Use date filters (`dateFrom`, `dateTo`) to limit result sets for better performance.
+
+3. **Pagination**: Large result sets are paginated. Use `page` and `limit` parameters appropriately.
+
+4. **Export Limits**: Excel exports are capped at 10,000 records to prevent memory issues.
+
+5. **Map Data Limits**: Map visualizations are limited to 5,000 locations. Use date filters to focus on recent data.
+
+---
+
+## Database Tables Used
+
+- `scans` or `scan_history`: Raw scan data with timestamps, locations, rewards
+- `customer_analytics_cache`: Pre-computed customer metrics
+- `reward_campaigns`: Campaign definitions and settings
+- `coupon_batches`: Batch information with dealer/zone tracking
+- `coupons`: Individual coupon data with serial numbers
+- `products`: Product catalog
+- `product_categories`: Product categorization
+- `customers`: Customer profiles
+

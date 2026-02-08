@@ -1,6 +1,6 @@
 .tenant-list-container {
-  padding: 24px;
-  max-width: 1400px;
+  padding: 1.5000rem;
+  max-width: 87.5000rem;
   margin: 0 auto;
 }
 
@@ -8,62 +8,62 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 1.5000rem;
 }
 
 .header h2 {
   margin: 0;
-  font-size: 28px;
+  font-size: 1.7500rem;
   font-weight: 600;
   color: #1a1a1a;
 }
 
 .filters {
   background: #f8f9fa;
-  padding: 16px;
-  border-radius: 8px;
-  margin-bottom: 24px;
+  padding: 1rem;
+  border-radius: 0.5000rem;
+  margin-bottom: 1.5000rem;
   display: flex;
-  gap: 16px;
+  gap: 1rem;
   flex-wrap: wrap;
   align-items: center;
 }
 
 .search-box {
   display: flex;
-  gap: 8px;
+  gap: 0.5000rem;
   flex: 1;
-  min-width: 300px;
+  min-width: 18.7500rem;
 }
 
 .search-input {
   flex: 1;
-  padding: 10px 16px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
+  padding: 0.6250rem 1rem;
+  border: 0.0625rem solid #ddd;
+  border-radius: 0.3750rem;
+  font-size: 0.8750rem;
 }
 
 .filter-controls {
   display: flex;
-  gap: 8px;
+  gap: 0.5000rem;
 }
 
 .filter-select {
-  padding: 10px 16px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
+  padding: 0.6250rem 1rem;
+  border: 0.0625rem solid #ddd;
+  border-radius: 0.3750rem;
+  font-size: 0.8750rem;
   background: white;
 }
 
 .btn-primary {
-  padding: 10px 20px;
+  padding: 0.6250rem 1.2500rem;
   background: #2563eb;
   color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 14px;
+  border-radius: 0.3750rem;
+  font-size: 0.8750rem;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.2s;
@@ -74,12 +74,12 @@
 }
 
 .btn-search, .btn-sort {
-  padding: 10px 16px;
+  padding: 0.6250rem 1rem;
   background: #2563eb;
   color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 14px;
+  border-radius: 0.3750rem;
+  font-size: 0.8750rem;
   cursor: pointer;
   transition: background 0.2s;
 }
@@ -89,9 +89,9 @@
 }
 
 .loading, .error {
-  padding: 20px;
+  padding: 1.2500rem;
   text-align: center;
-  border-radius: 6px;
+  border-radius: 0.3750rem;
 }
 
 .loading {
@@ -106,8 +106,8 @@
 
 .table-container {
   overflow-x: auto;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border-radius: 0.5000rem;
+  border: 0.0625rem solid #e5e7eb;
 }
 
 .tenant-table {
@@ -118,19 +118,19 @@
 
 .tenant-table th {
   background: #f9fafb;
-  padding: 12px 16px;
+  padding: 0.7500rem 1rem;
   text-align: left;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: #374151;
-  border-bottom: 2px solid #e5e7eb;
+  border-bottom: 0.1250rem solid #e5e7eb;
   white-space: nowrap;
 }
 
 .tenant-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid #e5e7eb;
-  font-size: 14px;
+  padding: 0.7500rem 1rem;
+  border-bottom: 0.0625rem solid #e5e7eb;
+  font-size: 0.8750rem;
   color: #1f2937;
 }
 
@@ -150,9 +150,9 @@
 
 .status-badge {
   display: inline-block;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
+  padding: 0.2500rem 0.7500rem;
+  border-radius: 0.7500rem;
+  font-size: 0.7500rem;
   font-weight: 500;
   text-transform: uppercase;
 }
@@ -174,16 +174,16 @@
 
 .actions {
   display: flex;
-  gap: 8px;
+  gap: 0.5000rem;
 }
 
 .btn-icon {
-  padding: 6px 10px;
+  padding: 0.3750rem 0.6250rem;
   background: transparent;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
+  border: 0.0625rem solid #d1d5db;
+  border-radius: 0.2500rem;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 1rem;
   transition: all 0.2s;
 }
 
@@ -194,7 +194,7 @@
 
 .no-data {
   text-align: center;
-  padding: 40px !important;
+  padding: 2.5000rem !important;
   color: #6b7280;
   font-style: italic;
 }
@@ -203,19 +203,19 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 16px;
-  margin-top: 24px;
-  padding: 16px;
+  gap: 1rem;
+  margin-top: 1.5000rem;
+  padding: 1rem;
   background: #f9fafb;
-  border-radius: 8px;
+  border-radius: 0.5000rem;
 }
 
 .btn-page {
-  padding: 8px 16px;
+  padding: 0.5000rem 1rem;
   background: white;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 14px;
+  border: 0.0625rem solid #d1d5db;
+  border-radius: 0.3750rem;
+  font-size: 0.8750rem;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -231,6 +231,6 @@
 }
 
 .page-info {
-  font-size: 14px;
+  font-size: 0.8750rem;
   color: #4b5563;
 }

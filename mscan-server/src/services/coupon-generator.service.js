@@ -35,11 +35,12 @@ class CouponGeneratorService {
   /**
    * Generate QR code data for a coupon
    * @param {Object} coupon - Coupon details
-   * @param {string} baseUrl - Base URL for verification
+   * @param {string} baseUrl - Base URL for verification (subdomain-aware)
    * @returns {Object} - QR code data
    */
   generateQRData(coupon, baseUrl = 'https://mscan.app') {
-    const verificationUrl = `${baseUrl}/verify/${coupon.coupon_code}`;
+    // Generate canonical scan URL (subdomain or path-based)
+    const verificationUrl = `${baseUrl}/scan/${coupon.coupon_code}`;
     
     const qrData = {
       couponCode: coupon.coupon_code,
@@ -47,6 +48,7 @@ class CouponGeneratorService {
       verifyUrl: verificationUrl,
       discountType: coupon.discount_type,
       discountValue: coupon.discount_value,
+      couponPoints: coupon.coupon_points || 0, // Points awarded on scan
       expiryDate: coupon.expiry_date
     };
     

@@ -1,18 +1,4 @@
 <div class="dashboard">
-  <!-- Header -->
-  <div class="header">
-    <div class="header-content">
-      <div class="header-left">
-        <h1>{{ stats?.tenant?.companyName || 'Dashboard' }}</h1>
-        <p class="subtitle" *ngIf="currentUser">Welcome, {{ currentUser.fullName }}</p>
-      </div>
-      <div class="header-actions">
-        <span class="role-badge">{{ currentUser?.role }}</span>
-        <button class="btn-logout" (click)="logout()">Logout</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Main Content -->
   <div class="content">
     <!-- Loading State -->

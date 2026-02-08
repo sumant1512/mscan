@@ -19,9 +19,8 @@
     Each batch can have its own description.
   </div>
 
-  <div *ngIf="verificationApps.length === 0 && !loading" class="alert alert-warning">
-    ⚠️ No active verification apps found. Please configure a verification app before creating
-    coupons.
+  <div *ngIf="!selectedAppId && !loading" class="alert alert-warning">
+    ⚠️ Please select an application from the dropdown in the top header before creating coupons.
   </div>
 
   <div *ngIf="error" class="alert alert-error">{{ error }}</div>
@@ -70,27 +69,6 @@
     class="coupon-form"
     *ngIf="!showBatchResults"
   >
-    <!-- Common Fields -->
-    <div class="common-fields">
-      <h3>Common Settings</h3>
-      <div class="form-group">
-        <label for="verification_app_id">Verification App <span class="required">*</span></label>
-        <select
-          id="verification_app_id"
-          formControlName="verification_app_id"
-          [class.invalid]="isFieldInvalid('verification_app_id')"
-        >
-          <option value="">Select an app</option>
-          <option *ngFor="let app of verificationApps" [value]="app.id">
-            {{ app.app_name }}
-          </option>
-        </select>
-        <span *ngIf="isFieldInvalid('verification_app_id')" class="error-text">
-          {{ getFieldError('verification_app_id') }}
-        </span>
-      </div>
-    </div>
-
     <!-- Single Mode Fields -->
     <div *ngIf="!multiCouponMode" class="form-sections">
       <div class="form-section">
@@ -111,9 +89,9 @@
           </div>
 
           <div class="form-group">
-            <label for="product_id">Product (Optional)</label>
+            <label for="product_id">Product *</label>
             <select id="product_id" formControlName="product_id">
-              <option value="">Select Product (Optional)</option>
+              <option value="">Select Product</option>
               <option *ngFor="let product of products" [value]="product.id">
                 {{ product.product_name }} ({{ product.product_sku }})
               </option>
@@ -208,9 +186,9 @@
               </div>
 
               <div class="form-group">
-                <label>Product (Optional)</label>
+                <label>Product *</label>
                 <select formControlName="product_id">
-                  <option value="">Select Product (Optional)</option>
+                  <option value="">Select Product</option>
                   <option *ngFor="let product of products" [value]="product.id">
                     {{ product.product_name }} ({{ product.product_sku }})
                   </option>

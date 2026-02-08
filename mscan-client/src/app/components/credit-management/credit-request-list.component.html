@@ -1,0 +1,96 @@
+<div class="request-list-container">
+  <div class="header">
+    <h2>{{ isSuperAdmin ? 'All Credit Requests' : 'My Credit Requests' }}</h2>
+    <div class="header-actions">
+      <a *ngIf="!isSuperAdmin" routerLink="/tenant/credits/request" class="btn-primary">
+        + New Request
+      </a>
+    </div>
+  </div>
+
+  <div class="filters-section">
+    <div class="filter-group">
+      <label for="statusFilter">Status:</label>
+      <select id="statusFilter" [(ngModel)]="statusFilter" (change)="onStatusFilterChange()" class="filter-select">
+        <option value="all">All Statuses</option>
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+      </select>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading">Loading requests...</div>
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <!-- Requests Table -->
+  <div class="table-container" *ngIf="!loading">
+    <table class="requests-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th *ngIf="isSuperAdmin">Tenant</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Requested Date</th>
+          <th>Processed Date</th>
+          <th>Processed By</th>
+          <th>Justification</th>
+          <th *ngIf="hasAnyRejectionReasons()">Rejection Reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let request of filteredRequests">
+          <td class="request-id">#{{ request.id }}</td>
+          <td *ngIf="isSuperAdmin">{{ request.tenant_name }}</td>
+          <td class="amount">{{ request.requested_amount }} credits</td>
+          <td>
+            <span class="status-badge" [ngClass]="getStatusClass(request.status)">
+              {{ request.status }}
+            </span>
+          </td>
+          <td>{{ formatDate(request.requested_at) }}</td>
+          <td>{{ request.processed_at ? formatDate(request.processed_at) : '-' }}</td>
+          <td>{{ request.processed_by_name || '-' }}</td>
+          <td class="justification">
+            <div class="text-truncate" [title]="request.justification">
+              {{ request.justification || '-' }}
+            </div>
+          </td>
+          <td *ngIf="hasAnyRejectionReasons()" class="rejection-reason">
+            <div *ngIf="request.rejection_reason" class="text-truncate" [title]="request.rejection_reason">
+              {{ request.rejection_reason }}
+            </div>
+            <span *ngIf="!request.rejection_reason">-</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="filteredRequests.length === 0" class="no-data">
+      <p>No {{ statusFilter !== 'all' ? statusFilter : '' }} credit requests found</p>
+      <a *ngIf="!isSuperAdmin && statusFilter === 'all'" routerLink="/tenant/credits/request" class="btn-link">
+        Create your first request
+      </a>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" *ngIf="totalPages > 1 && isSuperAdmin">
+    <button
+      (click)="onPageChange(currentPage - 1)"
+      [disabled]="!hasPreviousPage"
+      class="btn-page">
+      Previous
+    </button>
+    <span class="page-info">
+      Page {{ currentPage }} of {{ totalPages }} ({{ totalRequests }} total)
+    </span>
+    <button
+      (click)="onPageChange(currentPage + 1)"
+      [disabled]="!hasNextPage"
+      class="btn-page">
+      Next
+    </button>
+  </div>
+</div>

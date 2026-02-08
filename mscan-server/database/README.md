@@ -1,251 +1,239 @@
-# Database Setup
+# Database Management - Simple Guide
 
-## Prerequisites
-- PostgreSQL 14+ installed and running
-- Database `mscan_db` created
+This directory contains **ONE SCRIPT** to manage your entire database: `db-manager.js`
 
-## Create Database
+## Quick Start
 
-```bash
-# Login to PostgreSQL
-psql -U postgres
-
-# Create database
-CREATE DATABASE mscan_db;
-
-# Exit psql
-\q
-```
-
-## Database Management Scripts
-
-### Quick Reference
+### NPM Scripts (Easiest!)
 
 ```bash
-# One-shot full setup (fresh DB)
-npm run migrate:full
+# Interactive menu
+npm run db
 
-# Complete reset (drop all tables + recreate schema)
+# Setup database
+npm run db:setup
+
+# Clean tenant data (with confirmation)
+npm run db:clean-tenant
+
+# Clean all data (with confirmation)
+npm run db:clean-all
+
+# Drop database (with confirmation)
+npm run db:drop
+
+# Complete reset (drop + setup, no confirmation)
 npm run db:reset
-
-# Clean data only (keep tables, delete data, preserve Super Admin)
-npm run db:cleanup
-
-# Drop all tables and schema (no recreate)
-npm run db:drop
 ```
 
-### Detailed Usage
-
-#### 🚀 Initial Setup
-
-**First-time database setup:**
+### Interactive Mode
 
 ```bash
-# Using consolidated SQL (Recommended)
-npm run migrate:full
+npm run db
+# or
+node database/db-manager.js
+```
+
+You'll see a menu:
+```
+1. Setup Database (create fresh database)
+2. Clean Tenant Data (keep tenants, delete operational data)
+3. Clean All Data (delete tenants, keep super admin)
+4. Drop Database (complete destruction)
+5. Exit
+```
+
+Just type a number and press Enter!
+
+---
+
+## Command Line Mode
+
+### 1. Setup Database (First Time or After Drop)
+
+```bash
+npm run db:setup
+# or
+node database/db-manager.js setup
 ```
 
 **What it does:**
-- Creates all database tables
-- Sets up indexes and constraints
-- Creates triggers and functions
-- Seeds Super Admin user (`admin@mscan.com`)
-- Includes product/catalog, batches, analytics, mobile tables
+- Creates the database if it doesn't exist
+- Creates all tables
+- Runs all migrations
+- Creates Super Admin user (email: admin@mscan.com)
 
-#### 🔄 Complete Reset
+**Use this when:**
+- Setting up for the first time
+- After dropping the database
 
-**Drop everything and start fresh:**
+---
+
+### 2. Clean Tenant Data (Keep Tenant Records)
+
+```bash
+npm run db:clean-tenant
+# or
+node database/db-manager.js clean-tenant
+# or skip confirmation:
+node database/db-manager.js clean-tenant --yes
+```
+
+**What it DELETES:**
+- All tenant users
+- All products, coupons, scans
+- All operational data
+
+**What it KEEPS:**
+- Tenant records
+- Super Admin users
+
+**Use this when:**
+- You want to reset data but keep tenant accounts
+
+---
+
+### 3. Clean All Data (Keep Super Admin Only)
+
+```bash
+npm run db:clean-all
+# or
+node database/db-manager.js clean-all
+# or skip confirmation:
+node database/db-manager.js clean-all --yes
+```
+
+**What it DELETES:**
+- ALL tenants
+- ALL users (except super admin)
+- ALL data
+
+**What it KEEPS:**
+- Super Admin users ONLY
+
+**Use this when:**
+- You want a fresh start but keep your admin account
+
+---
+
+### 4. Drop Database (Complete Destruction)
 
 ```bash
 npm run db:drop
-npm run migrate:full
+# or
+node database/db-manager.js drop
+# or skip confirmation:
+node database/db-manager.js drop --yes
 ```
 
-**What it does:**
-1. Drops all tables, views, sequences, functions, and types
-2. Recreates entire schema from scratch
-3. Seeds Super Admin user
+**What it DELETES:**
+- The entire database
+- EVERYTHING
 
-**Use when:**
-- You want a completely fresh database
-- Schema has changed significantly
-- Starting a new development cycle
+**What it KEEPS:**
+- Nothing
 
-#### 🧹 Clean Data Only
+**Use this when:**
+- You want to completely remove everything
 
-**Delete all tenant data but keep schema:**
+---
 
+## Common Workflows
+
+### Complete Fresh Start (One Command!)
 ```bash
-# Interactive mode (with confirmation)
-npm run db:cleanup
-
-# Force mode (no confirmation - BE CAREFUL!)
-npm run db:cleanup:force
+npm run db:reset
 ```
 
-**What gets DELETED:**
-- All tenants
-- All tenant users (TENANT_ADMIN, TENANT_USER)
-- All coupons and scans
-- All verification apps
-- All credit requests and transactions
-- All tenant-related audit logs and OTPs
-
-**What gets PRESERVED:**
-- Super Admin user(s)
-- Database schema and tables
-- Extensions (uuid-ossp)
-
-**Use when:**
-- You want to keep the schema but remove all data
-- Testing with clean data
-- Clearing development data
-
-#### 💥 Drop All Tables
-
-**Drop all tables without recreating:**
-
+Or manually:
 ```bash
 npm run db:drop
+npm run db:setup
 ```
 
-**What it does:**
-- Drops all user-created tables, views, sequences
-- Removes user-defined functions and types
-- Preserves PostgreSQL extensions
+### Reset All Data (Keep Super Admin)
+```bash
+npm run db:clean-all
+```
 
-**Use when:**
-- You want to manually rebuild the schema
-- Troubleshooting schema issues
-- Preparing for a different migration strategy
+### Reset Operational Data (Keep Tenants)
+```bash
+npm run db:clean-tenant
+```
 
-## Database Schema
+---
 
-### Tables
+## Quick Comparison
 
-1. **tenants** - Stores customer/tenant company information
-2. **users** - All user accounts (Super Admin, Tenant Admin, Tenant Users)
-3. **otps** - One-time passwords for email authentication
-4. **token_blacklist** - Invalidated JWT tokens
-5. **audit_logs** - System activity audit trail
-6. **credit_requests** - Credit allocation requests from tenants
-7. **tenant_credit_balance** - Credit balance for each tenant
-8. **credit_transactions** - Credit transaction history
-9. **verification_apps** - Verification applications for tenants
-10. **coupons** - Coupon/voucher records
-11. **scans** - Coupon scan history
+| Command | Database | Tables | Tenants | Super Admin | Data |
+|---------|----------|--------|---------|-------------|------|
+| `setup` | ✅ Create | ✅ Create | - | ✅ Create | - |
+| `clean-tenant` | ✅ Keep | ✅ Keep | ✅ Keep | ✅ Keep | ❌ Delete |
+| `clean-all` | ✅ Keep | ✅ Keep | ❌ Delete | ✅ Keep | ❌ Delete |
+| `drop` | ❌ Drop | ❌ Drop | ❌ Delete | ❌ Delete | ❌ Delete |
 
-## Script Comparison
-
-| Script | Tables | Data | Super Admin | Use Case |
-|--------|--------|------|-------------|----------|
-| `migrate:full` | ✅ Create | ✅ Seed | ✅ Create | First-time setup |
-| `db:cleanup` | ✅ Keep | ❌ Delete | ✅ Keep | Clear data, keep schema |
-| `db:drop` | ❌ Drop | ❌ Delete | ❌ Delete | Manual schema rebuild |
+---
 
 ## Configuration
 
-All scripts use these environment variables (or defaults):
+The script uses these environment variables (with defaults):
 
 ```bash
-DB_HOST=localhost      # Database host
-DB_PORT=5432          # Database port
-DB_NAME=mscan_db      # Database name
-DB_USER=postgres      # Database user
-DB_PASSWORD=admin     # Database password
+DB_HOST=localhost        # Database host
+DB_PORT=5432            # PostgreSQL port
+DB_NAME=mscan_db        # Database name
+DB_USER=postgres        # Database user
+DB_PASSWORD=admin       # Database password
 ```
 
-Set them before running scripts:
-
+To change:
 ```bash
-export DB_PASSWORD=my_password
-npm run migrate:full
+export DB_PASSWORD=mypassword
+node database/db-manager.js setup
 ```
 
-## Troubleshooting
-
-### Migration fails with "relation already exists"
-
-**Solution:** Drop and rerun consolidated setup:
-```bash
-npm run db:drop
-npm run migrate:full
-```
-
-### Password authentication failed
-
-**Solution:** Set the correct password:
-```bash
-export DB_PASSWORD=your_password
-npm run migrate:full
-```
-
-### Cannot drop function (extension error)
-
-This is normal. The drop script automatically skips extension-owned objects like `uuid-ossp` functions.
-
-### Want to verify what will be deleted?
-
-Use the interactive cleanup mode:
-```bash
-npm run db:cleanup
-# Shows summary and asks for confirmation
-```
+---
 
 ## Safety Features
 
-### Interactive Confirmation
+- ✅ Interactive confirmations (type specific words to confirm)
+- ✅ Shows what will be deleted/kept before proceeding
+- ✅ Use `--yes` flag to skip confirmations
+- ✅ Color-coded output for easy reading
+- ✅ Graceful Ctrl+C handling
 
-The cleanup script requires typing "DELETE ALL DATA" to proceed:
+---
 
-```
-Type "DELETE ALL DATA" to confirm: DELETE ALL DATA
-```
+## Other Files in This Directory
 
-### Transaction-based
+- `full_setup.sql` - The main SQL schema file (used by db-manager.js)
+- `migrations/` - Database migration files (automatically run by db-manager.js)
+- `CLEANUP_GUIDE.md` - Detailed cleanup documentation (if needed)
 
-All operations use database transactions:
-- Success: All changes committed
-- Error: All changes rolled back
-
-### Verification Checks
-
-Scripts verify operations completed successfully and show summaries.
-
-## Related Files
-
-- `full_setup.sql` - Consolidated one-shot schema + migrations + seed
-- `rewards-migration.sql` - Rewards system tables
-- `run-full-setup.js` - Node runner for consolidated SQL
-- `cleanup-all-tenant-data.js` - Data cleanup script
-- `cleanup-all-tenant-data.sql` - SQL cleanup script
-- `drop-all-tables.js` - Drop tables script
-- `CLEANUP_GUIDE.md` - Detailed cleanup documentation
-
-## Support
-
-For detailed cleanup documentation, see [CLEANUP_GUIDE.md](./CLEANUP_GUIDE.md)
+---
 
 ## Default Super Admin
 
+After running `setup`, you get:
 - **Email**: admin@mscan.com
 - **Role**: SUPER_ADMIN
-- Use this email to login with OTP
+- Login with this email using OTP
 
-## Verify Setup
+---
 
-```bash
-# Connect to database
-psql -U postgres -d mscan_db
+## Troubleshooting
 
-# Check tables
-\dt
+### "Database does not exist"
+Run: `node database/db-manager.js setup`
 
-# Check users
-SELECT email, full_name, role FROM users;
+### "Password authentication failed"
+Set password: `export DB_PASSWORD=yourpassword`
 
-# Exit
-\q
-```
+### Want to see what will be deleted?
+Run without `--yes` flag to see a summary first
 
+---
+
+## That's It!
+
+Just use `db-manager.js` for everything. No more confusion! 🎉

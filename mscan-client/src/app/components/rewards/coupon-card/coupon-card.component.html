@@ -1,0 +1,23 @@
+<div class="coupon-card">
+  <div class="card-top">
+    <img class="card-logo" [src]="brandLogo" alt="Logo" />
+    <p class="card-type">Painter Token</p>
+  </div>
+  <div class="card-banner">
+    <div class="star-img">
+      <!-- <img class="star-img" src="star.png" alt="" /> -->
+      <p class="amount">{{ amount }}</p>
+    </div>
+  </div>
+  <div class="card-bottom">
+    <p *ngIf="productName" class="product-chip">{{ productName }}</p>
+    <img class="qr-code" [src]="qrSrc" alt="" />
+    <p class="terms-and-condition">
+      * Terms & Conditions Applied, to know more please contact or visit us on:
+    </p>
+    <p class="contact">
+      <span class="me-2"><span class="material-icons">support_agent</span>0731-4938908</span>
+      <span><span class="material-icons">public</span>www.palspaint.com</span>
+    </p>
+  </div>
+</div>

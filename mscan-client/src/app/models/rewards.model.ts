@@ -1,25 +1,6 @@
-export interface Tenant {
-  id: number;
-  tenant_name: string;
-  contact_person: string;
-  email: string;
-  phone?: string;
-  address?: string;
-  status: 'active' | 'inactive' | 'suspended';
-  created_at: string;
-  updated_at: string;
-  total_credits_received?: number;
-  total_credits_spent?: number;
-  credit_balance?: number;
-  total_coupons?: number;
-  total_scans?: number;
-  subdomain_slug?: string;
-  verification_apps_count?: number;
-}
-
 export interface CreditRequest {
   id: number;
-  tenant_id: number;
+  tenant_id: string;
   requested_amount: number;
   justification?: string;
   status: 'pending' | 'approved' | 'rejected';
@@ -33,7 +14,7 @@ export interface CreditRequest {
 }
 
 export interface CreditBalance {
-  tenant_id: number;
+  tenant_id: string;
   total_credits: number;
   balance: number;
   total_received: number;
@@ -44,7 +25,7 @@ export interface CreditBalance {
 
 export interface CreditTransaction {
   id: number;
-  tenant_id: number;
+  tenant_id: string;
   transaction_type: 'CREDIT' | 'DEBIT';
   amount: number;
   balance_before: number;
@@ -58,9 +39,10 @@ export interface CreditTransaction {
 }
 
 export interface VerificationApp {
-  id: string;
-  tenant_id: string;
+  verification_app_id: string;
+  tenant_id?: string;
   app_name: string;
+  code?: string;
   description?: string;
   logo_url?: string;
   primary_color?: string;
@@ -79,28 +61,19 @@ export interface VerificationApp {
 export interface Product {
   id: number;
   tenant_id: string;
+  verification_app_id?: string | number;
   product_name: string;
   product_sku?: string;
   description?: string;
-  category_id?: number;
   price?: number;
   currency?: string;
   image_url?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
-}
-
-export interface Category {
-  id: number;
-  tenant_id: string;
-  name: string;
-  description?: string;
-  icon?: string;
-  is_active: boolean;
-  product_count?: number;
-  created_at: string;
-  updated_at: string;
+  template_id?: string;
+  template_name?: string;
+  attributes?: any; // Dynamic attributes from template
 }
 
 export interface Coupon {
@@ -141,7 +114,7 @@ export interface Coupon {
 export interface Scan {
   id: number;
   coupon_id: number;
-  tenant_id: number;
+  tenant_id: string;
   scan_timestamp: string;
   scan_status: 'SUCCESS' | 'EXPIRED' | 'EXHAUSTED' | 'INVALID' | 'INACTIVE';
   location_lat?: number;

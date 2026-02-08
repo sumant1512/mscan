@@ -1,3 +1,5 @@
+import { Tenant } from './tenant-admin.model';
+
 /**
  * User Model
  */
@@ -15,13 +17,6 @@ export enum UserRole {
   SUPER_ADMIN = 'SUPER_ADMIN',
   TENANT_ADMIN = 'TENANT_ADMIN',
   TENANT_USER = 'TENANT_USER'
-}
-
-export interface Tenant {
-  id: string;
-  companyName: string;
-  contactEmail: string;
-  subdomain?: string;
 }
 
 /**
@@ -109,3 +104,13 @@ export interface ApiResponse<T = any> {
   message?: string;
   data?: T;
 }
+
+/**
+ * Export Permission and Tenant User Models
+ */
+export * from './permissions.model';
+
+/**
+ * Export Template Models
+ */
+export * from './templates.model';

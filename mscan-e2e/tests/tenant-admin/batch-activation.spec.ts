@@ -15,12 +15,25 @@ test.describe('Tenant Admin - Batch Activation', () => {
     await authHelper.loginAsTenantAdmin(TEST_CONFIG.tenant1);
     const accessToken = await authHelper.getAccessToken();
 
+    // Add sufficient credits to tenant via database for testing
+    const { DatabaseHelper } = await import('../../utils/database-helper.js');
+    const dbHelper = new DatabaseHelper();
+    await dbHelper.connect();
+    await (dbHelper as any).client.query(
+      `UPDATE tenant_credit_balance
+       SET balance = balance + 50000
+       WHERE tenant_id = (SELECT tenant_id FROM users WHERE email = $1 LIMIT 1)`,
+      [TEST_CONFIG.tenant1.email]
+    );
+    await dbHelper.disconnect();
+    console.log('✅ Added 50000 credits to tenant for testing');
+
     // Get verification app
     const appsResponse = await page.request.get(`${TEST_CONFIG.tenant1.apiBaseUrl}/rewards/verification-apps`, {
       headers: { 'Authorization': `Bearer ${accessToken}` }
     });
     const appsData = await appsResponse.json();
-    verificationAppId = appsData.apps[0].id;
+    verificationAppId = appsData.apps[0].verification_app_id;
 
     // Create a batch of coupons for testing
     const expiryDate = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
@@ -38,7 +51,19 @@ test.describe('Tenant Admin - Batch Activation', () => {
       }
     });
 
+    if (!createResponse.ok()) {
+      const errorData = await createResponse.text();
+      console.error('Failed to create batch coupons:', createResponse.status(), errorData);
+      throw new Error(`Failed to create batch coupons: ${errorData}`);
+    }
+
     const createData = await createResponse.json();
+    console.log('✅ Coupon creation response:', JSON.stringify(createData, null, 2));
+
+    if (!createData.coupons || createData.coupons.length === 0) {
+      throw new Error(`No coupons returned in response: ${JSON.stringify(createData)}`);
+    }
+
     batchId = createData.coupons[0].batch_id;
     couponReferences = createData.coupons.map((c: any) => c.coupon_reference).sort();
 

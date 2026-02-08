@@ -19,8 +19,8 @@ describe('CouponCreateComponent', () => {
   let router: any;
 
   const mockVerificationApps = [
-    { id: 'app-1', app_name: 'Test App 1', status: 'active' },
-    { id: 'app-2', app_name: 'Test App 2', status: 'active' }
+    { verification_app_id: 'app-1', app_name: 'Test App 1', status: 'active' },
+    { verification_app_id: 'app-2', app_name: 'Test App 2', status: 'active' }
   ];
 
   const mockCouponResponse = {

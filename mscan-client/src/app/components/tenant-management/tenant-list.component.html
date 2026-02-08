@@ -4,107 +4,91 @@
     <button class="btn-primary" (click)="createTenant()">+ Create Tenant</button>
   </div>
 
-  <div class="filters">
-    <div class="search-box">
-      <input
-        type="text"
-        [(ngModel)]="searchQuery"
-        (keyup.enter)="onSearch()"
-        placeholder="Search tenants..."
-        class="search-input"
-      />
-      <button (click)="onSearch()" class="btn-search">Search</button>
+  <ng-container *ngIf="filters$ | async as filters">
+    <div class="filters">
+      <div class="search-box">
+        <input
+          type="text"
+          [value]="filters.searchQuery"
+          (input)="onSearch($any($event.target).value)"
+          (keyup.enter)="onSearch($any($event.target).value)"
+          placeholder="Search tenants..."
+          class="search-input"
+        />
+        <button (click)="resetFilters()" class="btn-search" *ngIf="filters.searchQuery">Clear</button>
+      </div>
+
+      <div class="filter-controls">
+        <select [value]="filters.statusFilter" (change)="onStatusFilterChange($any($event.target).value)" class="filter-select">
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+
+        <select [value]="filters.sortBy" (change)="onSortByChange($any($event.target).value)" class="filter-select">
+          <option value="created_at">Sort by Date</option>
+          <option value="name">Sort by Name</option>
+        </select>
+
+        <button (click)="toggleSortOrder()" class="btn-sort">
+          {{ filters.sortOrder === 'asc' ? '↑' : '↓' }}
+        </button>
+      </div>
     </div>
+  </ng-container>
 
-    <div class="filter-controls">
-      <select [(ngModel)]="statusFilter" (change)="onFilterChange()" class="filter-select">
-        <option value="all">All Status</option>
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-        <option value="suspended">Suspended</option>
-      </select>
+  <div *ngIf="loading$ | async" class="loading">Loading tenants...</div>
+  <div *ngIf="error$ | async as error" class="error">{{ error }}</div>
 
-      <select [(ngModel)]="sortBy" (change)="onSortChange()" class="filter-select">
-        <option value="created_at">Sort by Date</option>
-        <option value="name">Sort by Name</option>
-        <option value="total_credits">Sort by Credits</option>
-      </select>
-
-      <button (click)="toggleSortOrder()" class="btn-sort">
-        {{ sortOrder === 'asc' ? '↑' : '↓' }}
-      </button>
+  <ng-container *ngIf="tenants$ | async as tenants">
+    <div *ngIf="!(loading$ | async) && !(error$ | async)" class="table-container">
+      <table class="tenant-table">
+        <thead>
+          <tr>
+            <th>Tenant Name</th>
+            <th>Subdomain</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Status</th>
+            <th>Admins</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let tenant of tenants">
+            <td class="tenant-name">{{ tenant.tenant_name }}</td>
+            <td>
+              <a href="http://{{ tenant.subdomain_slug }}.localhost:4200" target="_blank" class="tenant-link" title="Open {{ tenant.subdomain_slug }}">
+                {{ tenant.subdomain_slug }}
+              </a>
+            </td>
+            <td>{{ tenant.email }}</td>
+            <td>{{ tenant.phone || '-' }}</td>
+            <td>
+              <span [class]="getStatusClass(tenant.status)" class="status-badge">
+                {{ tenant.status }}
+              </span>
+            </td>
+            <td>{{ tenant.tenant_admin_count || 0 }}</td>
+            <td>{{ tenant.created_at | date : 'short' }}</td>
+            <td class="actions">
+              <button (click)="viewTenant(tenant.id)" class="btn-icon" title="View">👁️</button>
+              <button (click)="editTenant(tenant.id)" class="btn-icon" title="Edit">✏️</button>
+              <button
+                (click)="toggleStatus(tenant)"
+                class="btn-icon"
+                [title]="tenant.status === 'active' ? 'Deactivate' : 'Activate'"
+              >
+                {{ tenant.status === 'active' ? '🔒' : '🔓' }}
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="tenants.length === 0">
+            <td colspan="8" class="no-data">No tenants found</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-  </div>
-
-  <div *ngIf="loading" class="loading">Loading tenants...</div>
-  <div *ngIf="error" class="error">{{ error }}</div>
-
-  <div *ngIf="!loading && !error" class="table-container">
-    <table class="tenant-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Tenant Name</th>
-          <th>Contact Person</th>
-          <th>Email</th>
-          <th>Phone</th>
-          <th>Status</th>
-          <th>Credits</th>
-          <th>Active Coupons</th>
-          <th>Total Scans</th>
-          <th>Created</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let tenant of tenants">
-          <td>{{ tenant.id }}</td>
-          <td class="tenant-name">
-            <a href="http://{{ tenant.subdomain_slug }}.localhost:4200" target="_blank" class="tenant-link" title="Open {{ tenant.subdomain_slug }}">
-              🌐
-            </a>
-            {{ tenant.tenant_name }}
-          </td>
-          <td>{{ tenant.contact_person }}</td>
-          <td>{{ tenant.email }}</td>
-          <td>{{ tenant.phone || '-' }}</td>
-          <td>
-            <span [class]="getStatusClass(tenant.status)" class="status-badge">
-              {{ tenant.status }}
-            </span>
-          </td>
-          <td class="credits">{{ tenant.credit_balance || 0 }}</td>
-          <td>{{ tenant.total_coupons || 0 }}</td>
-          <td>{{ tenant.total_scans || 0 }}</td>
-          <td>{{ tenant.created_at | date : 'short' }}</td>
-          <td class="actions">
-            <button (click)="viewTenant(tenant.id)" class="btn-icon" title="View">👁️</button>
-            <button (click)="editTenant(tenant.id)" class="btn-icon" title="Edit">✏️</button>
-            <button
-              (click)="toggleStatus(tenant)"
-              class="btn-icon"
-              [title]="tenant.status === 'active' ? 'Deactivate' : 'Activate'"
-            >
-              {{ tenant.status === 'active' ? '🔒' : '🔓' }}
-            </button>
-          </td>
-        </tr>
-        <tr *ngIf="tenants.length === 0">
-          <td colspan="11" class="no-data">No tenants found</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div *ngIf="!loading && tenants.length > 0" class="pagination">
-    <button (click)="previousPage()" [disabled]="currentPage === 1" class="btn-page">
-      Previous
-    </button>
-    <span class="page-info">
-      Page {{ currentPage }} of {{ totalPages }} ({{ totalTenants }} total)
-    </span>
-    <button (click)="nextPage()" [disabled]="currentPage === totalPages" class="btn-page">
-      Next
-    </button>
-  </div>
+  </ng-container>
 </div>

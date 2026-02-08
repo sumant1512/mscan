@@ -1,26 +1,27 @@
 <div class="verification-app-container">
   <div class="header">
     <h1>Verification Apps</h1>
-    <button class="btn-primary" (click)="configureApp()">
+    <button *ngIf="canCreateApp" class="btn-primary" (click)="configureApp()">
       <span class="material-icons">add</span>
       Create New App
     </button>
   </div>
 
-  <div *ngIf="loading" class="loading">Loading...</div>
-  <div *ngIf="error" class="error">{{ error }}</div>
+  <div *ngIf="verificationAppsFacade.loading$ | async" class="loading">Loading...</div>
+  <div *ngIf="verificationAppsFacade.error$ | async as error" class="error">{{ error }}</div>
 
-  <div *ngIf="!loading && !error && apps.length === 0" class="empty-state">
+  <div *ngIf="!(verificationAppsFacade.loading$ | async) && !(verificationAppsFacade.error$ | async) && apps.length === 0" class="empty-state">
     <span class="material-icons">verified</span>
     <h3>No Verification Apps Yet</h3>
-    <p>Create your first verification app to start generating QR codes for your coupons.</p>
-    <button class="btn-primary" (click)="configureApp()">
+    <p *ngIf="canCreateApp">Create your first verification app to start generating QR codes for your coupons.</p>
+    <p *ngIf="!canCreateApp">Contact your administrator to create verification apps.</p>
+    <button *ngIf="canCreateApp" class="btn-primary" (click)="configureApp()">
       <span class="material-icons">add</span>
       Create Verification App
     </button>
   </div>
 
-  <div *ngIf="!loading && !error && apps.length > 0" class="apps-grid">
+  <div *ngIf="!(verificationAppsFacade.loading$ | async) && !(verificationAppsFacade.error$ | async) && apps.length > 0" class="apps-grid">
     <div *ngFor="let app of apps" class="app-card">
       <div class="app-header">
         <img [src]="app.logo_url || '/assets/default-logo.png'" alt="App Logo" class="app-logo">
@@ -44,10 +45,15 @@
         </div>
       </div>
       <div class="app-actions">
-        <button class="btn-secondary" (click)="editApp(app.id)">
+        <button *ngIf="canEditApp" class="btn-secondary" (click)="editApp(app.verification_app_id)">
           <span class="material-icons">edit</span>
           Configure
         </button>
+        <button *ngIf="canEditApp" class="btn-secondary" (click)="configureApi(app.verification_app_id)">
+          <span class="material-icons">api</span>
+          API Config
+        </button>
+        <span *ngIf="!canEditApp" class="read-only-badge">Read-Only</span>
       </div>
     </div>
   </div>

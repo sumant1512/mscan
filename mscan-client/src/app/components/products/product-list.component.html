@@ -13,10 +13,11 @@
           <span class="material-icons">search</span>
         </button>
       </div>
-      <button (click)="createProduct()" class="btn-primary">
+      <button *ngIf="canCreateProduct" (click)="createProduct()" class="btn-primary">
         <span class="material-icons">add</span>
         Add Product
       </button>
+      <span *ngIf="!canCreateProduct && !canEditProduct && !canDeleteProduct" class="read-only-badge">Read-Only Access</span>
     </div>
   </div>
 
@@ -29,8 +30,9 @@
   <div *ngIf="!loading && products.length === 0" class="empty-state">
     <span class="material-icons">inventory_2</span>
     <h3>No products found</h3>
-    <p>Create your first product to get started</p>
-    <button (click)="createProduct()" class="btn-primary">
+    <p *ngIf="canCreateProduct">Create your first product to get started</p>
+    <p *ngIf="!canCreateProduct">No products available</p>
+    <button *ngIf="canCreateProduct" (click)="createProduct()" class="btn-primary">
       <span class="material-icons">add</span>
       Create Product
     </button>
@@ -46,16 +48,25 @@
         <h3>{{ product.product_name }}</h3>
         <p class="product-sku" *ngIf="product.product_sku">SKU: {{ product.product_sku }}</p>
         <p class="product-description" *ngIf="product.description">{{ product.description }}</p>
-        <div class="product-price" *ngIf="product.price">
-          {{ product.currency || 'USD' }} {{ product.price }}
+        <div class="product-meta">
+          <div class="product-price">
+            {{ getProductPriceDisplay(product) }}
+            <span *ngIf="hasVariants(product)" class="variant-count" title="Product Variants">
+              ({{ getVariantCount(product) }} variants)
+            </span>
+          </div>
+          <span *ngIf="product.template_id" class="template-badge" title="Product Template">
+            📋 {{ product.template_name || 'Template' }}
+          </span>
         </div>
         <span class="status-badge" [class.active]="product.is_active" [class.inactive]="!product.is_active">
           {{ product.is_active ? 'Active' : 'Inactive' }}
         </span>
       </div>
       <div class="product-actions">
-        <button (click)="editProduct(product)" class="btn-secondary">Edit</button>
-        <button (click)="confirmDelete(product)" class="btn-danger">Delete</button>
+        <button *ngIf="canEditProduct" (click)="editProduct(product)" class="btn-secondary">Edit</button>
+        <button *ngIf="canDeleteProduct" (click)="confirmDelete(product)" class="btn-danger">Delete</button>
+        <span *ngIf="!canEditProduct && !canDeleteProduct" class="info-text">View-only</span>
       </div>
   </div>
 

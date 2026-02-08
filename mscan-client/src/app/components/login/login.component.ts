@@ -1,13 +1,14 @@
 /**
  * Login Component
  */
-import { ChangeDetectorRef, Component } from '@angular/core';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { SubdomainService } from '../../services/subdomain.service';
+import { AuthContextFacade } from '../../store/auth-context';
 
 @Component({
   selector: 'app-login',
@@ -19,7 +20,7 @@ import { SubdomainService } from '../../services/subdomain.service';
 export class LoginComponent {
   emailForm: FormGroup;
   otpForm: FormGroup;
-  
+
   step: 'email' | 'otp' = 'email';
   loading = false;
   error = '';
@@ -28,6 +29,8 @@ export class LoginComponent {
   otpExpiryTime = 0;
   countdown = '';
   currentSubdomain: string | null = null;
+
+  private authContextFacade = inject(AuthContextFacade);
 
   constructor(
     private fb: FormBuilder,
@@ -113,6 +116,9 @@ export class LoginComponent {
           if (response.success && response.data) {
             const userType = response.data.userType;
             const subdomain = response.data.subdomain;
+
+            // Load user context into NgRx store after successful login
+            this.authContextFacade.loadUserContext();
 
             // Issue 2 & 3: Handle subdomain redirect and navigation properly
             if (userType === 'SUPER_ADMIN') {

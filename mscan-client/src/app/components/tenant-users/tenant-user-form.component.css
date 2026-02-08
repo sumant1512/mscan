@@ -1,0 +1,273 @@
+.form-container {
+  max-width: 56.2500rem;
+  margin: 0 auto;
+  padding: 1.2500rem;
+}
+
+.form-header {
+  margin-bottom: 1.5000rem;
+}
+
+.form-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.5000rem;
+}
+
+/* Alerts */
+.alert {
+  padding: 0.7500rem 1rem;
+  border-radius: 0.2500rem;
+  margin-bottom: 1rem;
+}
+
+.alert-error {
+  background: #f8d7da;
+  border: 0.0625rem solid #f5c6cb;
+  color: #721c24;
+}
+
+/* Loading state */
+.loading,
+.loading-permissions {
+  text-align: center;
+  padding: 2.5000rem 1.2500rem;
+  color: #666;
+}
+
+.no-permissions {
+  padding: 1.2500rem;
+  text-align: center;
+  color: #666;
+  background: #f8f9fa;
+  border-radius: 0.2500rem;
+}
+
+/* Form */
+.user-form {
+  background: white;
+  border-radius: 0.5000rem;
+  box-shadow: 0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.1);
+}
+
+.form-section {
+  padding: 1.5000rem;
+  border-bottom: 0.0625rem solid #e9ecef;
+}
+
+.form-section:last-of-type {
+  border-bottom: none;
+}
+
+.form-section h3 {
+  margin: 0 0 1rem;
+  color: #333;
+  font-size: 1.1250rem;
+}
+
+.section-description {
+  margin: 0 0 1.2500rem;
+  color: #666;
+  font-size: 0.8750rem;
+}
+
+.form-group {
+  margin-bottom: 1.2500rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5000rem;
+  color: #495057;
+  font-weight: 500;
+  font-size: 0.8750rem;
+}
+
+.required {
+  color: #dc3545;
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="tel"],
+.form-group select {
+  width: 100%;
+  padding: 0.6250rem 0.7500rem;
+  border: 0.0625rem solid #ced4da;
+  border-radius: 0.2500rem;
+  font-size: 0.8750rem;
+  transition: border-color 0.15s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-group input:read-only {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
+
+.help-text {
+  display: block;
+  margin-top: 0.2500rem;
+  font-size: 0.7500rem;
+  color: #6c757d;
+}
+
+/* Permissions Section */
+.permissions-grid {
+  display: grid;
+  gap: 1.5000rem;
+}
+
+.permission-group h4 {
+  margin: 0 0 0.7500rem;
+  color: #495057;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.permission-checkboxes {
+  display: grid;
+  gap: 0.5000rem;
+}
+
+.permission-item {
+  background: #f8f9fa;
+  border: 0.0625rem solid #dee2e6;
+  border-radius: 0.2500rem;
+  padding: 0.7500rem;
+  transition: background-color 0.15s;
+}
+
+.permission-item:hover {
+  background: #e9ecef;
+}
+
+.checkbox-label {
+  display: flex;
+  gap: 0.7500rem;
+  cursor: pointer;
+  align-items: flex-start;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin-top: 0.1875rem;
+  width: 1.1250rem;
+  height: 1.1250rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.permission-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2500rem;
+  flex: 1;
+}
+
+.permission-name {
+  font-weight: 500;
+  color: #212529;
+  font-size: 0.8750rem;
+}
+
+.permission-code {
+  font-family: 'Courier New', monospace;
+  font-size: 0.7500rem;
+  color: #6c757d;
+}
+
+.permission-description {
+  font-size: 0.7500rem;
+  color: #6c757d;
+}
+
+.selected-permissions-summary {
+  margin-top: 1rem;
+  padding: 0.7500rem;
+  background: #e7f3ff;
+  border-left: 0.2500rem solid #007bff;
+  border-radius: 0.2500rem;
+  font-size: 0.8750rem;
+  color: #004085;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.7500rem;
+  padding: 1.5000rem;
+  background: #f8f9fa;
+  border-top: 0.0625rem solid #dee2e6;
+  border-radius: 0 0 0.5000rem 0.5000rem;
+}
+
+.btn-primary,
+.btn-secondary {
+  padding: 0.6250rem 1.5000rem;
+  border: none;
+  border-radius: 0.2500rem;
+  cursor: pointer;
+  font-size: 0.8750rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.btn-primary {
+  background: #007bff;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.btn-primary:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #545b62;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 48rem) {
+  .form-container {
+    padding: 0.7500rem;
+  }
+
+  .form-section {
+    padding: 1rem;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+    padding: 1rem;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+
+  .checkbox-label {
+    font-size: 0.8750rem;
+  }
+}

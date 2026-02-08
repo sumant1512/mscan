@@ -1,0 +1,156 @@
+<div class="users-container">
+  <div class="header">
+    <h2>Tenant Users</h2>
+    <div class="header-actions">
+      <div class="search-box">
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          (keyup.enter)="onSearch()"
+          placeholder="Search users by name or email..."
+        />
+        <button (click)="onSearch()" class="btn-search">
+          <span class="material-icons">search</span>
+        </button>
+      </div>
+      <select
+        [(ngModel)]="roleFilter"
+        (change)="onRoleFilterChange()"
+        class="filter-select"
+      >
+        <option value="">All Roles</option>
+        <option value="TENANT_ADMIN">Tenant Admin</option>
+        <option value="TENANT_USER">Tenant User</option>
+      </select>
+      <button
+        *ngIf="canManageUsers"
+        (click)="createUser()"
+        class="btn-primary"
+      >
+        <span class="material-icons">person_add</span>
+        Add User
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="successMessage" class="alert alert-success">
+    {{ successMessage }}
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+
+  <div *ngIf="loading" class="loading">
+    <p>Loading users...</p>
+  </div>
+
+  <div *ngIf="!loading && !error && users.length === 0" class="empty-state">
+    <span class="material-icons">people</span>
+    <h3>No users found</h3>
+    <p>Add your first user to get started</p>
+    <button *ngIf="canManageUsers" (click)="createUser()" class="btn-primary">
+      <span class="material-icons">person_add</span>
+      Add User
+    </button>
+  </div>
+
+  <div *ngIf="!loading && users.length > 0" class="users-table-container">
+    <table class="users-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Permissions</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of users">
+          <td>{{ user.full_name }}</td>
+          <td>{{ user.email }}</td>
+          <td>
+            <span [ngClass]="getRoleBadgeClass(user.role)">
+              {{ user.role === 'TENANT_ADMIN' ? 'Admin' : 'User' }}
+            </span>
+          </td>
+          <td>
+            <span [ngClass]="getStatusBadgeClass(user)">
+              {{ getStatusText(user) }}
+            </span>
+          </td>
+          <td>
+            <button
+              (click)="viewUserPermissions(user)"
+              class="btn-link"
+              title="View permissions"
+            >
+              {{ user.permissions?.length || 0 }} permissions
+            </button>
+          </td>
+          <td>{{ formatDate(user.created_at) }}</td>
+          <td class="actions-cell">
+            <button
+              *ngIf="canManageUsers"
+              (click)="editUser(user)"
+              class="btn-icon"
+              title="Edit user"
+            >
+              <span class="material-icons">edit</span>
+            </button>
+            <button
+              (click)="viewUserPermissions(user)"
+              class="btn-icon"
+              title="Manage permissions"
+            >
+              <span class="material-icons">lock</span>
+            </button>
+            <button
+              *ngIf="canManageUsers && !user.deleted_at"
+              (click)="confirmDelete(user)"
+              class="btn-icon btn-icon-danger"
+              title="Delete user"
+            >
+              <span class="material-icons">delete</span>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button
+        (click)="previousPage()"
+        [disabled]="currentPage === 1"
+        class="btn-secondary"
+      >
+        Previous
+      </button>
+      <span class="page-info">
+        Page {{ currentPage }} of {{ totalPages }} ({{ totalUsers }} users)
+      </span>
+      <button
+        (click)="nextPage()"
+        [disabled]="currentPage === totalPages"
+        class="btn-secondary"
+      >
+        Next
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div *ngIf="showDeleteModal" class="modal-overlay" (click)="closeDeleteModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <h3>Delete User</h3>
+    <p>Are you sure you want to delete "{{ selectedUser?.full_name }}"?</p>
+    <p class="warning-text">This will soft-delete the user and they will no longer have access to the system.</p>
+    <div class="modal-actions">
+      <button (click)="deleteUser()" class="btn-danger">Delete</button>
+      <button (click)="closeDeleteModal()" class="btn-secondary">Cancel</button>
+    </div>
+  </div>
+</div>

@@ -42,6 +42,14 @@ export class SideNavComponent implements OnInit {
       ]
     },
     {
+      label: 'Tenant Admins',
+      icon: 'admin_panel_settings',
+      children: [
+        { label: 'Manage Admins', icon: 'group', route: '/super-admin/tenant-admins' },
+        { label: 'Add Admin', icon: 'person_add', route: '/super-admin/tenant-admins/add' }
+      ]
+    },
+    {
       label: 'Credit Requests',
       icon: 'account_balance_wallet',
       children: [
@@ -74,10 +82,10 @@ export class SideNavComponent implements OnInit {
       label: 'Catalogue',
       icon: 'inventory_2',
       children: [
-        { label: 'Add Category', icon: 'add_circle', route: '/tenant/categories/create' },
-        { label: 'View Categories', icon: 'category', route: '/tenant/categories' },
         { label: 'Add Product', icon: 'add_circle', route: '/tenant/products/create' },
-        { label: 'View Products', icon: 'inventory', route: '/tenant/products' }
+        { label: 'View Products', icon: 'inventory', route: '/tenant/products' },
+        { label: 'Product Templates', icon: 'view_module', route: '/tenant/templates' },
+        { label: 'Tag Management', icon: 'label', route: '/tenant/tags' }
       ]
     },
     {
@@ -86,8 +94,7 @@ export class SideNavComponent implements OnInit {
       children: [
         { label: 'Create Coupon', icon: 'add_circle', route: '/tenant/coupons/create' },
         { label: 'Coupon List', icon: 'list_alt', route: '/tenant/coupons' },
-        { label: 'Scan History', icon: 'qr_code_scanner', route: '/tenant/scans/history' },
-        { label: 'Analytics', icon: 'analytics', route: '/tenant/scans/analytics' }
+        { label: 'Scan History', icon: 'qr_code_scanner', route: '/tenant/scans/history' }
       ]
     },
     {
@@ -97,6 +104,14 @@ export class SideNavComponent implements OnInit {
         { label: 'Balance', icon: 'account_balance', route: '/tenant/credits/balance' },
         { label: 'Request Credits', icon: 'add', route: '/tenant/credits/request' },
         { label: 'Transaction History', icon: 'receipt', route: '/tenant/credits/history' } 
+      ]
+    },
+    {
+      label: 'User Management',
+      icon: 'people',
+      children: [
+        { label: 'Add User', icon: 'person_add', route: '/tenant/users/create' },
+        { label: 'View Users', icon: 'group', route: '/tenant/users' }
       ]
     },
     {
@@ -127,7 +142,7 @@ export class SideNavComponent implements OnInit {
           
           // Set tenant name for display
           if (user.tenant) {
-            this.currentTenantName = user.tenant.companyName || '';
+            this.currentTenantName = user.tenant.tenant_name || '';
           }
           this.cdr.detectChanges();
         }

@@ -1,0 +1,589 @@
+<div class="template-form-container">
+  <div class="page-header">
+    <h1>{{ isEditMode ? 'Edit Template' : 'Create Template' }}</h1>
+    <p class="subtitle">
+      {{ isEditMode ? 'Update template metadata and attributes' : 'Define a new product template with custom attributes' }}
+    </p>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="error" class="alert alert-error">
+    <span class="icon">⚠️</span>
+    {{ error }}
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading && isEditMode" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading template...</p>
+  </div>
+
+  <!-- Form -->
+  <form *ngIf="!loading || !isEditMode" (ngSubmit)="onSubmit()" class="template-form">
+    <!-- Template Metadata -->
+    <div class="form-section">
+      <h2 class="section-title">Template Information</h2>
+
+      <div class="form-group">
+        <label for="name" class="required">Template Name</label>
+        <input
+          type="text"
+          id="name"
+          [(ngModel)]="template.name"
+          name="name"
+          placeholder="e.g., Premium Clothing Template"
+          required
+          class="form-input"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="industry_type" class="required">Industry Type</label>
+        <select
+          id="industry_type"
+          [(ngModel)]="template.industry_type"
+          name="industry_type"
+          required
+          class="form-input"
+        >
+          <option value="">Select industry type...</option>
+          <option *ngFor="let type of industryTypes" [value]="type.value">
+            {{ type.label }}
+          </option>
+        </select>
+        <small class="form-hint">Choose the industry category for this template</small>
+      </div>
+
+      <div class="form-group">
+        <label for="description">Description</label>
+        <textarea
+          id="description"
+          [(ngModel)]="template.description"
+          name="description"
+          rows="3"
+          placeholder="Optional description of this template"
+          class="form-input"
+        ></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="icon">Icon (Emoji)</label>
+        <input
+          type="text"
+          id="icon"
+          [(ngModel)]="template.icon"
+          name="icon"
+          placeholder="e.g., 👕"
+          maxlength="2"
+          class="form-input icon-input"
+        />
+        <small class="form-hint">Enter an emoji to represent this template</small>
+      </div>
+    </div>
+
+    <!-- Attributes Section -->
+    <div class="form-section">
+      <div class="section-header">
+        <h2 class="section-title">Attributes</h2>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="addAttribute()">
+          <span class="icon">➕</span> Add Attribute
+        </button>
+      </div>
+
+      <div *ngIf="attributes.length === 0" class="empty-state-small">
+        <p>No attributes defined. Click "Add Attribute" to get started.</p>
+      </div>
+
+      <div *ngFor="let attribute of attributes; let i = index" class="attribute-card">
+        <div class="attribute-header">
+          <span class="attribute-number">#{{ i + 1 }}</span>
+          <div class="attribute-actions">
+            <button
+              type="button"
+              class="btn-icon"
+              (click)="moveAttributeUp(i)"
+              [disabled]="i === 0"
+              title="Move Up"
+            >
+              ⬆️
+            </button>
+            <button
+              type="button"
+              class="btn-icon"
+              (click)="moveAttributeDown(i)"
+              [disabled]="i === attributes.length - 1"
+              title="Move Down"
+            >
+              ⬇️
+            </button>
+            <button
+              type="button"
+              class="btn-icon btn-icon-danger"
+              (click)="removeAttribute(i)"
+              title="Remove"
+            >
+              🗑️
+            </button>
+          </div>
+        </div>
+
+        <div class="attribute-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label [for]="'attr-name-' + i" class="required">Attribute Name</label>
+              <input
+                type="text"
+                [id]="'attr-name-' + i"
+                [(ngModel)]="attribute.attribute_name"
+                [name]="'attribute_name_' + i"
+                (input)="onAttributeNameChange(attribute)"
+                placeholder="e.g., Size, Color, Material"
+                required
+                class="form-input"
+              />
+            </div>
+
+            <div class="form-group">
+              <label [for]="'attr-key-' + i" class="required">Attribute Key</label>
+              <input
+                type="text"
+                [id]="'attr-key-' + i"
+                [(ngModel)]="attribute.attribute_key"
+                [name]="'attribute_key_' + i"
+                placeholder="e.g., size, color, material"
+                required
+                pattern="[a-z0-9_]+"
+                class="form-input"
+              />
+              <small class="form-hint">Lowercase letters, numbers, and underscores only</small>
+            </div>
+
+            <div class="form-group">
+              <label [for]="'attr-type-' + i" class="required">Data Type</label>
+              <select
+                [id]="'attr-type-' + i"
+                [(ngModel)]="attribute.data_type"
+                [name]="'data_type_' + i"
+                (change)="onDataTypeChange(attribute)"
+                required
+                class="form-input"
+              >
+                <option *ngFor="let type of dataTypes" [value]="type">
+                  {{ getDataTypeLabel(type) }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label [for]="'attr-group-' + i">Field Group</label>
+              <input
+                type="text"
+                [id]="'attr-group-' + i"
+                [(ngModel)]="attribute.field_group"
+                [name]="'field_group_' + i"
+                placeholder="e.g., Basic Info, Specifications"
+                class="form-input"
+              />
+            </div>
+
+            <div class="form-group">
+              <label [for]="'attr-default-' + i">Default Value</label>
+              <input
+                type="text"
+                [id]="'attr-default-' + i"
+                [(ngModel)]="attribute.default_value"
+                [name]="'default_value_' + i"
+                placeholder="Optional default value"
+                class="form-input"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label [for]="'attr-placeholder-' + i">Placeholder Text</label>
+              <input
+                type="text"
+                [id]="'attr-placeholder-' + i"
+                [(ngModel)]="attribute.placeholder"
+                [name]="'placeholder_' + i"
+                placeholder="Shown in empty input field"
+                class="form-input"
+              />
+            </div>
+
+            <div class="form-group">
+              <label [for]="'attr-help-' + i">Help Text</label>
+              <input
+                type="text"
+                [id]="'attr-help-' + i"
+                [(ngModel)]="attribute.help_text"
+                [name]="'help_text_' + i"
+                placeholder="Guidance for users"
+                class="form-input"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                [(ngModel)]="attribute.is_required"
+                [name]="'is_required_' + i"
+              />
+              <span>Required Field</span>
+            </label>
+          </div>
+
+          <!-- Validation Rules -->
+          <div *ngIf="needsStringValidation(attribute.data_type)" class="validation-section">
+            <h4>Validation Rules</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label [for]="'attr-min-length-' + i">Min Length</label>
+                <input
+                  type="number"
+                  [id]="'attr-min-length-' + i"
+                  [(ngModel)]="attribute.validation_rules.min_length"
+                  [name]="'min_length_' + i"
+                  min="0"
+                  class="form-input"
+                />
+              </div>
+              <div class="form-group">
+                <label [for]="'attr-max-length-' + i">Max Length</label>
+                <input
+                  type="number"
+                  [id]="'attr-max-length-' + i"
+                  [(ngModel)]="attribute.validation_rules.max_length"
+                  [name]="'max_length_' + i"
+                  min="0"
+                  class="form-input"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="needsNumberValidation(attribute.data_type)" class="validation-section">
+            <h4>Validation Rules</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label [for]="'attr-min-value-' + i">Min Value</label>
+                <input
+                  type="number"
+                  [id]="'attr-min-value-' + i"
+                  [(ngModel)]="attribute.validation_rules.min_value"
+                  [name]="'min_value_' + i"
+                  class="form-input"
+                />
+              </div>
+              <div class="form-group">
+                <label [for]="'attr-max-value-' + i">Max Value</label>
+                <input
+                  type="number"
+                  [id]="'attr-max-value-' + i"
+                  [(ngModel)]="attribute.validation_rules.max_value"
+                  [name]="'max_value_' + i"
+                  class="form-input"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="needsOptions(attribute.data_type)" class="validation-section">
+            <h4>Options</h4>
+            <div class="options-list">
+              <div *ngFor="let option of attribute.validation_rules.options; let optIdx = index" class="option-item">
+                <span>{{ option }}</span>
+                <button
+                  type="button"
+                  class="btn-icon btn-icon-danger"
+                  (click)="removeSelectOption(attribute, optIdx)"
+                >
+                  ✕
+                </button>
+              </div>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline"
+                (click)="addSelectOption(attribute)"
+              >
+                ➕ Add Option
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Variant Configuration Section -->
+    <div class="form-section">
+      <div class="section-header">
+        <h2 class="section-title">Variant Configuration</h2>
+        <p class="section-subtitle">Define product variants using dimensions (e.g., Size, Color, Pack Size)</p>
+      </div>
+
+      <!-- Variant Label -->
+      <div class="form-group">
+        <label for="variant-label">Variant Label</label>
+        <input
+          type="text"
+          id="variant-label"
+          [(ngModel)]="variantConfig.variant_label"
+          name="variant_label"
+          placeholder="e.g., Variants, Pack Sizes, Options"
+          class="form-input"
+        />
+        <small class="form-hint">How variants will be labeled in the product form</small>
+      </div>
+
+      <!-- Variant Dimensions -->
+      <div class="subsection">
+        <div class="section-header">
+          <h3 class="subsection-title">Variant Dimensions</h3>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="addDimension()">
+            <span class="icon">➕</span> Add Dimension
+          </button>
+        </div>
+
+        <div *ngIf="variantConfig.dimensions.length === 0" class="empty-state-small">
+          <p>No variant dimensions defined. Dimensions define the axes of variation (e.g., Size, Color).</p>
+        </div>
+
+        <div *ngFor="let dimension of variantConfig.dimensions; let i = index" class="variant-card">
+          <div class="variant-header">
+            <span class="variant-number">Dimension #{{ i + 1 }}</span>
+            <button
+              type="button"
+              class="btn-icon btn-icon-danger"
+              (click)="removeDimension(i)"
+              title="Remove Dimension"
+            >
+              🗑️
+            </button>
+          </div>
+
+          <div class="variant-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label [for]="'dim-name-' + i" class="required">Dimension Name</label>
+                <input
+                  type="text"
+                  [id]="'dim-name-' + i"
+                  [(ngModel)]="dimension.attribute_name"
+                  [name]="'dimension_name_' + i"
+                  (input)="onDimensionNameChange(dimension)"
+                  placeholder="e.g., Pack Size, Color, Material"
+                  required
+                  class="form-input"
+                />
+              </div>
+
+              <div class="form-group">
+                <label [for]="'dim-key-' + i" class="required">Dimension Key</label>
+                <input
+                  type="text"
+                  [id]="'dim-key-' + i"
+                  [(ngModel)]="dimension.attribute_key"
+                  [name]="'dimension_key_' + i"
+                  placeholder="e.g., pack_size, color"
+                  required
+                  pattern="[a-z0-9_]+"
+                  class="form-input"
+                />
+                <small class="form-hint">Lowercase letters, numbers, and underscores only</small>
+              </div>
+
+              <div class="form-group">
+                <label [for]="'dim-type-' + i" class="required">Type</label>
+                <select
+                  [id]="'dim-type-' + i"
+                  [(ngModel)]="dimension.type"
+                  [name]="'dimension_type_' + i"
+                  required
+                  class="form-input"
+                >
+                  <option *ngFor="let type of variantFieldTypes" [value]="type">
+                    {{ type }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="dimension.required"
+                  [name]="'dimension_required_' + i"
+                />
+                <span>Required Field</span>
+              </label>
+            </div>
+
+            <!-- Dimension Options (for select type) -->
+            <div *ngIf="dimension.type === 'select'" class="validation-section">
+              <h4>Options</h4>
+              <div class="options-list">
+                <div *ngFor="let option of dimension.options; let optIdx = index" class="option-item">
+                  <span>{{ option }}</span>
+                  <button
+                    type="button"
+                    class="btn-icon btn-icon-danger"
+                    (click)="removeDimensionOption(dimension, optIdx)"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline"
+                  (click)="addDimensionOption(dimension)"
+                >
+                  ➕ Add Option
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Common Fields -->
+      <div class="subsection">
+        <div class="section-header">
+          <h3 class="subsection-title">Common Fields (Per Variant)</h3>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="addCommonField()">
+            <span class="icon">➕</span> Add Common Field
+          </button>
+        </div>
+
+        <div *ngIf="variantConfig.common_fields.length === 0" class="empty-state-small">
+          <p>No common fields defined. These fields will be available for each variant (e.g., SKU, MRP, Stock).</p>
+        </div>
+
+        <div *ngFor="let field of variantConfig.common_fields; let i = index" class="variant-card">
+          <div class="variant-header">
+            <span class="variant-number">Field #{{ i + 1 }}</span>
+            <button
+              type="button"
+              class="btn-icon btn-icon-danger"
+              (click)="removeCommonField(i)"
+              title="Remove Common Field"
+            >
+              🗑️
+            </button>
+          </div>
+
+          <div class="variant-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label [for]="'field-name-' + i" class="required">Field Name</label>
+                <input
+                  type="text"
+                  [id]="'field-name-' + i"
+                  [(ngModel)]="field.attribute_name"
+                  [name]="'field_name_' + i"
+                  (input)="onCommonFieldNameChange(field)"
+                  placeholder="e.g., SKU Code, MRP, Stock Quantity"
+                  required
+                  class="form-input"
+                />
+              </div>
+
+              <div class="form-group">
+                <label [for]="'field-key-' + i" class="required">Field Key</label>
+                <input
+                  type="text"
+                  [id]="'field-key-' + i"
+                  [(ngModel)]="field.attribute_key"
+                  [name]="'field_key_' + i"
+                  placeholder="e.g., sku, mrp, stock"
+                  required
+                  pattern="[a-z0-9_]+"
+                  class="form-input"
+                />
+                <small class="form-hint">Lowercase letters, numbers, and underscores only</small>
+              </div>
+
+              <div class="form-group">
+                <label [for]="'field-type-' + i" class="required">Type</label>
+                <select
+                  [id]="'field-type-' + i"
+                  [(ngModel)]="field.type"
+                  [name]="'field_type_' + i"
+                  required
+                  class="form-input"
+                >
+                  <option *ngFor="let type of variantFieldTypes" [value]="type">
+                    {{ type }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label [for]="'field-placeholder-' + i">Placeholder</label>
+                <input
+                  type="text"
+                  [id]="'field-placeholder-' + i"
+                  [(ngModel)]="field.placeholder"
+                  [name]="'field_placeholder_' + i"
+                  placeholder="Shown in empty input field"
+                  class="form-input"
+                />
+              </div>
+
+              <div class="form-group" *ngIf="field.type === 'number'">
+                <label [for]="'field-min-' + i">Min Value</label>
+                <input
+                  type="number"
+                  [id]="'field-min-' + i"
+                  [(ngModel)]="field.min"
+                  [name]="'field_min_' + i"
+                  class="form-input"
+                />
+              </div>
+
+              <div class="form-group" *ngIf="field.type === 'number'">
+                <label [for]="'field-max-' + i">Max Value</label>
+                <input
+                  type="number"
+                  [id]="'field-max-' + i"
+                  [(ngModel)]="field.max"
+                  [name]="'field_max_' + i"
+                  class="form-input"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="field.required"
+                  [name]="'field_required_' + i"
+                />
+                <span>Required Field</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+      <button type="button" class="btn btn-outline" (click)="cancel()" [disabled]="loading">
+        Cancel
+      </button>
+      <button type="submit" class="btn btn-primary" [disabled]="loading">
+        <span *ngIf="!loading">{{ isEditMode ? 'Update Template' : 'Create Template' }}</span>
+        <span *ngIf="loading">Processing...</span>
+      </button>
+    </div>
+  </form>
+</div>

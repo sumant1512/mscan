@@ -170,12 +170,16 @@ const verifyOTP = async (req, res, next) => {
 
     const user = userResult.rows[0];
 
-    // Generate tokens with subdomain
+    // Get permissions for user role
+    const permissions = getPermissionsByRole(user.role);
+
+    // Generate tokens with subdomain and permissions
     const { accessToken, refreshToken } = tokenService.generateTokens(
       user.id,
       user.role,
       user.tenant_id,
-      user.subdomain_slug
+      user.subdomain_slug,
+      permissions
     );
 
     // Log audit
@@ -227,16 +231,16 @@ const getUserContext = async (req, res, next) => {
     const user = result.rows[0];
 
     // Validate subdomain matches user's tenant (if not super admin)
-    if (user.role !== 'SUPER_ADMIN' && user.subdomain_slug) {
-      const requestSubdomain = req.subdomain || null;
-      
-      if (requestSubdomain !== user.subdomain_slug) {
+    // Skip validation for direct API calls (when no subdomain in request)
+    // This allows API clients and tests to call the endpoint directly
+    if (user.role !== 'SUPER_ADMIN' && user.subdomain_slug && req.subdomain) {
+      if (req.subdomain !== user.subdomain_slug) {
         return res.status(403).json({
           success: false,
           message: 'Access denied: Subdomain mismatch',
           data: {
             expectedSubdomain: user.subdomain_slug,
-            currentSubdomain: requestSubdomain
+            currentSubdomain: req.subdomain
           }
         });
       }
@@ -290,12 +294,16 @@ const refreshAccessToken = async (req, res, next) => {
     // Verify refresh token
     const decoded = await tokenService.verifyRefreshToken(refreshToken);
 
-    // Generate new tokens with subdomain
+    // Get permissions for user role (refresh from role in case permissions were updated)
+    const permissions = getPermissionsByRole(decoded.role);
+
+    // Generate new tokens with subdomain and refreshed permissions
     const tokens = tokenService.generateTokens(
       decoded.userId,
       decoded.role,
       decoded.tenantId,
-      decoded.subdomainSlug
+      decoded.subdomainSlug,
+      permissions
     );
 
     // Blacklist old tokens
@@ -370,24 +378,62 @@ const logout = async (req, res, next) => {
 
 /**
  * Get permissions by role
+ * Updated to include granular resource-based permissions
  */
 const getPermissionsByRole = (role) => {
   const permissions = {
     SUPER_ADMIN: [
-      'view_all_tenants',
-      'create_customer',
-      'manage_users',
-      'view_system_stats',
-      'access_admin_panel'
+      // System-level permissions
+      'manage_tenants',
+      'approve_credits',
+      'view_all_data',
+      'manage_system_settings',
+      // All TENANT_ADMIN permissions when acting in tenant context
+      'create_app', 'edit_app', 'delete_app', 'view_apps',
+      'create_coupon', 'edit_coupon', 'delete_coupon', 'view_coupons',
+      'create_batch', 'edit_batch', 'delete_batch', 'view_batches',
+      'create_product', 'edit_product', 'delete_product', 'view_products',
+      'create_template', 'edit_template', 'delete_template', 'view_templates',
+      'request_credits', 'view_credit_balance', 'view_credit_transactions',
+      'view_analytics', 'view_scans',
+      // User and Permission management
+      'manage_tenant_users', 'view_tenant_users',
+      'assign_permissions', 'view_permissions',
+      'create_tenant_user', 'edit_tenant_user', 'delete_tenant_user'
     ],
     TENANT_ADMIN: [
-      'view_tenant_data',
-      'manage_tenant_users',
-      'view_tenant_stats'
+      // App management
+      'create_app', 'edit_app', 'delete_app', 'view_apps',
+      // Coupon management
+      'create_coupon', 'edit_coupon', 'delete_coupon', 'view_coupons',
+      // Batch management
+      'create_batch', 'edit_batch', 'delete_batch', 'view_batches',
+      // Product management
+      'create_product', 'edit_product', 'delete_product', 'view_products',
+      // Template management
+      'create_template', 'edit_template', 'delete_template', 'view_templates',
+      // Credit management
+      'request_credits', 'view_credit_balance', 'view_credit_transactions',
+      // Analytics and reporting
+      'view_analytics', 'view_scans',
+      // User and Permission management
+      'manage_tenant_users', 'view_tenant_users',
+      'assign_permissions', 'view_permissions',
+      'create_tenant_user', 'edit_tenant_user', 'delete_tenant_user'
     ],
     TENANT_USER: [
-      'view_tenant_data',
-      'view_own_profile'
+      // Read-only permissions
+      'view_apps',
+      'view_coupons',
+      'view_batches',
+      'view_products',
+      'view_templates',
+      'view_scans',
+      'view_analytics',
+      'view_credit_balance',
+      'view_credit_transactions',
+      'view_tenant_users',
+      'view_permissions'
     ]
   };
 

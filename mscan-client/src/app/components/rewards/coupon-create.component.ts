@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { RewardsService } from '../../services/rewards.service';
 import { CreditService } from '../../services/credit.service';
 import { ProductsService } from '../../services/products.service';
+import { AppContextService } from '../../services/app-context.service';
 import { VerificationApp, Product } from '../../models/rewards.model';
 import { finalize } from 'rxjs/operators';
 
@@ -20,7 +21,7 @@ export class CouponCreateComponent implements OnInit {
   loading = false;
   error = '';
   success = '';
-  verificationApps: VerificationApp[] = [];
+  selectedAppId: string | null = null;
   products: Product[] = [];
   currentBalance = 0;
   estimatedCost = 0;
@@ -35,6 +36,7 @@ export class CouponCreateComponent implements OnInit {
     private rewardsService: RewardsService,
     private productsService: ProductsService,
     private creditService: CreditService,
+    private appContextService: AppContextService,
     private router: Router,
     private readonly cdr: ChangeDetectorRef
   ) {
@@ -44,12 +46,11 @@ export class CouponCreateComponent implements OnInit {
     const defaultExpiryDate = oneYearFromNow.toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:mm
 
     this.couponForm = this.fb.group({
-      verification_app_id: ['', Validators.required],
       // Single mode fields
       description: ['', [Validators.required, Validators.minLength(3)]],
       discount_value: ['', [Validators.required, Validators.min(1)]],
       quantity: [1, [Validators.required, Validators.min(1), Validators.max(500)]],
-      product_id: [''],
+      product_id: ['', Validators.required],
       coupon_generation_type: ['SINGLE', Validators.required],
       expiry_date: [defaultExpiryDate, Validators.required],
       // Multi-batch mode field
@@ -58,37 +59,47 @@ export class CouponCreateComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.loadData();
+    // Get selected app from context
+    this.appContextService.appContext$.subscribe(context => {
+      this.selectedAppId = context.selectedAppId;
+      if (!this.selectedAppId) {
+        this.error = 'Please select an application from the top header before creating coupons.';
+        this.products = [];
+      } else {
+        this.error = '';
+        // Load products for the selected app
+        this.loadProducts();
+      }
+      this.cdr.detectChanges();
+    });
+
+    this.loadBalance();
     this.couponForm.valueChanges.subscribe(() => {
       this.calculateEstimatedCost();
     });
   }
 
-  loadData() {
-    // Load verification apps
-    this.rewardsService.getVerificationApps().subscribe({
-      next: (response) => {
-        this.verificationApps = response.apps;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Load verification apps error:', err);
-        this.error = err.error?.error || err.message || 'Failed to load verification apps';
-      },
-    });
+  loadProducts() {
+    if (!this.selectedAppId) {
+      this.products = [];
+      return;
+    }
 
-    // Load products
-    this.productsService.getProducts({}).subscribe({
+    console.log('Loading products for app ID:', this.selectedAppId);
+
+    this.productsService.getProducts({ app_id: this.selectedAppId }).subscribe({
       next: (response) => {
         this.products = response.products || [];
         this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Load products error:', err);
+        this.products = [];
       },
     });
+  }
 
-    // Load balance
+  loadBalance() {
     this.creditService.getBalance().subscribe({
       next: (balance) => {
         this.currentBalance = balance.balance;
@@ -126,18 +137,21 @@ export class CouponCreateComponent implements OnInit {
       this.couponForm.get('description')?.clearValidators();
       this.couponForm.get('discount_value')?.clearValidators();
       this.couponForm.get('quantity')?.clearValidators();
+      this.couponForm.get('product_id')?.clearValidators();
       this.couponForm.get('expiry_date')?.clearValidators();
       
       this.couponForm.patchValue({
         description: '',
         discount_value: '',
         quantity: '',
+        product_id: '',
         expiry_date: ''
       });
       
       this.couponForm.get('description')?.updateValueAndValidity();
       this.couponForm.get('discount_value')?.updateValueAndValidity();
       this.couponForm.get('quantity')?.updateValueAndValidity();
+      this.couponForm.get('product_id')?.updateValueAndValidity();
       this.couponForm.get('expiry_date')?.updateValueAndValidity();
       
       if (this.batches.length === 0) {
@@ -148,6 +162,7 @@ export class CouponCreateComponent implements OnInit {
       this.couponForm.get('description')?.setValidators([Validators.required, Validators.minLength(3)]);
       this.couponForm.get('discount_value')?.setValidators([Validators.required, Validators.min(1)]);
       this.couponForm.get('quantity')?.setValidators([Validators.required, Validators.min(1), Validators.max(500)]);
+      this.couponForm.get('product_id')?.setValidators(Validators.required);
       this.couponForm.get('expiry_date')?.setValidators(Validators.required);
       
       // Clear batches and restore single mode defaults
@@ -160,12 +175,14 @@ export class CouponCreateComponent implements OnInit {
         description: '',
         discount_value: '',
         quantity: 1,
+        product_id: '',
         expiry_date: oneYearFromNow.toISOString().slice(0, 16)
       });
       
       this.couponForm.get('description')?.updateValueAndValidity();
       this.couponForm.get('discount_value')?.updateValueAndValidity();
       this.couponForm.get('quantity')?.updateValueAndValidity();
+      this.couponForm.get('product_id')?.updateValueAndValidity();
       this.couponForm.get('expiry_date')?.updateValueAndValidity();
     }
     this.calculateEstimatedCost();
@@ -180,7 +197,7 @@ export class CouponCreateComponent implements OnInit {
       description: ['', [Validators.required, Validators.minLength(3)]],
       quantity: ['', [Validators.required, Validators.min(1), Validators.max(500)]],
       discount_value: ['', [Validators.required, Validators.min(0.01)]],
-      product_id: [''],
+      product_id: ['', Validators.required],
       expiry_date: [defaultExpiryDate, Validators.required]
     });
 
@@ -204,6 +221,11 @@ export class CouponCreateComponent implements OnInit {
   }
 
   onSubmit() {
+    if (!this.selectedAppId) {
+      this.error = 'Please select an application from the top header before creating coupons.';
+      return;
+    }
+
     if (this.couponForm.invalid) {
       Object.keys(this.couponForm.controls).forEach((key) => {
         this.couponForm.controls[key].markAsTouched();
@@ -237,6 +259,7 @@ export class CouponCreateComponent implements OnInit {
     // Always use FIXED_AMOUNT, single-use per code
     const formData = {
       ...this.couponForm.value,
+      verification_app_id: this.selectedAppId,
       discount_type: 'FIXED_AMOUNT',
       total_usage_limit: 1,
       max_scans_per_code: 1,
@@ -285,7 +308,6 @@ export class CouponCreateComponent implements OnInit {
     this.success = '';
     this.showBatchResults = false;
 
-    const { verification_app_id } = this.couponForm.value;
     const batches = this.batches.value.map((batch: any) => ({
       description: batch.description,
       quantity: batch.quantity,
@@ -296,7 +318,7 @@ export class CouponCreateComponent implements OnInit {
     }));
 
     const requestData = {
-      verificationAppId: verification_app_id,
+      verificationAppId: this.selectedAppId!,  // Non-null assertion safe since we check in onSubmit
       batches
     };
 

@@ -1,50 +1,85 @@
 /**
- * Products Controller
- * Handles product catalog management for tenants
+ * Products Controller (Enhanced with Dynamic Attributes)
+ * Handles product catalog management for tenants with template-based attributes
  */
 
 const db = require('../config/database');
+const attributeValidator = require('../services/attributeValidator.service');
 
 const productsController = {
   /**
    * GET /api/products
-   * Get all products for tenant
+   * Get all products for tenant with dynamic attributes
    */
   async getProducts(req, res) {
     try {
       const tenantId = req.user.tenant_id;
-      const { page = 1, limit = 50, search = '', category = '' } = req.query;
+      const { page = 1, limit = 50, search = '', app_id, template_id } = req.query;
+
       const offset = (page - 1) * limit;
 
       let query = `
-        SELECT * FROM products 
-        WHERE tenant_id = $1
+        SELECT
+          p.*,
+          va.app_name,
+          va.code as app_code,
+          pt.template_name,
+          pt.variant_config,
+          pt.custom_fields
+        FROM products p
+        LEFT JOIN verification_apps va ON p.verification_app_id = va.id
+        LEFT JOIN product_templates pt ON p.template_id = pt.id
+        WHERE p.tenant_id = $1
       `;
       const params = [tenantId];
       let paramIndex = 2;
 
+      // Optionally filter by app_id if provided (skip if "all" or empty)
+      if (app_id && app_id !== '' && app_id !== 'all') {
+        query += ` AND p.verification_app_id = $${paramIndex}`;
+        params.push(app_id);
+        paramIndex++;
+      }
+
+      // Filter by template_id if provided
+      if (template_id) {
+        query += ` AND p.template_id = $${paramIndex}`;
+        params.push(template_id);
+        paramIndex++;
+      }
+
       if (search) {
-        query += ` AND (product_name ILIKE $${paramIndex} OR product_sku ILIKE $${paramIndex})`;
+        query += ` AND (p.product_name ILIKE $${paramIndex} OR p.product_sku ILIKE $${paramIndex})`;
         params.push(`%${search}%`);
         paramIndex++;
       }
 
-      if (category) {
-        query += ` AND category = $${paramIndex}`;
-        params.push(category);
-        paramIndex++;
-      }
-
-      query += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+      query += `
+        ORDER BY p.created_at DESC
+        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+      `;
       params.push(limit, offset);
 
       const result = await db.query(query, params);
 
-      // Get total count
-      const countResult = await db.query(
-        'SELECT COUNT(*) FROM products WHERE tenant_id = $1',
-        [tenantId]
-      );
+      // Get total count with filters
+      let countQuery = 'SELECT COUNT(*) FROM products WHERE tenant_id = $1';
+      const countParams = [tenantId];
+      let countIndex = 2;
+
+      if (app_id && app_id !== '' && app_id !== 'all') {
+        countQuery += ` AND verification_app_id = $${countIndex}`;
+        countParams.push(app_id);
+        countIndex++;
+      }
+
+      if (template_id) {
+        countQuery += ` AND template_id = $${countIndex}`;
+        countParams.push(template_id);
+        countIndex++;
+      }
+
+      const countResult = await db.query(countQuery, countParams);
 
       res.json({
         products: result.rows,
@@ -57,23 +92,33 @@ const productsController = {
       });
     } catch (error) {
       console.error('Get products error:', error);
-      res.status(500).json({ error: 'Failed to fetch products' });
+      res.status(500).json({ error: 'Failed to fetch products', message: error.message });
     }
   },
 
   /**
    * GET /api/products/:id
-   * Get single product
+   * Get single product with dynamic attributes
    */
   async getProduct(req, res) {
     try {
       const tenantId = req.user.tenant_id;
       const { id } = req.params;
 
-      const result = await db.query(
-        'SELECT * FROM products WHERE id = $1 AND tenant_id = $2',
-        [id, tenantId]
-      );
+      const result = await db.query(`
+        SELECT
+          p.*,
+          va.app_name,
+          va.code as app_code,
+          pt.template_name,
+          pt.id as template_id,
+          pt.variant_config,
+          pt.custom_fields
+        FROM products p
+        LEFT JOIN verification_apps va ON p.verification_app_id = va.id
+        LEFT JOIN product_templates pt ON p.template_id = pt.id
+        WHERE p.id = $1 AND p.tenant_id = $2
+      `, [id, tenantId]);
 
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Product not found' });
@@ -82,25 +127,27 @@ const productsController = {
       res.json({ product: result.rows[0] });
     } catch (error) {
       console.error('Get product error:', error);
-      res.status(500).json({ error: 'Failed to fetch product' });
+      res.status(500).json({ error: 'Failed to fetch product', message: error.message });
     }
   },
 
   /**
    * POST /api/products
-   * Create new product
+   * Create new product with dynamic attributes
    */
   async createProduct(req, res) {
+    const client = await db.pool.connect();
+
     try {
       const tenantId = req.user.tenant_id;
       const {
         product_name,
-        product_sku,
-        description,
-        category_id,
+        verification_app_id,
         price,
         currency = 'USD',
-        image_url
+        image_url,
+        template_id,
+        attributes = {}
       } = req.body;
 
       // Validation
@@ -108,58 +155,89 @@ const productsController = {
         return res.status(400).json({ error: 'Product name is required' });
       }
 
-      // Check if SKU already exists for this tenant
-      if (product_sku) {
-        const existing = await db.query(
-          'SELECT id FROM products WHERE tenant_id = $1 AND product_sku = $2',
-          [tenantId, product_sku]
-        );
-
-        if (existing.rows.length > 0) {
-          return res.status(400).json({ error: 'Product SKU already exists' });
+      // Validate attributes if template_id is provided
+      if (template_id) {
+        const validation = await attributeValidator.validateAttributes(template_id, attributes);
+        if (!validation.valid) {
+          return res.status(400).json({
+            error: 'Attribute validation failed',
+            validation_errors: validation.errors
+          });
         }
       }
 
-      const result = await db.query(
-        `INSERT INTO products 
-         (tenant_id, product_name, product_sku, description, category_id, price, currency, image_url)
+      await client.query('BEGIN');
+
+      // Insert product with attributes in JSONB column
+      const productResult = await client.query(
+        `INSERT INTO products
+         (tenant_id, product_name, price, currency, image_url, verification_app_id, template_id, attributes)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING *`,
-        [tenantId, product_name, product_sku, description, category_id, price, currency, image_url]
+        [
+          tenantId,
+          product_name,
+          price || null,
+          currency,
+          image_url || null,
+          verification_app_id && verification_app_id !== '' ? verification_app_id : null,
+          template_id || null,
+          JSON.stringify(attributes || {})
+        ]
       );
+
+      const productId = productResult.rows[0].id;
+
+      await client.query('COMMIT');
+
+      // Fetch complete product with template info
+      const completeProduct = await client.query(`
+        SELECT
+          p.*,
+          pt.template_name,
+          pt.variant_config,
+          pt.custom_fields
+        FROM products p
+        LEFT JOIN product_templates pt ON p.template_id = pt.id
+        WHERE p.id = $1
+      `, [productId]);
 
       res.status(201).json({
         message: 'Product created successfully',
-        product: result.rows[0]
+        product: completeProduct.rows[0]
       });
     } catch (error) {
+      await client.query('ROLLBACK');
       console.error('Create product error:', error);
-      res.status(500).json({ error: 'Failed to create product' });
+      res.status(500).json({ error: 'Failed to create product', message: error.message });
+    } finally {
+      client.release();
     }
   },
 
   /**
    * PUT /api/products/:id
-   * Update product
+   * Update product with dynamic attributes
    */
   async updateProduct(req, res) {
+    const client = await db.pool.connect();
+
     try {
       const tenantId = req.user.tenant_id;
       const { id } = req.params;
       const {
         product_name,
-        product_sku,
-        description,
-        category_id,
         price,
         currency,
         image_url,
-        is_active
+        is_active,
+        template_id,
+        attributes
       } = req.body;
 
       // Check if product exists and belongs to tenant
-      const existing = await db.query(
-        'SELECT id FROM products WHERE id = $1 AND tenant_id = $2',
+      const existing = await client.query(
+        'SELECT id, template_id FROM products WHERE id = $1 AND tenant_id = $2',
         [id, tenantId]
       );
 
@@ -167,47 +245,76 @@ const productsController = {
         return res.status(404).json({ error: 'Product not found' });
       }
 
-      // Check if SKU already exists for another product
-      if (product_sku) {
-        const skuCheck = await db.query(
-          'SELECT id FROM products WHERE tenant_id = $1 AND product_sku = $2 AND id != $3',
-          [tenantId, product_sku, id]
-        );
-
-        if (skuCheck.rows.length > 0) {
-          return res.status(400).json({ error: 'Product SKU already exists' });
+      // Validate attributes if provided and template exists
+      const effectiveTemplateId = template_id || existing.rows[0].template_id;
+      if (attributes && effectiveTemplateId) {
+        const validation = await attributeValidator.validateAttributes(effectiveTemplateId, attributes);
+        if (!validation.valid) {
+          return res.status(400).json({
+            error: 'Attribute validation failed',
+            validation_errors: validation.errors
+          });
         }
       }
 
-      const result = await db.query(
-        `UPDATE products 
+      await client.query('BEGIN');
+
+      // Update product with attributes in JSONB column
+      const result = await client.query(
+        `UPDATE products
          SET product_name = COALESCE($1, product_name),
-             product_sku = COALESCE($2, product_sku),
-             description = COALESCE($3, description),
-             category_id = COALESCE($4, category_id),
-             price = COALESCE($5, price),
-             currency = COALESCE($6, currency),
-             image_url = COALESCE($7, image_url),
-             is_active = COALESCE($8, is_active),
+             price = COALESCE($2, price),
+             currency = COALESCE($3, currency),
+             image_url = COALESCE($4, image_url),
+             is_active = COALESCE($5, is_active),
+             template_id = COALESCE($6, template_id),
+             attributes = COALESCE($7, attributes),
              updated_at = CURRENT_TIMESTAMP
-         WHERE id = $9 AND tenant_id = $10
+         WHERE id = $8 AND tenant_id = $9
          RETURNING *`,
-        [product_name, product_sku, description, category_id, price, currency, image_url, is_active, id, tenantId]
+        [
+          product_name,
+          price,
+          currency,
+          image_url,
+          is_active,
+          template_id,
+          attributes ? JSON.stringify(attributes) : null,
+          id,
+          tenantId
+        ]
       );
+
+      await client.query('COMMIT');
+
+      // Fetch complete product with template info
+      const completeProduct = await client.query(`
+        SELECT
+          p.*,
+          pt.template_name,
+          pt.variant_config,
+          pt.custom_fields
+        FROM products p
+        LEFT JOIN product_templates pt ON p.template_id = pt.id
+        WHERE p.id = $1
+      `, [id]);
 
       res.json({
         message: 'Product updated successfully',
-        product: result.rows[0]
+        product: completeProduct.rows[0]
       });
     } catch (error) {
+      await client.query('ROLLBACK');
       console.error('Update product error:', error);
-      res.status(500).json({ error: 'Failed to update product' });
+      res.status(500).json({ error: 'Failed to update product', message: error.message });
+    } finally {
+      client.release();
     }
   },
 
   /**
    * DELETE /api/products/:id
-   * Delete product
+   * Delete product (attributes cascade automatically)
    */
   async deleteProduct(req, res) {
     try {
@@ -227,6 +334,7 @@ const productsController = {
         });
       }
 
+      // Delete product (attribute values will cascade due to ON DELETE CASCADE)
       const result = await db.query(
         'DELETE FROM products WHERE id = $1 AND tenant_id = $2 RETURNING id',
         [id, tenantId]
@@ -239,7 +347,49 @@ const productsController = {
       res.json({ message: 'Product deleted successfully' });
     } catch (error) {
       console.error('Delete product error:', error);
-      res.status(500).json({ error: 'Failed to delete product' });
+      res.status(500).json({ error: 'Failed to delete product', message: error.message });
+    }
+  },
+
+  /**
+   * GET /api/products/:id/attributes
+   * Get product attributes with template metadata
+   */
+  async getProductAttributes(req, res) {
+    try {
+      const tenantId = req.user.tenant_id;
+      const { id } = req.params;
+
+      const result = await db.query(`
+        SELECT
+          p.id as product_id,
+          p.template_id,
+          p.attributes,
+          pt.template_name,
+          pt.variant_config,
+          pt.custom_fields
+        FROM products p
+        LEFT JOIN product_templates pt ON p.template_id = pt.id
+        WHERE p.id = $1 AND p.tenant_id = $2
+      `, [id, tenantId]);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+
+      res.json({
+        product_id: result.rows[0].product_id,
+        template: {
+          id: result.rows[0].template_id,
+          name: result.rows[0].template_name,
+          variant_config: result.rows[0].variant_config,
+          custom_fields: result.rows[0].custom_fields
+        },
+        attributes: result.rows[0].attributes || {}
+      });
+    } catch (error) {
+      console.error('Get product attributes error:', error);
+      res.status(500).json({ error: 'Failed to fetch product attributes', message: error.message });
     }
   }
 };

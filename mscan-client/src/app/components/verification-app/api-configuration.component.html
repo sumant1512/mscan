@@ -1,0 +1,288 @@
+<div class="api-config-container">
+  <div class="page-header">
+    <button class="btn-back" (click)="goBack()">← Back</button>
+    <h1>API Configuration</h1>
+    <p class="subtitle">{{ appName }}</p>
+  </div>
+
+  <!-- Alert Messages -->
+  <div *ngIf="error" class="alert alert-error">
+    <span class="icon">⚠️</span>
+    {{ error }}
+  </div>
+
+  <div *ngIf="success" class="alert alert-success">
+    <span class="icon">✓</span>
+    {{ success }}
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading configuration...</p>
+  </div>
+
+  <div *ngIf="!loading">
+    <!-- Mobile API Section -->
+    <div class="api-section">
+      <div class="section-header">
+        <div class="header-left">
+          <h2>📱 Mobile App API</h2>
+          <p>Product catalog access for mobile applications</p>
+        </div>
+        <div class="header-right">
+          <label class="toggle-switch">
+            <span class="toggle-label">{{ config.mobile_api_enabled ? 'Enabled' : 'Disabled' }}</span>
+            <button
+              *ngIf="!config.mobile_api_enabled"
+              class="btn btn-primary btn-sm"
+              (click)="enableMobileApi()"
+              [disabled]="saving"
+            >
+              Enable Mobile API
+            </button>
+          </label>
+        </div>
+      </div>
+
+      <div *ngIf="config.mobile_api_enabled" class="api-content">
+        <!-- API Key Display -->
+        <div class="api-key-section">
+          <h3>API Key</h3>
+
+          <div *ngIf="showMobileKey && newMobileKey" class="key-display new-key">
+            <div class="key-warning">
+              ⚠️ This key will only be shown once! Copy it now.
+            </div>
+            <div class="key-value">
+              <code>{{ newMobileKey }}</code>
+              <button class="btn-icon" (click)="copyToClipboard(newMobileKey, 'Mobile')" title="Copy to clipboard">
+                📋
+              </button>
+            </div>
+            <button class="btn btn-outline btn-sm" (click)="showMobileKey = false">
+              I've copied the key
+            </button>
+          </div>
+
+          <div *ngIf="!showMobileKey" class="key-actions">
+            <p class="key-status">
+              <span class="status-badge status-active">Active</span>
+              API key is configured (starts with mobile_...)
+            </p>
+            <button
+              class="btn btn-outline btn-sm"
+              (click)="regenerateMobileKey()"
+              [disabled]="saving"
+            >
+              🔄 Regenerate Key
+            </button>
+          </div>
+        </div>
+
+        <!-- Rate Limits -->
+        <div class="config-section">
+          <h3>Rate Limits</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="mobile_rpm">Requests per Minute</label>
+              <input
+                type="number"
+                id="mobile_rpm"
+                [(ngModel)]="config.api_rate_limits.mobile_rpm"
+                min="1"
+                max="1000"
+                class="form-input"
+              />
+              <small class="form-hint">Default: 60 RPM</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Usage Statistics -->
+        <div class="stats-section">
+          <h3>Usage Statistics</h3>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">Total Requests</div>
+              <div class="stat-value">{{ usageStats.mobile.total_requests | number }}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Today</div>
+              <div class="stat-value">{{ usageStats.mobile.requests_today | number }}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Avg Response Time</div>
+              <div class="stat-value">{{ usageStats.mobile.avg_response_time | number:'1.0-0' }}ms</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Error Rate</div>
+              <div class="stat-value">{{ usageStats.mobile.error_rate | number:'1.2-2' }}%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- API Endpoints -->
+        <div class="endpoints-section">
+          <h3>Available Endpoints</h3>
+          <div class="endpoint-list">
+            <div class="endpoint-item">
+              <span class="method get">GET</span>
+              <code>/api/mobile/v2/products</code>
+              <span class="desc">List products with attributes</span>
+            </div>
+            <div class="endpoint-item">
+              <span class="method get">GET</span>
+              <code>/api/mobile/v2/products/:id</code>
+              <span class="desc">Get product details</span>
+            </div>
+            <div class="endpoint-item">
+              <span class="method get">GET</span>
+              <code>/api/mobile/v2/templates</code>
+              <span class="desc">Get product templates</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- E-commerce API Section -->
+    <div class="api-section">
+      <div class="section-header">
+        <div class="header-left">
+          <h2>🛒 E-commerce API</h2>
+          <p>Product sync for e-commerce platforms</p>
+        </div>
+        <div class="header-right">
+          <label class="toggle-switch">
+            <span class="toggle-label">{{ config.ecommerce_api_enabled ? 'Enabled' : 'Disabled' }}</span>
+            <button
+              *ngIf="!config.ecommerce_api_enabled"
+              class="btn btn-primary btn-sm"
+              (click)="enableEcommerceApi()"
+              [disabled]="saving"
+            >
+              Enable E-commerce API
+            </button>
+          </label>
+        </div>
+      </div>
+
+      <div *ngIf="config.ecommerce_api_enabled" class="api-content">
+        <!-- API Key Display -->
+        <div class="api-key-section">
+          <h3>API Key</h3>
+
+          <div *ngIf="showEcommerceKey && newEcommerceKey" class="key-display new-key">
+            <div class="key-warning">
+              ⚠️ This key will only be shown once! Copy it now.
+            </div>
+            <div class="key-value">
+              <code>{{ newEcommerceKey }}</code>
+              <button class="btn-icon" (click)="copyToClipboard(newEcommerceKey, 'E-commerce')" title="Copy to clipboard">
+                📋
+              </button>
+            </div>
+            <button class="btn btn-outline btn-sm" (click)="showEcommerceKey = false">
+              I've copied the key
+            </button>
+          </div>
+
+          <div *ngIf="!showEcommerceKey" class="key-actions">
+            <p class="key-status">
+              <span class="status-badge status-active">Active</span>
+              API key is configured (starts with ecommerce_...)
+            </p>
+            <button
+              class="btn btn-outline btn-sm"
+              (click)="regenerateEcommerceKey()"
+              [disabled]="saving"
+            >
+              🔄 Regenerate Key
+            </button>
+          </div>
+        </div>
+
+        <!-- Rate Limits -->
+        <div class="config-section">
+          <h3>Rate Limits</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="ecommerce_rpm">Requests per Minute</label>
+              <input
+                type="number"
+                id="ecommerce_rpm"
+                [(ngModel)]="config.api_rate_limits.ecommerce_rpm"
+                min="1"
+                max="1000"
+                class="form-input"
+              />
+              <small class="form-hint">Default: 120 RPM</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Usage Statistics -->
+        <div class="stats-section">
+          <h3>Usage Statistics</h3>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">Total Requests</div>
+              <div class="stat-value">{{ usageStats.ecommerce.total_requests | number }}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Today</div>
+              <div class="stat-value">{{ usageStats.ecommerce.requests_today | number }}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Avg Response Time</div>
+              <div class="stat-value">{{ usageStats.ecommerce.avg_response_time | number:'1.0-0' }}ms</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Error Rate</div>
+              <div class="stat-value">{{ usageStats.ecommerce.error_rate | number:'1.2-2' }}%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- API Endpoints -->
+        <div class="endpoints-section">
+          <h3>Available Endpoints</h3>
+          <div class="endpoint-list">
+            <div class="endpoint-item">
+              <span class="method get">GET</span>
+              <code>/api/ecommerce/v1/products</code>
+              <span class="desc">List products</span>
+            </div>
+            <div class="endpoint-item">
+              <span class="method get">GET</span>
+              <code>/api/ecommerce/v1/products/:id</code>
+              <span class="desc">Get product details</span>
+            </div>
+            <div class="endpoint-item">
+              <span class="method post">POST</span>
+              <code>/api/ecommerce/v1/products/sync</code>
+              <span class="desc">Bulk product sync</span>
+            </div>
+            <div class="endpoint-item">
+              <span class="method put">PUT</span>
+              <code>/api/ecommerce/v1/products/:id</code>
+              <span class="desc">Update product</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Save Button -->
+    <div class="form-actions">
+      <button class="btn btn-outline" (click)="goBack()" [disabled]="saving">
+        Cancel
+      </button>
+      <button class="btn btn-primary" (click)="saveConfiguration()" [disabled]="saving || loading">
+        <span *ngIf="!saving">💾 Save Configuration</span>
+        <span *ngIf="saving">Saving...</span>
+      </button>
+    </div>
+  </div>
+</div>

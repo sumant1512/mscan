@@ -1,68 +1,97 @@
-<div class="transaction-history-container">
+<div class="approval-container">
   <div class="header">
-    <h2>Credit Transaction History</h2>
+    <h2>Credit Transactions</h2>
+    <!-- Only show tenant filter for Super Admins -->
+    <div class="filters-group" *ngIf="isSuperAdmin">
+      <div class="filter-item">
+        <label for="tenantFilter">Tenant:</label>
+        <select id="tenantFilter" [(ngModel)]="tenantFilter" (change)="onTenantFilterChange()" class="filter-select">
+          <option value="">All Tenants</option>
+          <option *ngFor="let tenant of tenants" [value]="tenant.id">{{ tenant.tenant_name }}</option>
+        </select>
+      </div>
+    </div>
   </div>
 
-  <div class="filters">
-    <select [(ngModel)]="typeFilter" (change)="onFilterChange()" class="filter-select">
-      <option value="all">All Transactions</option>
-      <option value="CREDIT">Credits Added</option>
-      <option value="DEBIT">Credits Spent</option>
-    </select>
-  </div>
-
-  <div *ngIf="loading" class="loading">Loading transaction history...</div>
+  <div *ngIf="loading" class="loading">Loading transactions...</div>
   <div *ngIf="error" class="error">{{ error }}</div>
 
-  <div *ngIf="!loading && !error" class="transactions-container" (scroll)="onScroll($event)">
-    <div *ngIf="transactions.length === 0" class="no-data">
-      No transactions found
+  <!-- Transactions Grid -->
+  <div class="requests-grid">
+    <div *ngFor="let item of displayItems" class="request-card">
+      <div class="card-header">
+        <div class="tenant-info">
+          <span class="transaction-id">#{{ item.id }}</span>
+          <span class="transaction-date">{{ formatDate(item.created_at) }}</span>
+        </div>
+        <span class="status-badge" [ngClass]="getTransactionTypeClass(item.type)">
+          {{ item.type }}
+        </span>
+      </div>
+
+      <div class="card-body">
+        <div class="amount-display" [ngClass]="{'pending-amount': item.type === 'PENDING', 'rejected-amount': item.type === 'REJECTED'}">
+          <div class="amount-label">
+            {{ (item.type === 'PENDING' || item.type === 'REJECTED') ? 'Requested Amount' : 'Amount' }}
+          </div>
+          <div class="amount-value">{{ formatCurrency(item.amount) }}</div>
+          <div class="amount-unit">credits</div>
+        </div>
+
+        <!-- Show balance info only for completed transactions (CREDIT/DEBIT) -->
+        <div class="info-section" *ngIf="item.type === 'CREDIT' || item.type === 'DEBIT'">
+          <div class="info-item">
+            <span class="label">Balance Before:</span>
+            <span class="value">{{ formatCurrency(item.balance_before!) }} credits</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Balance After:</span>
+            <span class="value">{{ formatCurrency(item.balance_after!) }} credits</span>
+          </div>
+        </div>
+
+        <!-- Show status info for pending requests -->
+        <div class="info-section" *ngIf="item.type === 'PENDING'">
+          <div class="info-item">
+            <span class="label">Status:</span>
+            <span class="value pending-status">Awaiting Approval</span>
+          </div>
+        </div>
+
+        <!-- Show rejection reason for rejected requests -->
+        <div class="info-section" *ngIf="item.type === 'REJECTED' && item.rejection_reason">
+          <div class="info-item rejection-info">
+            <span class="label">Rejection Reason:</span>
+            <span class="value rejection-reason">{{ item.rejection_reason }}</span>
+          </div>
+        </div>
+
+        <!-- Description or Justification -->
+        <div *ngIf="item.description || item.justification" class="justification-section">
+          <div class="label">{{ (item.type === 'PENDING' || item.type === 'REJECTED') ? 'Justification:' : 'Description:' }}</div>
+          <p class="justification-text">{{ item.justification || item.description }}</p>
+        </div>
+
+        <!-- Additional info -->
+        <div class="processing-info">
+          <div *ngIf="item.reference_type" class="info-item">
+            <span class="label">Reference Type:</span>
+            <span class="value">{{ item.reference_type }}</span>
+          </div>
+          <div *ngIf="item.reference_id" class="info-item">
+            <span class="label">Reference ID:</span>
+            <span class="value">#{{ item.reference_id }}</span>
+          </div>
+          <div *ngIf="item.created_by_name && item.type !== 'PENDING'" class="info-item">
+            <span class="label">Created By:</span>
+            <span class="value">{{ item.created_by_name }}</span>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div *ngFor="let transaction of transactions" 
-         class="transaction-item"
-         [class]="getTransactionTypeClass(transaction.transaction_type)">
-      <div class="transaction-icon">
-        {{ getTransactionIcon(transaction.transaction_type) }}
-      </div>
-
-      <div class="transaction-details">
-        <div class="transaction-header">
-          <span class="transaction-type-label">
-            {{ transaction.transaction_type === 'CREDIT' ? 'Credits Added' : 'Credits Spent' }}
-          </span>
-          <span class="transaction-date">
-            {{ transaction.created_at | date: 'medium' }}
-          </span>
-        </div>
-
-        <div class="transaction-description" *ngIf="transaction.description">
-          {{ transaction.description }}
-        </div>
-
-        <div class="transaction-reference" *ngIf="transaction.reference_type">
-          <span class="reference-label">Reference:</span>
-          <span class="reference-value">{{ transaction.reference_type }}</span>
-        </div>
-
-        <div class="transaction-balance">
-          <span class="balance-label">Balance:</span>
-          <span class="balance-change">
-            {{ transaction.balance_before }} 
-            → 
-            {{ transaction.balance_after }}
-          </span>
-        </div>
-      </div>
-
-      <div class="transaction-amount" [class]="getTransactionTypeClass(transaction.transaction_type)">
-        <span class="amount-sign">{{ getTransactionSign(transaction.transaction_type) }}</span>
-        <span class="amount-value">{{ transaction.amount }}</span>
-      </div>
-    </div>
-
-    <div *ngIf="loadingMore" class="loading-more">
-      Loading more transactions...
+    <div *ngIf="!loading && displayItems.length === 0" class="no-data">
+      No transactions or rejected requests found
     </div>
   </div>
 </div>

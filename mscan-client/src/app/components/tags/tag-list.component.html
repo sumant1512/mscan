@@ -1,0 +1,80 @@
+<div class="tag-list-container">
+  <div class="page-header">
+    <h2>Tag Management</h2>
+    <button class="btn btn-primary" (click)="createTag()">
+      <span class="material-icons">add</span>
+      Create Tag
+    </button>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <div class="filter-group">
+      <input
+        type="text"
+        class="form-control"
+        placeholder="Search tags..."
+        [(ngModel)]="searchQuery"
+        (input)="onSearch()"
+      />
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading$ | async" class="loading">
+    <div class="spinner"></div>
+    <p>Loading tags...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error$ | async as error" class="error-message">
+    {{ error }}
+  </div>
+
+  <!-- Tags List -->
+  <div *ngIf="!(loading$ | async) && !(error$ | async)" class="tags-grid">
+    <div *ngFor="let tag of tags" class="tag-card" [class.inactive]="!tag.is_active">
+      <div class="tag-header">
+        <div class="tag-icon-name">
+          <span class="material-icons tag-icon">{{ tag.icon || 'label' }}</span>
+          <h3>{{ tag.name }}</h3>
+        </div>
+        <div class="tag-actions">
+          <button
+            class="btn-icon"
+            [class.active]="tag.is_active"
+            (click)="toggleActive(tag)"
+            [title]="tag.is_active ? 'Deactivate' : 'Activate'"
+          >
+            <span class="material-icons">
+              {{ tag.is_active ? 'toggle_on' : 'toggle_off' }}
+            </span>
+          </button>
+          <button class="btn-icon" (click)="editTag(tag)" title="Edit">
+            <span class="material-icons">edit</span>
+          </button>
+          <button class="btn-icon" (click)="deleteTag(tag)" title="Delete">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="tag-body">
+        <p class="tag-description">{{ tag.description || 'No description' }}</p>
+        <div class="tag-meta">
+          <span class="badge">{{ tag.verification_app_name || 'No App' }}</span>
+          <span class="badge" [class.active]="tag.is_active" [class.inactive]="!tag.is_active">
+            {{ tag.is_active ? 'Active' : 'Inactive' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="tags.length === 0" class="empty-state">
+      <span class="material-icons">label_off</span>
+      <p>No tags found</p>
+      <button class="btn btn-primary" (click)="createTag()">Create Your First Tag</button>
+    </div>
+  </div>
+</div>

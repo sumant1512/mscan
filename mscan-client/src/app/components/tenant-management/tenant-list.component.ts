@@ -1,115 +1,63 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TenantService } from '../../services/tenant.service';
-import { Tenant, PaginationParams } from '../../models/rewards.model';
-import { finalize } from 'rxjs/operators';
+import { TenantsFacade } from '../../store/tenants';
+import { Tenant } from '../../models/tenant-admin.model';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-tenant-list',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './tenant-list.component.html',
-  styleUrls: ['./tenant-list.component.css']
+  styleUrls: ['./tenant-list.component.css'],
 })
 export class TenantListComponent implements OnInit {
-  tenants: Tenant[] = [];
-  loading = false;
-  error = '';
-  
-  // Pagination
-  currentPage = 1;
-  limit = 10;
-  totalTenants = 0;
-  totalPages = 0;
-  
-  // Filters
-  searchQuery = '';
-  statusFilter: 'all' | 'active' | 'inactive' | 'suspended' = 'all';
-  sortBy: 'name' | 'created_at' | 'total_credits' = 'created_at';
-  sortOrder: 'asc' | 'desc' = 'desc';
+  private tenantsFacade = inject(TenantsFacade);
+  private tenantService = inject(TenantService);
+  private router = inject(Router);
 
-  constructor(
-    private tenantService: TenantService,
-    private router: Router,
-    private readonly cdr: ChangeDetectorRef
-  ) {}
+  // NgRx observables
+  tenants$: Observable<Tenant[]> = this.tenantsFacade.filteredTenants$;
+  loading$: Observable<boolean> = this.tenantsFacade.loading$;
+  error$: Observable<string | null> = this.tenantsFacade.error$;
+  filters$ = this.tenantsFacade.filters$;
 
   ngOnInit() {
-    this.loadTenants();
+    this.tenantsFacade.loadTenants();
   }
 
-  loadTenants() {
-    this.loading = true;
-    this.error = '';
-    
-    const params: PaginationParams & any = {
-      page: this.currentPage,
-      limit: this.limit
-    };
-    
-    if (this.searchQuery) params.search = this.searchQuery;
-    if (this.statusFilter !== 'all') params.status = this.statusFilter;
-    params.sort_by = this.sortBy;
-    params.sort_order = this.sortOrder;
-    
-    this.tenantService.getAllTenants(params)
-      .pipe(finalize(() => {
-        this.loading = false;
-        this.cdr.detectChanges();
-      }))
-      .subscribe({
-        next: (response) => {
-          this.tenants = response.tenants;
-          this.totalTenants = response.total;
-          this.totalPages = response.total_pages;
-        },
-        error: (err) => {
-          console.error('Load tenants error:', err);
-          this.error = err.error?.error || err.message || 'Failed to load tenants';
-        }
-      });
+  onSearch(searchQuery: string) {
+    this.tenantsFacade.setSearchQuery(searchQuery);
   }
 
-  onSearch() {
-    this.currentPage = 1;
-    this.loadTenants();
+  onStatusFilterChange(statusFilter: 'all' | 'active' | 'inactive') {
+    this.tenantsFacade.setStatusFilter(statusFilter);
   }
 
-  onFilterChange() {
-    this.currentPage = 1;
-    this.loadTenants();
+  onSortByChange(sortBy: 'name' | 'created_at') {
+    this.tenantsFacade.setSortBy(sortBy);
   }
 
-  onSortChange() {
-    this.loadTenants();
+  onSortOrderChange(sortOrder: 'asc' | 'desc') {
+    this.tenantsFacade.setSortOrder(sortOrder);
   }
 
   toggleSortOrder() {
-    this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
-    this.loadTenants();
+    this.tenantsFacade.toggleSortOrder();
   }
 
-  previousPage() {
-    if (this.currentPage > 1) {
-      this.currentPage--;
-      this.loadTenants();
-    }
+  resetFilters() {
+    this.tenantsFacade.resetFilters();
   }
 
-  nextPage() {
-    if (this.currentPage < this.totalPages) {
-      this.currentPage++;
-      this.loadTenants();
-    }
-  }
-
-  viewTenant(id: number | string) {
+  viewTenant(id: string) {
     this.router.navigate(['/super-admin/tenants', id]);
   }
 
-  editTenant(id: number | string) {
+  editTenant(id: string) {
     this.router.navigate(['/super-admin/tenants', id, 'edit']);
   }
 
@@ -118,25 +66,36 @@ export class TenantListComponent implements OnInit {
   }
 
   toggleStatus(tenant: Tenant) {
-    if (confirm(`Are you sure you want to ${tenant.status === 'active' ? 'deactivate' : 'activate'} ${tenant.tenant_name}?`)) {
+    if (
+      confirm(
+        `Are you sure you want to ${tenant.status === 'active' ? 'deactivate' : 'activate'} ${
+          tenant.tenant_name
+        }?`
+      )
+    ) {
       this.tenantService.toggleTenantStatus(tenant.id).subscribe({
         next: () => {
-          this.loadTenants();
+          // Reload tenants after status change
+          this.tenantsFacade.loadTenants();
         },
         error: (err) => {
           console.error('Toggle status error:', err);
           alert(err.error?.error || err.message || 'Failed to update tenant status');
-        }
+        },
       });
     }
   }
 
   getStatusClass(status: string): string {
     switch (status) {
-      case 'active': return 'status-active';
-      case 'inactive': return 'status-inactive';
-      case 'suspended': return 'status-suspended';
-      default: return '';
+      case 'active':
+        return 'status-active';
+      case 'inactive':
+        return 'status-inactive';
+      case 'suspended':
+        return 'status-suspended';
+      default:
+        return '';
     }
   }
 }

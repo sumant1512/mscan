@@ -1,0 +1,33 @@
+<!-- Print Action Bar (hidden during print) -->
+<div class="print-actions no-print">
+  <div class="actions-container">
+    <button class="btn btn-secondary" (click)="goBack()">
+      <span class="material-icons">arrow_back</span>
+      Back to Coupons
+    </button>
+    <div class="print-info">
+      <span>{{ coupons.length }} coupon{{ coupons.length !== 1 ? 's' : '' }} ready to print</span>
+    </div>
+    <button class="btn btn-primary" (click)="handlePrint()">
+      <span class="material-icons">print</span>
+      Print Coupons
+    </button>
+  </div>
+</div>
+
+<!-- Coupons Grid (printable content) -->
+<div class="print-container">
+  <div class="coupons-grid">
+    <div class="coupon-card" *ngFor="let coupon of coupons; let i = index">
+      <app-coupon-card
+        [amount]="getDiscountDisplay(coupon)"
+        [brandLogo]="'https://palspaint.com/logo/header_logo.webp'"
+        [productName]="coupon?.product_name"
+        [qrSrc]="coupon?.qr_code_url"
+      ></app-coupon-card>
+
+      <!-- Page break after every 24 coupons -->
+      <div class="page-break" *ngIf="(i + 1) % 24 === 0 && i < coupons.length - 1"></div>
+    </div>
+  </div>
+</div>

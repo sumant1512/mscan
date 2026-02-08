@@ -16,6 +16,7 @@ class RewardsController {
   async createVerificationApp(req, res) {
     try {
       const tenantId = req.user.tenant_id;
+      const crypto = require('crypto');
       const {
         app_name,
         description,
@@ -26,29 +27,63 @@ class RewardsController {
         scan_success_message,
         scan_failure_message,
         post_scan_redirect_url,
-        enable_analytics
+        template_id
       } = req.body;
 
       if (!app_name) {
         return res.status(400).json({ error: 'App name is required' });
       }
 
+      if (!template_id) {
+        return res.status(400).json({ error: 'Product template is required. Please create a template first.' });
+      }
+
+      // Validate template exists and belongs to tenant
+      const templateCheck = await db.query(
+        'SELECT id FROM product_templates WHERE id = $1 AND tenant_id = $2',
+        [template_id, tenantId]
+      );
+
+      if (templateCheck.rows.length === 0) {
+        return res.status(400).json({ error: 'Invalid template ID or template does not belong to your tenant' });
+      }
+
+      // Generate URL-friendly code from app name
+      let code = app_name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+
+      // Check if code already exists for this tenant, if so, append number
+      const existingCode = await db.query(
+        `SELECT code FROM verification_apps WHERE tenant_id = $1 AND code LIKE $2`,
+        [tenantId, `${code}%`]
+      );
+
+      if (existingCode.rows.length > 0) {
+        code = `${code}-${existingCode.rows.length + 1}`;
+      }
+
+      // Generate API key
+      const apiKey = crypto.randomBytes(32).toString('hex');
+
       const result = await db.query(
-        `INSERT INTO verification_apps 
-         (tenant_id, app_name, description, logo_url, primary_color, secondary_color,
-          welcome_message, scan_success_message, scan_failure_message, post_scan_redirect_url, enable_analytics)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        `INSERT INTO verification_apps
+         (tenant_id, app_name, code, api_key, description, logo_url, primary_color, secondary_color,
+          welcome_message, scan_success_message, scan_failure_message, post_scan_redirect_url, template_id, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, true)
          RETURNING *`,
-        [tenantId, app_name, description, logo_url, primary_color, secondary_color,
+        [tenantId, app_name, code, apiKey, description, logo_url, primary_color, secondary_color,
          welcome_message || 'Welcome! Scan your QR code to redeem your reward.',
          scan_success_message || 'Success! Your coupon has been verified.',
          scan_failure_message || 'Sorry, this coupon is not valid.',
-         post_scan_redirect_url, enable_analytics !== false]
+         post_scan_redirect_url, template_id]
       );
 
       res.status(201).json({
         message: 'Verification app created successfully',
-        app: result.rows[0]
+        app: result.rows[0],
+        important: 'Please save the API key. It will not be shown again in full.'
       });
 
     } catch (error) {
@@ -66,14 +101,31 @@ class RewardsController {
       const tenantId = req.user.tenant_id;
 
       const result = await db.query(
-        `SELECT va.*,
+        `SELECT va.id AS verification_app_id,
+                va.app_name,
+                va.code,
+                va.description,
+                va.logo_url,
+                va.primary_color,
+                va.secondary_color,
+                va.welcome_message,
+                va.scan_success_message,
+                va.scan_failure_message,
+                va.post_scan_redirect_url,
+                va.is_active,
+                va.tenant_id,
+                va.template_id,
+                pt.template_name,
+                va.created_at,
+                va.updated_at,
                 COUNT(DISTINCT c.id) as total_coupons,
                 COUNT(DISTINCT s.id) as total_scans
          FROM verification_apps va
          LEFT JOIN coupons c ON va.id = c.verification_app_id
          LEFT JOIN scans s ON c.id = s.coupon_id
+         LEFT JOIN product_templates pt ON va.template_id = pt.id
          WHERE va.tenant_id = $1
-         GROUP BY va.id
+         GROUP BY va.id, pt.id, pt.template_name
          ORDER BY va.created_at DESC`,
         [tenantId]
       );
@@ -96,14 +148,31 @@ class RewardsController {
       const tenantId = req.user.tenant_id;
 
       const result = await db.query(
-        `SELECT va.*,
+        `SELECT va.id AS verification_app_id,
+                va.app_name,
+                va.code,
+                va.description,
+                va.logo_url,
+                va.primary_color,
+                va.secondary_color,
+                va.welcome_message,
+                va.scan_success_message,
+                va.scan_failure_message,
+                va.post_scan_redirect_url,
+                va.is_active,
+                va.tenant_id,
+                va.template_id,
+                pt.template_name,
+                va.created_at,
+                va.updated_at,
                 COUNT(DISTINCT c.id) as total_coupons,
                 COUNT(DISTINCT s.id) as total_scans
          FROM verification_apps va
          LEFT JOIN coupons c ON va.id = c.verification_app_id
          LEFT JOIN scans s ON c.id = s.coupon_id
+         LEFT JOIN product_templates pt ON va.template_id = pt.id
          WHERE va.id = $1 AND va.tenant_id = $2
-         GROUP BY va.id`,
+         GROUP BY va.id, va.app_name, va.code, va.description, va.logo_url, va.primary_color, va.secondary_color, va.welcome_message, va.scan_success_message, va.scan_failure_message, va.post_scan_redirect_url, va.is_active, va.tenant_id, va.template_id, pt.template_name, va.created_at, va.updated_at`,
         [id, tenantId]
       );
 
@@ -130,7 +199,7 @@ class RewardsController {
       const updates = req.body;
 
       const result = await db.query(
-        `UPDATE verification_apps 
+        `UPDATE verification_apps
          SET app_name = COALESCE($1, app_name),
              description = COALESCE($2, description),
              logo_url = COALESCE($3, logo_url),
@@ -140,14 +209,14 @@ class RewardsController {
              scan_success_message = COALESCE($7, scan_success_message),
              scan_failure_message = COALESCE($8, scan_failure_message),
              post_scan_redirect_url = COALESCE($9, post_scan_redirect_url),
-             enable_analytics = COALESCE($10, enable_analytics),
+             template_id = COALESCE($10, template_id),
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $11 AND tenant_id = $12
          RETURNING *`,
         [updates.app_name, updates.description, updates.logo_url, updates.primary_color,
          updates.secondary_color, updates.welcome_message, updates.scan_success_message,
-         updates.scan_failure_message, updates.post_scan_redirect_url, updates.enable_analytics,
-         id, tenantId]
+         updates.scan_failure_message, updates.post_scan_redirect_url,
+         updates.template_id, id, tenantId]
       );
 
       if (result.rows.length === 0) {
@@ -172,7 +241,7 @@ class RewardsController {
    */
   async createCoupon(req, res) {
     const client = await db.getClient();
-    
+
     try {
       await client.query('BEGIN');
 
@@ -191,9 +260,22 @@ class RewardsController {
         description,
         terms,
         product_id,
-        coupon_generation_type = 'SINGLE', // 'SINGLE' or 'BATCH'
-        batch_quantity = 1
+        coupon_generation_type, // 'SINGLE' or 'BATCH'
+        batch_quantity,
+        quantity // Alias for batch_quantity (for E2E test compatibility)
       } = req.body;
+
+      // Support 'quantity' as an alias for 'batch_quantity'
+      // Auto-detect batch mode when quantity > 1
+      let actualBatchQuantity = batch_quantity || quantity || 1;
+      let actualGenerationType = coupon_generation_type;
+
+      // Auto-detect batch mode
+      if (!actualGenerationType && actualBatchQuantity > 1) {
+        actualGenerationType = 'BATCH';
+      } else if (!actualGenerationType) {
+        actualGenerationType = 'SINGLE';
+      }
 
       // Validation
       if (!discount_value || !expiry_date) {
@@ -212,17 +294,16 @@ class RewardsController {
       }
 
       // Validate batch quantity
-      const isBatch = coupon_generation_type === 'BATCH';
-      const actualBatchQuantity = isBatch ? batch_quantity : 1;
-      
-      if (isBatch && (!batch_quantity || batch_quantity < 1)) {
+      const isBatch = actualGenerationType === 'BATCH';
+
+      if (isBatch && (!actualBatchQuantity || actualBatchQuantity < 1)) {
         await client.query('ROLLBACK');
         return res.status(400).json({
           error: 'Batch quantity must be at least 1'
         });
       }
 
-      if (isBatch && batch_quantity > 500) {
+      if (isBatch && actualBatchQuantity > 500) {
         await client.query('ROLLBACK');
         return res.status(400).json({
           error: 'Batch quantity cannot exceed 500 coupons per request'
@@ -294,12 +375,14 @@ class RewardsController {
         );
         const couponReference = referenceResult.rows[0].ref;
 
-        // Generate QR code
+        // Generate QR code with coupon_points
+        const couponPoints = req.body.coupon_points || discount_value; // Default to discount_value if not specified
         const qrData = couponGenerator.generateQRData({ 
           coupon_code: couponCode, 
           tenant_id: tenantId,
           discount_type: 'FIXED_AMOUNT',
           discount_value,
+          coupon_points: couponPoints,
           expiry_date
         });
         const qrCodeUrl = await couponGenerator.generateQRCodeImage(couponCode, qrData.url);
@@ -311,15 +394,15 @@ class RewardsController {
             discount_currency, buy_quantity, get_quantity, min_purchase_amount,
             expiry_date, total_usage_limit, per_user_usage_limit, qr_code_url,
             description, terms, credit_cost, status, max_scans_per_code, batch_id, batch_quantity,
-            product_id)
-           VALUES ($1, $2, $3, $4, 'FIXED_AMOUNT', $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'draft', $17, $18, $19, $20)
+            product_id, coupon_points)
+           VALUES ($1, $2, $3, $4, 'FIXED_AMOUNT', $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'draft', $17, $18, $19, $20, $21)
            RETURNING *`,
           [tenantId, verification_app_id, couponCode, couponReference, discount_value,
            discount_currency || 'USD', buy_quantity, get_quantity, min_purchase_amount,
            expiry_date, finalTotalUsageLimit, finalPerUserUsageLimit, qrCodeUrl,
            description, terms, discount_value, // Each coupon stores its own cost
            maxScansPerCode, batchId, i === 0 ? actualBatchQuantity : null, // Only first coupon stores batch quantity
-           product_id || null]
+           product_id || null, couponPoints]
         );
 
         createdCoupons.push(couponResult.rows[0]);
@@ -354,9 +437,15 @@ class RewardsController {
 
       // Return response
       if (isBatch) {
+        // Ensure batch_id is present in each coupon object
+        const couponsWithBatchId = createdCoupons.map(coupon => ({
+          ...coupon,
+          batch_id: batchId
+        }));
+
         res.status(201).json({
           message: `${actualBatchQuantity} coupons created successfully`,
-          coupons: createdCoupons,
+          coupons: couponsWithBatchId,
           batch_id: batchId,
           credit_cost: costCalculation.total,
           new_balance: newBalance
@@ -489,12 +578,14 @@ class RewardsController {
           );
           const couponReference = referenceResult.rows[0].ref;
 
-          // Generate QR code
+          // Generate QR code with coupon_points
+          const couponPoints = batch.couponPoints || batch.discountAmount; // Default to discount amount if not specified
           const qrData = couponGenerator.generateQRData({ 
             coupon_code: couponCode, 
             tenant_id: tenantId,
             discount_type: 'FIXED_AMOUNT',
             discount_value: batch.discountAmount,
+            coupon_points: couponPoints,
             expiry_date: batch.expiryDate
           });
           const qrCodeUrl = await couponGenerator.generateQRCodeImage(couponCode, qrData.url);
@@ -505,8 +596,8 @@ class RewardsController {
              (tenant_id, verification_app_id, coupon_code, coupon_reference, discount_type, discount_value,
               discount_currency, expiry_date, total_usage_limit, per_user_usage_limit, qr_code_url,
               description, credit_cost, status, max_scans_per_code, batch_id, batch_quantity,
-              product_id)
-             VALUES ($1, $2, $3, $4, 'FIXED_AMOUNT', $5, $6, $7, $8, $9, $10, $11, $12, 'draft', $13, $14, $15, $16)
+              product_id, coupon_points)
+             VALUES ($1, $2, $3, $4, 'FIXED_AMOUNT', $5, $6, $7, $8, $9, $10, $11, $12, 'draft', $13, $14, $15, $16, $17)
              RETURNING *`,
             [tenantId, verificationAppId, couponCode, couponReference, batch.discountAmount,
              'USD', batch.expiryDate, 1, 1, qrCodeUrl,
@@ -514,7 +605,8 @@ class RewardsController {
              1, // max_scans_per_code
              batchId,
              i === 0 ? batch.quantity : null, // Only first coupon in batch stores batch quantity
-             batch.productId || null] // product_id
+             batch.productId || null, // product_id
+             couponPoints] // coupon_points
           );
 
           allCreatedCoupons.push(couponResult.rows[0]);
@@ -596,7 +688,7 @@ class RewardsController {
       }
 
       if (search) {
-        query += ` AND (c.coupon_code ILIKE $${paramIndex} OR c.description ILIKE $${paramIndex})`;
+        query += ` AND (c.coupon_code ILIKE $${paramIndex} OR c.coupon_reference ILIKE $${paramIndex} OR c.description ILIKE $${paramIndex})`;
         params.push(`%${search}%`);
         paramIndex++;
       }
@@ -628,7 +720,7 @@ class RewardsController {
       }
 
       if (search) {
-        countQuery += ` AND (c.coupon_code ILIKE $${countParamIndex} OR c.description ILIKE $${countParamIndex})`;
+        countQuery += ` AND (c.coupon_code ILIKE $${countParamIndex} OR c.coupon_reference ILIKE $${countParamIndex} OR c.description ILIKE $${countParamIndex})`;
         countParams.push(`%${search}%`);
       }
 
@@ -846,13 +938,29 @@ class RewardsController {
       }
       // Only proceed with further checks if status is 'active'
       else if (coupon.status === 'active') {
+        // CRITICAL FIX: Check max_scans_per_code for single-use/limited-use coupons
+        // Verify that coupons haven't exceeded their per-code scan limit
+        if (coupon.max_scans_per_code) {
+          const scanCountResult = await client.query(
+            'SELECT COUNT(*) as scan_count FROM scans WHERE coupon_id = $1 AND scan_status = $2',
+            [coupon.id, 'SUCCESS']
+          );
+          
+          const scanCount = parseInt(scanCountResult.rows[0].scan_count);
+          
+          if (scanCount >= coupon.max_scans_per_code) {
+            scan_status = 'USED';
+            errorMessage = `This coupon has reached its scan limit (${coupon.max_scans_per_code} scan${coupon.max_scans_per_code > 1 ? 's' : ''})`;
+          }
+        }
+        
         // Check expiry date
-        if (new Date(coupon.expiry_date) < new Date()) {
+        if (scan_status === 'SUCCESS' && new Date(coupon.expiry_date) < new Date()) {
           scan_status = 'EXPIRED';
           errorMessage = 'Coupon Expired';
         }
         // Check if exhausted
-        else if (coupon.total_usage_limit && coupon.current_usage_count >= coupon.total_usage_limit) {
+        else if (scan_status === 'SUCCESS' && coupon.total_usage_limit && coupon.current_usage_count >= coupon.total_usage_limit) {
           scan_status = 'EXHAUSTED';
           errorMessage = 'Coupon Limit Reached';
         }
@@ -869,24 +977,31 @@ class RewardsController {
 
       // If successful, increment usage count and mark as used
       if (scan_status === 'SUCCESS') {
+        // Get current scan count for this coupon
+        const scanCountResult = await client.query(
+          'SELECT COUNT(*) as scan_count FROM scans WHERE coupon_id = $1 AND scan_status = $2',
+          [coupon.id, 'SUCCESS']
+        );
+        const currentScanCount = parseInt(scanCountResult.rows[0].scan_count);
+        
         await client.query(
           `UPDATE coupons 
            SET current_usage_count = current_usage_count + 1,
                status = CASE 
                  WHEN (total_usage_limit IS NOT NULL AND current_usage_count + 1 >= total_usage_limit) 
                    THEN 'exhausted'::VARCHAR
-                 WHEN per_user_usage_limit = 1 
+                 WHEN (max_scans_per_code IS NOT NULL AND $2 + 1 >= max_scans_per_code)
                    THEN 'used'::VARCHAR
                  ELSE status
                END,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $1`,
-          [coupon.id]
+          [coupon.id, currentScanCount]
         );
 
         // Get verification app for custom messages
         const appResult = await client.query(
-          'SELECT * FROM verification_apps WHERE id = $1',
+          'SELECT id AS verification_app_id, app_name, code, description, logo_url, primary_color, secondary_color, welcome_message, scan_success_message, scan_failure_message, post_scan_redirect_url, is_active, tenant_id, created_at, updated_at FROM verification_apps WHERE id = $1',
           [coupon.verification_app_id]
         );
 
@@ -1349,6 +1464,366 @@ class RewardsController {
       res.status(500).json({ error: 'Failed to deactivate coupon range' });
     } finally {
       client.release();
+    }
+  }
+
+  /**
+   * Regenerate API key for verification app (Tenant)
+   * POST /api/verification-apps/:id/regenerate-key
+   */
+  async regenerateApiKey(req, res) {
+    try {
+      const { id } = req.params;
+      const tenantId = req.user.tenant_id;
+      const crypto = require('crypto');
+
+      // Generate new API key
+      const newApiKey = crypto.randomBytes(32).toString('hex');
+
+      const result = await db.query(
+        `UPDATE verification_apps 
+         SET api_key = $1, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2 AND tenant_id = $3
+         RETURNING id, app_name, code, api_key, created_at`,
+        [newApiKey, id, tenantId]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Verification app not found' });
+      }
+
+      res.json({
+        message: 'API key regenerated successfully',
+        app: result.rows[0],
+        warning: 'The old API key is now invalid. Update your external applications with the new key.'
+      });
+
+    } catch (error) {
+      console.error('Regenerate API key error:', error);
+      res.status(500).json({ error: 'Failed to regenerate API key' });
+    }
+  }
+
+  /**
+   * Delete verification app (Tenant)
+   * DELETE /api/verification-apps/:id
+   */
+  async deleteVerificationApp(req, res) {
+    try {
+      const { id } = req.params;
+      const tenantId = req.user.tenant_id;
+
+      // First, check if app exists and get stats
+      const appCheck = await db.query(
+        `SELECT va.id AS verification_app_id,
+                va.app_name,
+                va.code,
+                va.description,
+                va.logo_url,
+                va.primary_color,
+                va.secondary_color,
+                va.welcome_message,
+                va.scan_success_message,
+                va.scan_failure_message,
+                va.post_scan_redirect_url,
+                va.is_active,
+                va.tenant_id,
+                va.created_at,
+                va.updated_at,
+                COUNT(DISTINCT c.id) as total_coupons,
+                COUNT(DISTINCT p.id) as total_products
+         FROM verification_apps va
+         LEFT JOIN coupons c ON va.id = c.verification_app_id
+         LEFT JOIN products p ON va.id = p.verification_app_id
+         WHERE va.id = $1 AND va.tenant_id = $2
+         GROUP BY va.id, va.app_name, va.code, va.description, va.logo_url, va.primary_color, va.secondary_color, va.welcome_message, va.scan_success_message, va.scan_failure_message, va.post_scan_redirect_url, va.is_active, va.tenant_id, va.created_at, va.updated_at`,
+        [id, tenantId]
+      );
+
+      if (appCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Verification app not found' });
+      }
+
+      const app = appCheck.rows[0];
+
+      // Delete the app (cascade will handle related data)
+      await db.query(
+        `DELETE FROM verification_apps WHERE id = $1 AND tenant_id = $2`,
+        [id, tenantId]
+      );
+
+      res.json({
+        message: 'Verification app deleted successfully',
+        deleted_data: {
+          app_name: app.app_name,
+          coupons_deleted: parseInt(app.total_coupons),
+          products_deleted: parseInt(app.total_products)
+        }
+      });
+
+    } catch (error) {
+      console.error('Delete verification app error:', error);
+      res.status(500).json({ error: 'Failed to delete verification app' });
+    }
+  }
+
+  /**
+   * Toggle verification app status (Tenant)
+   * PATCH /api/verification-apps/:id/toggle-status
+   */
+  async toggleAppStatus(req, res) {
+    try {
+      const { id } = req.params;
+      const tenantId = req.user.tenant_id;
+
+      const result = await db.query(
+        `UPDATE verification_apps
+         SET is_active = NOT is_active, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND tenant_id = $2
+         RETURNING id, app_name, is_active`,
+        [id, tenantId]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Verification app not found' });
+      }
+
+      const app = result.rows[0];
+      res.json({
+        message: `Verification app ${app.is_active ? 'activated' : 'deactivated'} successfully`,
+        app
+      });
+
+    } catch (error) {
+      console.error('Toggle app status error:', error);
+      res.status(500).json({ error: 'Failed to toggle app status' });
+    }
+  }
+
+  /**
+   * Mark batch as printed
+   * POST /api/rewards/coupons/batch/:batch_id/print
+   */
+  async batchPrint(req, res) {
+    try {
+      const { batch_id } = req.params;
+      const { print_note } = req.body;
+      const tenantId = req.user.tenant_id;
+
+      // Verify batch belongs to tenant
+      const batchCheck = await db.query(
+        `SELECT COUNT(*) as count FROM coupons
+         WHERE batch_id = $1 AND tenant_id = $2`,
+        [batch_id, tenantId]
+      );
+
+      if (parseInt(batchCheck.rows[0].count) === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Batch not found'
+        });
+      }
+
+      // Update all coupons in batch to printed status
+      const result = await db.query(
+        `UPDATE coupons
+         SET status = 'printed',
+             printed_at = CURRENT_TIMESTAMP,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE batch_id = $1 AND tenant_id = $2 AND status = 'draft'
+         RETURNING coupon_code`,
+        [batch_id, tenantId]
+      );
+
+      res.json({
+        success: true,
+        batch_id,
+        printed_count: result.rows.length,
+        message: `${result.rows.length} coupons marked as printed`,
+        print_note: print_note || null
+      });
+
+    } catch (error) {
+      console.error('Batch print error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to mark batch as printed'
+      });
+    }
+  }
+
+  /**
+   * Activate entire batch
+   * POST /api/rewards/coupons/batch/:batch_id/activate
+   */
+  async batchActivate(req, res) {
+    try {
+      const { batch_id } = req.params;
+      const { activation_note } = req.body;
+      const tenantId = req.user.tenant_id;
+
+      // Verify batch belongs to tenant and get count
+      const batchCheck = await db.query(
+        `SELECT COUNT(*) as count FROM coupons
+         WHERE batch_id = $1 AND tenant_id = $2`,
+        [batch_id, tenantId]
+      );
+
+      if (parseInt(batchCheck.rows[0].count) === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Batch not found'
+        });
+      }
+
+      // Check if any coupons are in draft status (not printed)
+      const draftCheck = await db.query(
+        `SELECT COUNT(*) as count FROM coupons
+         WHERE batch_id = $1 AND tenant_id = $2 AND status = 'draft'`,
+        [batch_id, tenantId]
+      );
+
+      if (parseInt(draftCheck.rows[0].count) > 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot activate batch with unprinted coupons. Please mark batch as printed first.'
+        });
+      }
+
+      // Activate all coupons in batch
+      const result = await db.query(
+        `UPDATE coupons
+         SET status = 'active',
+             activation_note = $3,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE batch_id = $1 AND tenant_id = $2 AND status = 'printed'
+         RETURNING coupon_code`,
+        [batch_id, tenantId, activation_note || null]
+      );
+
+      const activatedCodes = result.rows.map(r => r.coupon_code);
+
+      res.json({
+        success: true,
+        batch_id,
+        activated_count: result.rows.length,
+        message: `${result.rows.length} coupons activated successfully`,
+        activated_codes: activatedCodes,
+        activation_note: activation_note || null
+      });
+
+    } catch (error) {
+      console.error('Batch activate error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to activate batch'
+      });
+    }
+  }
+
+  /**
+   * Deactivate entire batch
+   * POST /api/rewards/coupons/batch/:batch_id/deactivate
+   */
+  async batchDeactivate(req, res) {
+    try {
+      const { batch_id } = req.params;
+      const { deactivation_reason } = req.body;
+      const tenantId = req.user.tenant_id;
+
+      // Deactivate all active coupons in batch
+      const result = await db.query(
+        `UPDATE coupons
+         SET status = 'inactive',
+             deactivation_reason = $3,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE batch_id = $1 AND tenant_id = $2 AND status = 'active'
+         RETURNING coupon_code`,
+        [batch_id, tenantId, deactivation_reason || null]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'No active coupons found in batch'
+        });
+      }
+
+      res.json({
+        success: true,
+        batch_id,
+        deactivated_count: result.rows.length,
+        message: `${result.rows.length} coupons deactivated`,
+        deactivation_reason: deactivation_reason || null
+      });
+
+    } catch (error) {
+      console.error('Batch deactivate error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to deactivate batch'
+      });
+    }
+  }
+
+  /**
+   * Get batch statistics
+   * GET /api/rewards/coupons/batch/:batch_id/stats
+   */
+  async batchStats(req, res) {
+    try {
+      const { batch_id } = req.params;
+      const tenantId = req.user.tenant_id;
+
+      // Get batch statistics
+      const stats = await db.query(
+        `SELECT
+           batch_id,
+           COUNT(*)::int as total_coupons,
+           COUNT(*) FILTER (WHERE status = 'draft')::int as draft_count,
+           COUNT(*) FILTER (WHERE status = 'printed')::int as printed_count,
+           COUNT(*) FILTER (WHERE status = 'active')::int as active_count,
+           COUNT(*) FILTER (WHERE status = 'used')::int as used_count,
+           COUNT(*) FILTER (WHERE status = 'inactive')::int as inactive_count,
+           COUNT(*) FILTER (WHERE status = 'expired')::int as expired_count,
+           MIN(created_at) as created_at,
+           MAX(updated_at) as last_updated
+         FROM coupons
+         WHERE batch_id = $1 AND tenant_id = $2
+         GROUP BY batch_id`,
+        [batch_id, tenantId]
+      );
+
+      if (stats.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Batch not found'
+        });
+      }
+
+      const row = stats.rows[0];
+      res.json({
+        success: true,
+        batch_id: row.batch_id,
+        total_coupons: row.total_coupons,
+        status_counts: {
+          draft: row.draft_count,
+          printed: row.printed_count,
+          active: row.active_count,
+          used: row.used_count,
+          inactive: row.inactive_count,
+          expired: row.expired_count
+        },
+        created_at: row.created_at,
+        last_updated: row.last_updated
+      });
+
+    } catch (error) {
+      console.error('Batch stats error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get batch statistics'
+      });
     }
   }
 }

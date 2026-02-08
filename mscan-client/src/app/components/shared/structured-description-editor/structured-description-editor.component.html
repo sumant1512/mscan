@@ -1,0 +1,117 @@
+<div class="structured-description-editor">
+  <div class="editor-header">
+    <label class="editor-label">
+      {{ attribute.attribute_name }}
+      <span *ngIf="attribute.is_required" class="required">*</span>
+    </label>
+    <small *ngIf="attribute.help_text" class="help-text">{{ attribute.help_text }}</small>
+  </div>
+
+  <div class="sections-container" [formArray]="sectionsForm">
+    <div
+      *ngFor="let section of sections.controls; let i = index"
+      class="section-card"
+      [formGroupName]="i"
+    >
+      <div class="section-header">
+        <span class="section-number">Section {{ i + 1 }}</span>
+        <button
+          type="button"
+          class="btn-icon btn-remove"
+          (click)="removeSection(i)"
+          [disabled]="!canRemoveSection || disabled"
+          title="Remove section"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div class="section-content">
+        <!-- Heading Input -->
+        <div class="form-group">
+          <label [for]="'section-heading-' + i">
+            Heading
+            <span class="required">*</span>
+          </label>
+          <input
+            type="text"
+            [id]="'section-heading-' + i"
+            formControlName="heading"
+            placeholder="e.g., Key Features, Technical Specifications"
+            class="form-input heading-input"
+            [class.input-error]="isHeadingInvalid(i)"
+            [disabled]="disabled"
+          />
+          <span *ngIf="isHeadingInvalid(i)" class="error-message">
+            Heading is required
+          </span>
+        </div>
+
+        <!-- Bullet Points -->
+        <div class="bullet-points-section" formArrayName="bullet_points">
+          <label class="bullet-points-label">
+            Bullet Points
+            <span class="required">*</span>
+          </label>
+
+          <div
+            *ngFor="let point of getBulletPoints(i).controls; let j = index"
+            class="bullet-point-row"
+          >
+            <span class="bullet-icon">•</span>
+            <input
+              type="text"
+              [formControlName]="j"
+              placeholder="Enter bullet point"
+              class="form-input"
+              [class.input-error]="isBulletPointInvalid(i, j)"
+              [disabled]="disabled"
+            />
+            <button
+              type="button"
+              class="btn-icon-small btn-remove"
+              (click)="removeBulletPoint(i, j)"
+              [disabled]="!canRemovePoint(i) || disabled"
+              title="Remove bullet point"
+            >
+              ✕
+            </button>
+          </div>
+
+          <!-- Add Bullet Point Button -->
+          <button
+            type="button"
+            class="btn-add-point"
+            (click)="addBulletPoint(i)"
+            [disabled]="!canAddPoint(i) || disabled"
+          >
+            <span class="icon">+</span>
+            Add Bullet Point
+            <span *ngIf="maxPoints" class="count-badge">
+              ({{ getBulletPoints(i).length }}/{{ maxPoints }})
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="sections.length === 0" class="empty-state">
+      <span class="icon">📝</span>
+      <p>No description sections added yet</p>
+      <p class="small">Click "Add Section" to create structured product descriptions</p>
+    </div>
+  </div>
+
+  <!-- Add Section Button -->
+  <button
+    type="button"
+    class="btn-add-section"
+    (click)="addSection()"
+    [disabled]="!canAddSection || disabled"
+  >
+    <span class="icon">+</span>
+    Add Section
+    <span *ngIf="maxSections" class="count-badge">({{ sections.length }}/{{ maxSections }})</span>
+  </button>
+</div>

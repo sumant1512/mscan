@@ -30,6 +30,7 @@ router.use(requireSuperAdmin);
 router.post('/', tenantController.createTenant);
 router.get('/', tenantController.getAllTenants);
 router.get('/:id', tenantController.getTenantById);
+router.get('/:tenantId/admins', tenantController.getTenantAdmins);
 router.put('/:id', tenantController.updateTenant);
 router.patch('/:id/status', tenantController.toggleTenantStatus);
 

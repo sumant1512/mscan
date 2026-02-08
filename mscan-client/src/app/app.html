@@ -3,6 +3,7 @@
   <div class="main-content" 
        [class.with-nav]="showNav" 
        [class.nav-collapsed]="navCollapsed">
+    <app-shared-header *ngIf="showNav"></app-shared-header>
     <router-outlet />
   </div>
 </div>

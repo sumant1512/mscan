@@ -21,7 +21,7 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    headless: true,
+    // headless mode can be controlled via CLI: --headed or default (headless)
     // storageState: '.auth/super-admin.json', // Disabled - login in each test instead
   },
   timeout: 60000,
@@ -46,12 +46,12 @@ export default defineConfig({
     //   use: { ...devices['Desktop Safari'] },
     // },
   ],
-  webServer: [
-    {
-      command: 'cd ../mscan-client && npm start',
-      url: 'http://localhost:4200',
-      reuseExistingServer: !process.env.CI,
-      timeout: 120000,
-    },
-  ],
+  // webServer: [
+  //   {
+  //     command: 'cd ../mscan-client && npm start',
+  //     url: 'http://localhost:4200',
+  //     reuseExistingServer: !process.env.CI,
+  //     timeout: 120000,
+  //   },
+  // ],
 });

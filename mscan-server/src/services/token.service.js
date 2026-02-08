@@ -7,8 +7,13 @@ const { v4: uuidv4 } = require('uuid');
 
 /**
  * Generate access and refresh tokens
+ * @param {string} userId - User ID
+ * @param {string} role - User role (SUPER_ADMIN, TENANT_ADMIN, TENANT_USER)
+ * @param {string|null} tenantId - Tenant ID (null for super admin)
+ * @param {string|null} subdomainSlug - Tenant subdomain
+ * @param {Array<string>} permissions - Array of permission strings (optional, will be empty if not provided for backward compatibility)
  */
-const generateTokens = (userId, role, tenantId = null, subdomainSlug = null) => {
+const generateTokens = (userId, role, tenantId = null, subdomainSlug = null, permissions = []) => {
   const accessJti = uuidv4();
   const refreshJti = uuidv4();
 
@@ -18,6 +23,7 @@ const generateTokens = (userId, role, tenantId = null, subdomainSlug = null) => 
       role,
       tenantId,
       subdomainSlug,
+      permissions, // Include permissions in JWT payload
       jti: accessJti,
       type: 'access'
     },
@@ -31,6 +37,7 @@ const generateTokens = (userId, role, tenantId = null, subdomainSlug = null) => 
       role,
       tenantId,
       subdomainSlug,
+      permissions, // Include permissions in refresh token too
       jti: refreshJti,
       type: 'refresh'
     },

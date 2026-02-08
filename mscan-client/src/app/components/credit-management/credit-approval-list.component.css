@@ -1,6 +1,6 @@
 .approval-container {
-  padding: 24px;
-  max-width: 1400px;
+  padding: 1.5000rem;
+  max-width: 87.5000rem;
   margin: 0 auto;
 }
 
@@ -8,28 +8,105 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 1.5000rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .header h2 {
   margin: 0;
-  font-size: 28px;
+  font-size: 1.7500rem;
   font-weight: 600;
   color: #1a1a1a;
 }
 
+.filters-group {
+  display: flex;
+  gap: 0.7500rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5000rem;
+}
+
+.filter-item label {
+  font-size: 0.8750rem;
+  font-weight: 500;
+  color: #4b5563;
+}
+
 .filter-select {
-  padding: 10px 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 14px;
+  padding: 0.6250rem 1rem;
+  border: 0.0625rem solid #d1d5db;
+  border-radius: 0.3750rem;
+  font-size: 0.8750rem;
   background: white;
+  min-width: 11.2500rem;
+}
+
+.section-tabs {
+  display: flex;
+  gap: 0.5000rem;
+  margin-bottom: 1.5000rem;
+  border-bottom: 0.1250rem solid #e5e7eb;
+  padding-bottom: 0;
+}
+
+.tab-button {
+  padding: 0.7500rem 1.5000rem;
+  background: none;
+  border: none;
+  border-bottom: 0.1875rem solid transparent;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  bottom: -0.1250rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5000rem;
+}
+
+.tab-button:hover {
+  color: #374151;
+  background: #f9fafb;
+}
+
+.tab-button.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.1250rem 0.5000rem;
+  background: #e5e7eb;
+  color: #374151;
+  border-radius: 0.7500rem;
+  font-size: 0.7500rem;
+  font-weight: 600;
+}
+
+.badge-success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge-danger {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .loading, .error {
-  padding: 20px;
+  padding: 1.2500rem;
   text-align: center;
-  border-radius: 6px;
+  border-radius: 0.3750rem;
 }
 
 .loading {
@@ -44,48 +121,48 @@
 
 .requests-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(25rem, 1fr));
+  gap: 1.5000rem;
 }
 
 .request-card {
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 0.7500rem;
+  box-shadow: 0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.1);
   overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .request-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+  transform: translateY(-0.1250rem);
+  box-shadow: 0 0.2500rem 0.3750rem rgba(0, 0, 0, 0.15);
 }
 
 .card-header {
-  padding: 20px;
+  padding: 1.2500rem;
   background: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 0.0625rem solid #e5e7eb;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
 }
 
 .tenant-info h3 {
-  margin: 0 0 4px 0;
-  font-size: 18px;
+  margin: 0 0 0.2500rem 0;
+  font-size: 1.1250rem;
   font-weight: 600;
   color: #1a1a1a;
 }
 
 .request-id {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: #6b7280;
 }
 
 .status-badge {
-  padding: 6px 14px;
-  border-radius: 12px;
-  font-size: 12px;
+  padding: 0.3750rem 0.8750rem;
+  border-radius: 0.7500rem;
+  font-size: 0.7500rem;
   font-weight: 500;
   text-transform: uppercase;
 }
@@ -106,116 +183,116 @@
 }
 
 .card-body {
-  padding: 20px;
+  padding: 1.2500rem;
 }
 
 .amount-display {
   text-align: center;
-  padding: 20px;
+  padding: 1.2500rem;
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  border-radius: 8px;
-  margin-bottom: 20px;
+  border-radius: 0.5000rem;
+  margin-bottom: 1.2500rem;
 }
 
 .amount-label {
-  font-size: 12px;
+  font-size: 0.7500rem;
   color: rgba(255, 255, 255, 0.9);
-  margin-bottom: 8px;
+  margin-bottom: 0.5000rem;
 }
 
 .amount-value {
-  font-size: 42px;
+  font-size: 2.6250rem;
   font-weight: 700;
   color: white;
 }
 
 .amount-unit {
-  font-size: 14px;
+  font-size: 0.8750rem;
   color: rgba(255, 255, 255, 0.9);
 }
 
 .info-section {
-  margin-bottom: 16px;
+  margin-bottom: 1rem;
 }
 
 .info-item {
   display: flex;
   justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #f3f4f6;
+  padding: 0.5000rem 0;
+  border-bottom: 0.0625rem solid #f3f4f6;
 }
 
 .info-item .label {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: #6b7280;
   font-weight: 500;
 }
 
 .info-item .value {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: #1f2937;
   text-align: right;
 }
 
 .justification-section {
-  margin-bottom: 16px;
+  margin-bottom: 1rem;
 }
 
 .justification-section .label {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: #6b7280;
   font-weight: 500;
-  margin-bottom: 8px;
+  margin-bottom: 0.5000rem;
   display: block;
 }
 
 .justification-text {
   margin: 0;
-  padding: 12px;
+  padding: 0.7500rem;
   background: #f9fafb;
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: 0.3750rem;
+  font-size: 0.8125rem;
   color: #374151;
   line-height: 1.5;
 }
 
 .approval-info, .rejection-info {
-  margin-top: 16px;
-  padding: 12px;
-  border-radius: 6px;
+  margin-top: 1rem;
+  padding: 0.7500rem;
+  border-radius: 0.3750rem;
 }
 
 .approval-info {
   background: #ecfdf5;
-  border: 1px solid #a7f3d0;
+  border: 0.0625rem solid #a7f3d0;
 }
 
 .rejection-info {
   background: #fef2f2;
-  border: 1px solid #fecaca;
+  border: 0.0625rem solid #fecaca;
 }
 
 .rejection-reason {
-  margin: 8px 0 0 0;
-  font-size: 13px;
+  margin: 0.5000rem 0 0 0;
+  font-size: 0.8125rem;
   color: #991b1b;
   font-style: italic;
 }
 
 .card-actions {
   display: flex;
-  gap: 12px;
-  padding: 16px 20px;
+  gap: 0.7500rem;
+  padding: 1rem 1.2500rem;
   background: #f9fafb;
-  border-top: 1px solid #e5e7eb;
+  border-top: 0.0625rem solid #e5e7eb;
 }
 
 .btn-approve, .btn-reject {
   flex: 1;
-  padding: 10px;
+  padding: 0.6250rem;
   border: none;
-  border-radius: 6px;
-  font-size: 14px;
+  border-radius: 0.3750rem;
+  font-size: 0.8750rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -252,9 +329,9 @@
 .no-data {
   grid-column: 1 / -1;
   text-align: center;
-  padding: 60px 20px;
+  padding: 3.7500rem 1.2500rem;
   color: #6b7280;
-  font-size: 16px;
+  font-size: 1rem;
   font-style: italic;
 }
 
@@ -274,34 +351,34 @@
 
 .modal-content {
   background: white;
-  padding: 32px;
-  border-radius: 12px;
-  max-width: 500px;
+  padding: 2rem;
+  border-radius: 0.7500rem;
+  max-width: 31.2500rem;
   width: 90%;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1.2500rem 1.5625rem -0.3125rem rgba(0, 0, 0, 0.1);
 }
 
 .modal-content h3 {
-  margin: 0 0 16px 0;
-  font-size: 20px;
+  margin: 0 0 1rem 0;
+  font-size: 1.2500rem;
   font-weight: 600;
   color: #1a1a1a;
 }
 
 .modal-content p {
-  margin: 0 0 24px 0;
-  font-size: 14px;
+  margin: 0 0 1.5000rem 0;
+  font-size: 0.8750rem;
   color: #6b7280;
 }
 
 .form-group {
-  margin-bottom: 24px;
+  margin-bottom: 1.5000rem;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 8px;
-  font-size: 14px;
+  margin-bottom: 0.5000rem;
+  font-size: 0.8750rem;
   font-weight: 500;
   color: #374151;
 }
@@ -312,10 +389,10 @@
 
 .modal-textarea {
   width: 100%;
-  padding: 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 14px;
+  padding: 0.7500rem;
+  border: 0.0625rem solid #d1d5db;
+  border-radius: 0.3750rem;
+  font-size: 0.8750rem;
   font-family: inherit;
   resize: vertical;
   box-sizing: border-box;
@@ -324,20 +401,20 @@
 .modal-textarea:focus {
   outline: none;
   border-color: #dc2626;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+  box-shadow: 0 0 0 0.1875rem rgba(220, 38, 38, 0.1);
 }
 
 .modal-actions {
   display: flex;
-  gap: 12px;
+  gap: 0.7500rem;
   justify-content: flex-end;
 }
 
 .btn-cancel, .btn-confirm-reject {
-  padding: 10px 20px;
+  padding: 0.6250rem 1.2500rem;
   border: none;
-  border-radius: 6px;
-  font-size: 14px;
+  border-radius: 0.3750rem;
+  font-size: 0.8750rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -346,7 +423,7 @@
 .btn-cancel {
   background: white;
   color: #374151;
-  border: 1px solid #d1d5db;
+  border: 0.0625rem solid #d1d5db;
 }
 
 .btn-cancel:hover {

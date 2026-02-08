@@ -14,13 +14,22 @@ const dashboardRoutes = require('./routes/dashboard.routes');
 const tenantRoutes = require('./routes/tenant.routes');
 const creditRoutes = require('./routes/credit.routes');
 const rewardsRoutes = require('./routes/rewards.routes');
-const categoryRoutes = require('./routes/categoryRoutes');
 const batchRoutes = require('./routes/batchRoutes');
 const campaignRoutes = require('./routes/campaignRoutes');
 const productsRoutes = require('./routes/products.routes');
-const categoriesRoutes = require('./routes/categories.routes');
 const publicScanRoutes = require('./routes/publicScan.routes');
 const mobileAuthRoutes = require('./routes/mobileAuth.routes');
+const userCreditsRoutes = require('./routes/userCredits.routes');
+const externalAppRoutes = require('./routes/externalApp.routes');
+const permissionsRoutes = require('./routes/permissions.routes');
+const tenantUsersRoutes = require('./routes/tenantUsers.routes');
+const templateRoutes = require('./routes/template.routes'); // JSONB template system
+const tagRoutes = require('./routes/tag.routes'); // Tag system
+const apiConfigRoutes = require('./routes/apiConfig.routes');
+const inventoryRoutes = require('./routes/inventory.routes');
+const webhooksRoutes = require('./routes/webhooks.routes');
+const mobileApiV2Routes = require('./routes/mobileApiV2.routes');
+const ecommerceApiRoutes = require('./routes/ecommerceApi.routes');
 // Import middleware
 const errorHandler = require('./middleware/error.middleware');
 const { subdomainMiddleware } = require('./middleware/subdomain.middleware');
@@ -82,18 +91,24 @@ app.use((req, res, next) => {
 // Health Check
 // ============================================
 app.get('/health', async (req, res) => {
-  try {
-    await db.query('SELECT 1');
+  const dbHealth = await db.checkHealth();
+
+  if (dbHealth.success) {
     res.json({
       status: 'healthy',
-      timestamp: new Date().toISOString(),
-      database: 'connected'
+      server: 'running',
+      database: dbHealth.status,
+      timestamp: dbHealth.timestamp,
+      responseTime: dbHealth.responseTime
     });
-  } catch (error) {
+  } else {
     res.status(503).json({
       status: 'unhealthy',
+      server: 'running',
+      database: dbHealth.status,
+      error: dbHealth.error,
       timestamp: new Date().toISOString(),
-      database: 'disconnected'
+      responseTime: dbHealth.responseTime
     });
   }
 });
@@ -108,12 +123,22 @@ app.use('/api/tenants', tenantRoutes);
 app.use('/api/credits', creditRoutes);
 app.use('/api/rewards', rewardsRoutes);
 app.use('/api/products', productsRoutes);
-app.use('/api/categories', categoriesRoutes);
-app.use('/api/tenant/categories', categoryRoutes);
 app.use('/api/tenant/batches', batchRoutes);
 app.use('/api/tenant/rewards/campaigns', campaignRoutes);
 app.use('/api/public/scan', publicScanRoutes);
 app.use('/api/mobile/v1/auth', mobileAuthRoutes);
+app.use('/api/mobile/v1/scan', require('./routes/mobileScan.routes'));
+app.use('/api/mobile/v2', mobileApiV2Routes);
+app.use('/api/ecommerce/v1', ecommerceApiRoutes);
+app.use('/api/v1/permissions', permissionsRoutes);
+app.use('/api/v1/tenants', tenantUsersRoutes);
+app.use('/api/templates', templateRoutes); // JSONB-based template system
+app.use('/api/tags', tagRoutes); // Tag system routes
+app.use('/api/verification-apps', apiConfigRoutes);
+app.use('/api', inventoryRoutes);
+app.use('/api', webhooksRoutes);
+app.use('/api', userCreditsRoutes);
+app.use('/api', externalAppRoutes); // Keep this LAST to avoid intercepting other routes
 
 // ============================================
 // Error Handling
@@ -210,23 +235,97 @@ app.get('/scan/:coupon_code', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log('\n🚀 TMS Server Started');
-  console.log(`📡 Server running on http://localhost:${PORT}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`📝 API Base: http://localhost:${PORT}/api`);
-  console.log('\n✨ Ready to accept requests\n');
-});
+// ============================================
+// Start Server (with Database Health Check)
+// ============================================
+async function startServer() {
+  try {
+    console.log('\n╔═══════════════════════════════════════════════════════╗');
+    console.log('║            MScan Server - Starting Up                 ║');
+    console.log('╚═══════════════════════════════════════════════════════╝\n');
 
-// ============================================
-// Graceful Shutdown
-// ============================================
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
-  server.close(() => {
-    console.log('HTTP server closed');
-    db.pool.end();
-  });
+    // Step 1: Check Database Connection
+    console.log('🔍 Checking database connection...');
+    const dbHealth = await db.checkHealth();
+
+    if (!dbHealth.success) {
+      // Database is not healthy
+      console.error('\n❌ DATABASE CONNECTION FAILED!\n');
+      console.error('Error Details:');
+      console.error(`  • Message: ${dbHealth.error}`);
+      console.error(`  • Code: ${dbHealth.code || 'N/A'}`);
+      console.error(`  • Response Time: ${dbHealth.responseTime}`);
+      console.error('\nDatabase Configuration:');
+      console.error(`  • Host: ${dbHealth.config.host}`);
+      console.error(`  • Port: ${dbHealth.config.port}`);
+      console.error(`  • Database: ${dbHealth.config.database}`);
+      console.error(`  • User: ${dbHealth.config.user}`);
+      console.error('\n💡 Troubleshooting:');
+      console.error('  1. Check if PostgreSQL is running');
+      console.error('  2. Verify database exists: npm run db:setup');
+      console.error('  3. Check .env configuration');
+      console.error('  4. Test connection: psql -h localhost -U postgres -d mscan_db');
+      console.error('\n🛑 Server startup aborted.\n');
+      process.exit(1);
+    }
+
+    // Database is healthy
+    console.log('✅ Database connection successful!');
+    console.log(`  • Database: ${dbHealth.database}`);
+    console.log(`  • Response Time: ${dbHealth.responseTime}`);
+    console.log(`  • Status: ${dbHealth.status}`);
+
+    // Step 2: Start HTTP Server
+    console.log('\n🚀 Starting HTTP server...');
+    const server = app.listen(PORT, () => {
+      console.log('\n╔═══════════════════════════════════════════════════════╗');
+      console.log('║            MScan Server - Ready!                      ║');
+      console.log('╚═══════════════════════════════════════════════════════╝');
+      console.log(`\n📡 Server: http://localhost:${PORT}`);
+      console.log(`📝 API: http://localhost:${PORT}/api`);
+      console.log(`🏥 Health: http://localhost:${PORT}/health`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`💾 Database: ${dbHealth.config.database}`);
+      console.log('\n✨ Ready to accept requests!\n');
+    });
+
+    // Graceful Shutdown
+    process.on('SIGTERM', () => {
+      console.log('\n⚠️  SIGTERM signal received: closing HTTP server');
+      server.close(() => {
+        console.log('✅ HTTP server closed');
+        db.pool.end(() => {
+          console.log('✅ Database pool closed');
+          process.exit(0);
+        });
+      });
+    });
+
+    process.on('SIGINT', () => {
+      console.log('\n\n⚠️  SIGINT signal received: closing HTTP server');
+      server.close(() => {
+        console.log('✅ HTTP server closed');
+        db.pool.end(() => {
+          console.log('✅ Database pool closed');
+          process.exit(0);
+        });
+      });
+    });
+
+    return server;
+
+  } catch (error) {
+    console.error('\n❌ FATAL ERROR during startup!');
+    console.error(error);
+    console.error('\n🛑 Server startup aborted.\n');
+    process.exit(1);
+  }
+}
+
+// Start the server
+startServer().catch((error) => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
 });
 
 module.exports = app;

@@ -1,30 +1,38 @@
 /**
  * Authentication Service
  */
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
 import { LoginResponse, UserContext, User, ApiResponse } from '../models';
 import { SubdomainService } from './subdomain.service';
+import { AuthContextFacade } from '../store/auth-context';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
+  private authContextFacade = inject(AuthContextFacade);
+
   private get apiUrl(): string {
     return this.subdomainService.getApiBaseUrl();
   }
-  
+
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
+
+  // Permissions observable - derived from current user
+  public permissions$ = this.currentUser$.pipe(
+    tap(user => user ? user.permissions : [])
+  );
 
   private accessTokenKey = 'tms_access_token';
   private refreshTokenKey = 'tms_refresh_token';
   private userTypeKey = 'tms_user_type';
   private subdomainKey = 'tms_tenant_subdomain';
-  
+
   private tokenRefreshTimer: any = null;
   private readonly TOKEN_REFRESH_INTERVAL = 25 * 60 * 1000; // 25 minutes in milliseconds
 
@@ -33,12 +41,33 @@ export class AuthService {
     private router: Router,
     private subdomainService: SubdomainService
   ) {
+    // Sync NgRx store user to currentUserSubject for backward compatibility
+    this.authContextFacade.currentUser$.subscribe(user => {
+      console.log('AuthService: Syncing user from AuthContextFacade', user);
+      this.currentUserSubject.next(user);
+
+      // Handle subdomain redirect when user context is loaded
+      if (user) {
+        const userType = user.role;
+        const subdomain = this.getTenantSubdomain();
+
+        if (userType !== 'SUPER_ADMIN' && subdomain) {
+          const currentSubdomain = this.subdomainService.getCurrentSubdomain();
+
+          // Only redirect if not already on the correct subdomain
+          if (currentSubdomain !== subdomain) {
+            this.subdomainService.redirectToSubdomain(subdomain, '/tenant/dashboard');
+          }
+        }
+      }
+    });
+
     // Check if user is already logged in
     if (this.getAccessToken()) {
       // Validate subdomain matches stored value
       const storedSubdomain = this.getTenantSubdomain();
       const currentSubdomain = this.subdomainService.getCurrentSubdomain();
-      
+
       if (storedSubdomain && currentSubdomain !== storedSubdomain) {
         console.warn('Subdomain mismatch detected - clearing tokens');
         // Clear tokens on subdomain mismatch to allow login on different tenant
@@ -46,7 +75,7 @@ export class AuthService {
         this.currentUserSubject.next(null);
         return;
       }
-      
+
       this.loadUserContext();
       this.startTokenRefreshTimer();
     }
@@ -99,24 +128,19 @@ export class AuthService {
   }
 
   /**
-   * Load user context
+   * Load user context using NgRx facade
    */
   loadUserContext(): void {
-    this.http.get<UserContext>(`${this.apiUrl}/auth/context`)
-      .subscribe({
-        next: (response) => {
-          if (response.success && response.data) {
-            this.currentUserSubject.next(response.data);
-          }
-        },
-        error: (error) => {
-          if (error.status !== 401) {
-            this.clearTokens();
-            this.currentUserSubject.next(null);
-            this.router.navigate(['/login']);
-          }
-        }
-      });
+    // Dispatch action to load user context via NgRx
+    // Error handling is now done by the userContextGuard
+    this.authContextFacade.loadUserContext();
+  }
+
+  /**
+   * Get user context (returns Observable for NgRx)
+   */
+  getUserContext(): Observable<UserContext> {
+    return this.http.get<UserContext>(`${this.apiUrl}/auth/context`);
   }
 
   /**
@@ -148,11 +172,14 @@ export class AuthService {
     if (refreshToken) {
       this.http.post(`${this.apiUrl}/auth/logout`, { refreshToken }).subscribe();
     }
-    
+
     this.stopTokenRefreshTimer();
     this.clearTokens();
     this.currentUserSubject.next(null);
-    
+
+    // Clear user context from NgRx store
+    this.authContextFacade.clearUserContext();
+
     // Stay on the same domain (tenant subdomain or root) and navigate to login
     this.router.navigate(['/login']);
   }
@@ -249,5 +276,73 @@ export class AuthService {
       clearInterval(this.tokenRefreshTimer);
       this.tokenRefreshTimer = null;
     }
+  }
+
+  /**
+   * Permission checking methods
+   */
+
+  /**
+   * Check if current user has a specific permission
+   * @param permission Permission code to check (e.g., 'create_coupon')
+   * @returns true if user has permission, false otherwise
+   */
+  hasPermission(permission: string): boolean {
+    const currentUser = this.currentUserSubject.value;
+
+    // Super Admin has all permissions
+    if (currentUser?.role === 'SUPER_ADMIN') {
+      return true;
+    }
+
+    // Check if user has the permission
+    return currentUser?.permissions?.includes(permission) ?? false;
+  }
+
+  /**
+   * Check if current user has ANY of the specified permissions (OR logic)
+   * @param permissions Array of permission codes
+   * @returns true if user has at least one permission, false otherwise
+   */
+  hasAnyPermission(permissions: string[]): boolean {
+    const currentUser = this.currentUserSubject.value;
+
+    // Super Admin has all permissions
+    if (currentUser?.role === 'SUPER_ADMIN') {
+      return true;
+    }
+
+    // Check if user has any of the permissions
+    return permissions.some(permission =>
+      currentUser?.permissions?.includes(permission) ?? false
+    );
+  }
+
+  /**
+   * Check if current user has ALL of the specified permissions (AND logic)
+   * @param permissions Array of permission codes
+   * @returns true if user has all permissions, false otherwise
+   */
+  hasAllPermissions(permissions: string[]): boolean {
+    const currentUser = this.currentUserSubject.value;
+
+    // Super Admin has all permissions
+    if (currentUser?.role === 'SUPER_ADMIN') {
+      return true;
+    }
+
+    // Check if user has all of the permissions
+    return permissions.every(permission =>
+      currentUser?.permissions?.includes(permission) ?? false
+    );
+  }
+
+  /**
+   * Get all permissions for current user
+   * @returns Array of permission codes
+   */
+  getPermissions(): string[] {
+    const currentUser = this.currentUserSubject.value;
+    return currentUser?.permissions ?? [];
   }
 }

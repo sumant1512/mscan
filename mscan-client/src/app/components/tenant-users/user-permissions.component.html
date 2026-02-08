@@ -1,0 +1,214 @@
+<div class="permissions-container">
+  <div class="header">
+    <div class="header-left">
+      <button (click)="goBack()" class="btn-back">
+        <span class="material-icons">arrow_back</span>
+      </button>
+      <div class="user-info">
+        <h2>User Permissions</h2>
+        <p *ngIf="user" class="user-details">
+          {{ user.full_name }} ({{ user.email }})
+          <span class="role-badge" [class.admin]="user.role === 'TENANT_ADMIN'">
+            {{ user.role === 'TENANT_ADMIN' ? 'Admin' : 'User' }}
+          </span>
+        </p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button
+        *ngIf="canAssignPermissions"
+        (click)="openAssignModal()"
+        class="btn-primary"
+      >
+        <span class="material-icons">add</span>
+        Assign Permissions
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="successMessage" class="alert alert-success">
+    {{ successMessage }}
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+
+  <div *ngIf="loadingCurrentPermissions" class="loading">
+    <p>Loading permissions...</p>
+  </div>
+
+  <div *ngIf="!loadingCurrentPermissions && currentPermissions.length === 0" class="empty-state">
+    <span class="material-icons">lock_open</span>
+    <h3>No permissions assigned</h3>
+    <p>This user has no permissions assigned yet</p>
+    <button *ngIf="canAssignPermissions" (click)="openAssignModal()" class="btn-primary">
+      <span class="material-icons">add</span>
+      Assign Permissions
+    </button>
+  </div>
+
+  <div *ngIf="!loadingCurrentPermissions && currentPermissions.length > 0" class="permissions-content">
+    <div class="permissions-summary">
+      <h3>{{ currentPermissions.length }} Permission(s) Assigned</h3>
+    </div>
+
+    <!-- TENANT Scope Permissions -->
+    <div *ngIf="getPermissionsByScope('TENANT').length > 0" class="permission-group">
+      <h4>Tenant Permissions</h4>
+      <div class="permission-list">
+        <div
+          *ngFor="let permission of getPermissionsByScope('TENANT')"
+          class="permission-card"
+        >
+          <div class="permission-icon">
+            <span class="material-icons">business</span>
+          </div>
+          <div class="permission-details">
+            <h5>{{ permission.name }}</h5>
+            <p class="permission-code">{{ permission.code }}</p>
+            <p *ngIf="permission.description" class="permission-description">
+              {{ permission.description }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- USER Scope Permissions -->
+    <div *ngIf="getPermissionsByScope('USER').length > 0" class="permission-group">
+      <h4>User Permissions</h4>
+      <div class="permission-list">
+        <div
+          *ngFor="let permission of getPermissionsByScope('USER')"
+          class="permission-card"
+        >
+          <div class="permission-icon">
+            <span class="material-icons">person</span>
+          </div>
+          <div class="permission-details">
+            <h5>{{ permission.name }}</h5>
+            <p class="permission-code">{{ permission.code }}</p>
+            <p *ngIf="permission.description" class="permission-description">
+              {{ permission.description }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GLOBAL Scope Permissions -->
+    <div *ngIf="getPermissionsByScope('GLOBAL').length > 0" class="permission-group">
+      <h4>Global Permissions</h4>
+      <div class="permission-list">
+        <div
+          *ngFor="let permission of getPermissionsByScope('GLOBAL')"
+          class="permission-card"
+        >
+          <div class="permission-icon">
+            <span class="material-icons">public</span>
+          </div>
+          <div class="permission-details">
+            <h5>{{ permission.name }}</h5>
+            <p class="permission-code">{{ permission.code }}</p>
+            <p *ngIf="permission.description" class="permission-description">
+              {{ permission.description }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Permissions Modal -->
+<div *ngIf="showAssignModal" class="modal-overlay" (click)="closeAssignModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Assign Permissions</h3>
+      <button (click)="closeAssignModal()" class="btn-close">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div *ngIf="loadingAvailablePermissions" class="loading">
+        Loading available permissions...
+      </div>
+
+      <div *ngIf="!loadingAvailablePermissions && availablePermissions.length === 0" class="no-permissions">
+        All available permissions have been assigned to this user
+      </div>
+
+      <div *ngIf="!loadingAvailablePermissions && availablePermissions.length > 0">
+        <p class="modal-description">
+          Select permissions to assign to {{ user?.full_name }}
+        </p>
+
+        <!-- TENANT Scope -->
+        <div *ngIf="getAvailablePermissionsByScope('TENANT').length > 0" class="permission-group">
+          <h4>Tenant Permissions</h4>
+          <div class="permission-checkboxes">
+            <div
+              *ngFor="let permission of getAvailablePermissionsByScope('TENANT')"
+              class="permission-checkbox-item"
+            >
+              <label>
+                <input
+                  type="checkbox"
+                  [checked]="isPermissionSelected(permission.id)"
+                  (change)="togglePermissionSelection(permission.id)"
+                />
+                <div class="permission-info">
+                  <span class="permission-name">{{ permission.name }}</span>
+                  <span class="permission-code">{{ permission.code }}</span>
+                  <span *ngIf="permission.description" class="permission-description">
+                    {{ permission.description }}
+                  </span>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- USER Scope -->
+        <div *ngIf="getAvailablePermissionsByScope('USER').length > 0" class="permission-group">
+          <h4>User Permissions</h4>
+          <div class="permission-checkboxes">
+            <div
+              *ngFor="let permission of getAvailablePermissionsByScope('USER')"
+              class="permission-checkbox-item"
+            >
+              <label>
+                <input
+                  type="checkbox"
+                  [checked]="isPermissionSelected(permission.id)"
+                  (change)="togglePermissionSelection(permission.id)"
+                />
+                <div class="permission-info">
+                  <span class="permission-name">{{ permission.name }}</span>
+                  <span class="permission-code">{{ permission.code }}</span>
+                  <span *ngIf="permission.description" class="permission-description">
+                    {{ permission.description }}
+                  </span>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <p class="selected-count">{{ selectedPermissionIds.length }} permission(s) selected</p>
+      <div class="modal-actions">
+        <button (click)="closeAssignModal()" class="btn-secondary">Cancel</button>
+        <button
+          (click)="assignPermissions()"
+          class="btn-primary"
+          [disabled]="selectedPermissionIds.length === 0 || loading"
+        >
+          Assign Permissions
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,106 @@
+<div class="tag-form-container">
+  <div class="page-header">
+    <h2>{{ isEditMode ? 'Edit Tag' : 'Create New Tag' }}</h2>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading && isEditMode" class="loading">
+    <div class="spinner"></div>
+    <p>Loading tag...</p>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="error" class="error-message">
+    {{ error }}
+  </div>
+
+  <!-- Form -->
+  <form *ngIf="!loading || !isEditMode" (ngSubmit)="onSubmit()" class="tag-form">
+    <!-- Tag Name -->
+    <div class="form-group">
+      <label class="required">Tag Name</label>
+      <input
+        type="text"
+        class="form-control"
+        [(ngModel)]="tag.name"
+        name="name"
+        placeholder="e.g., Premium Quality, Eco-Friendly"
+        maxlength="100"
+        required
+      />
+      <small class="help-text">Maximum 100 characters</small>
+    </div>
+
+    <!-- Icon Selection -->
+    <div class="form-group">
+      <label>Icon</label>
+      <div class="icon-selector">
+        <button type="button" class="icon-preview-btn" (click)="toggleIconPicker()">
+          <span class="material-icons">{{ selectedIcon }}</span>
+          <span>{{ selectedIcon }}</span>
+          <span class="material-icons">{{ showIconPicker ? 'expand_less' : 'expand_more' }}</span>
+        </button>
+
+        <!-- Icon Picker Dropdown -->
+        <div *ngIf="showIconPicker" class="icon-picker-dropdown">
+          <div class="icon-picker-header">
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="iconSearchTerm"
+              [ngModelOptions]="{ standalone: true }"
+              placeholder="Search icons..."
+            />
+          </div>
+          <div class="icon-picker-grid">
+            <button
+              type="button"
+              *ngFor="let icon of getFilteredIcons()"
+              class="icon-option"
+              [class.selected]="icon === selectedIcon"
+              (click)="selectIcon(icon)"
+              [title]="icon"
+            >
+              <span class="material-icons">{{ icon }}</span>
+              <small>{{ icon }}</small>
+            </button>
+          </div>
+          <div *ngIf="getFilteredIcons().length === 0" class="no-icons">No icons found</div>
+        </div>
+      </div>
+      <small class="help-text">Select a Material Icon to represent this tag</small>
+    </div>
+
+    <!-- Description -->
+    <div class="form-group">
+      <label>Description</label>
+      <textarea
+        class="form-control"
+        [(ngModel)]="tag.description"
+        name="description"
+        placeholder="Brief description of this tag..."
+        rows="3"
+        maxlength="250"
+      ></textarea>
+      <small class="help-text"> {{ getRemainingChars() }} characters remaining (max 250) </small>
+    </div>
+
+    <!-- Active Status -->
+    <div class="form-group">
+      <label class="checkbox-label">
+        <input type="checkbox" [(ngModel)]="tag.is_active" name="is_active" />
+        <span>Active</span>
+      </label>
+      <small class="help-text">Inactive tags will not be available for selection</small>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+      <button type="button" class="btn btn-secondary" (click)="cancel()">Cancel</button>
+      <button type="submit" class="btn btn-primary" [disabled]="loading">
+        <span *ngIf="!loading">{{ isEditMode ? 'Update Tag' : 'Create Tag' }}</span>
+        <span *ngIf="loading">Saving...</span>
+      </button>
+    </div>
+  </form>
+</div>

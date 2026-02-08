@@ -40,8 +40,21 @@ const authenticate = async (req, res, next) => {
     req.user = {
       id: decoded.userId,
       role: decoded.role,
-      tenant_id: decoded.tenantId || null
+      tenant_id: decoded.tenantId || null,
+      permissions: decoded.permissions || [] // Include permissions from JWT
     };
+
+    // For CUSTOMER role, fetch phone_e164 for mobile scanning
+    if (decoded.role === 'CUSTOMER') {
+      const customerResult = await db.query(
+        'SELECT phone_e164 FROM customers WHERE id = $1',
+        [decoded.userId]
+      );
+      if (customerResult.rows.length > 0) {
+        req.user.customerId = decoded.userId;
+        req.user.phone_e164 = customerResult.rows[0].phone_e164;
+      }
+    }
 
     next();
   } catch (error) {
@@ -87,7 +100,91 @@ const authorize = (...allowedRoles) => {
   };
 };
 
+/**
+ * Require specific permission(s)
+ * @param {string|Array<string>} permissions - Single permission or array of permissions
+ * @param {string} mode - 'any' (OR logic) or 'all' (AND logic). Default: 'any'
+ */
+const requirePermission = (permissions, mode = 'any') => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authenticated'
+      });
+    }
+
+    // Only Super Admin bypasses permission checks
+    // TENANT_ADMIN must have proper permissions assigned
+    if (req.user.role === 'SUPER_ADMIN') {
+      console.log(`✅ Permission check bypassed for ${req.user.role}`);
+      return next();
+    }
+
+    // Normalize permissions to array
+    const requiredPermissions = Array.isArray(permissions) ? permissions : [permissions];
+    const userPermissions = req.user.permissions || [];
+
+    console.log(`🔐 Permission Check: Required=[${requiredPermissions.join(', ')}], Mode=${mode}, User permissions=[${userPermissions.join(', ')}]`);
+
+    // Check permissions based on mode
+    let hasPermission = false;
+
+    if (mode === 'all') {
+      // AND logic - user must have ALL required permissions
+      hasPermission = requiredPermissions.every(perm => userPermissions.includes(perm));
+    } else {
+      // OR logic (default) - user must have AT LEAST ONE required permission
+      hasPermission = requiredPermissions.some(perm => userPermissions.includes(perm));
+    }
+
+    if (!hasPermission) {
+      console.log(`❌ Permission DENIED: User lacks required permission(s)`);
+
+      // Log unauthorized attempt to audit_logs if we have database access
+      // This is async but we don't await it to avoid blocking the response
+      db.query(
+        `INSERT INTO audit_logs (user_id, action, metadata, ip_address, user_agent)
+         VALUES ($1, 'UNAUTHORIZED_ACCESS_ATTEMPT', $2, $3, $4)`,
+        [
+          req.user.id,
+          JSON.stringify({
+            required_permissions: requiredPermissions,
+            mode: mode,
+            endpoint: req.path,
+            method: req.method
+          }),
+          req.ip,
+          req.get('user-agent') || 'unknown'
+        ]
+      ).catch(err => console.error('Failed to log unauthorized attempt:', err));
+
+      return res.status(403).json({
+        success: false,
+        message: 'Insufficient permissions to perform this action',
+        code: 'PERMISSION_DENIED',
+        details: {
+          required: requiredPermissions,
+          mode: mode
+        }
+      });
+    }
+
+    console.log(`✅ Permission check PASSED`);
+    next();
+  };
+};
+
+// Wrapper for requireRole to handle both array and spread arguments
+const requireRole = (roles) => {
+  // If roles is an array, spread it; otherwise treat as single role
+  const allowedRoles = Array.isArray(roles) ? roles : [roles];
+  return authorize(...allowedRoles);
+};
+
 module.exports = {
   authenticate,
-  authorize
+  authorize,
+  requireRole,
+  requirePermission
 };

@@ -1,11 +1,14 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { RewardsService } from '../../services/rewards.service';
 import { Coupon } from '../../models/rewards.model';
 import { finalize } from 'rxjs/operators';
-
+import { AppContextService } from '../../services/app-context.service';
+import { VerificationAppsFacade } from '../../store/verification-apps';
+import { AuthService } from '../../services/auth.service';
 @Component({
   selector: 'app-coupon-list',
   standalone: true,
@@ -13,32 +16,33 @@ import { finalize } from 'rxjs/operators';
   templateUrl: './coupon-list.component.html',
   styleUrls: ['./coupon-list.component.css']
 })
-export class CouponListComponent implements OnInit {
+export class CouponListComponent implements OnInit, OnDestroy {
+  subscription = new Subscription();
+  verificationAppsFacade = inject(VerificationAppsFacade);
   coupons: Coupon[] = [];
   verificationApps: any[] = [];
   loading = false;
   loadingMore = false;
   error = '';
-  
-  statusFilter: 'all' | 'draft' | 'printed' | 'active' | 'used' | 'inactive' | 'expired' = 'active';
-  appFilter: string = 'all';
+
+  statusFilter: 'all' | 'draft' | 'printed' | 'active' | 'used' | 'inactive' | 'expired' = 'all';
   searchQuery = '';
-  
+
   currentPage = 1;
   hasMore = true;
-  
+
   selectedCoupon?: Coupon;
   showQRModal = false;
   showRangeActivationModal = false;
   showDeactivationModal = false;
-  
+
   // Bulk selection
   selectedCouponIds: Set<string> = new Set();
   selectAll = false;
-  
+
   // Expanded state
   expandedCoupons: Set<string> = new Set();
-  
+
   // Range activation form
   rangeActivation = {
     from_reference: '',
@@ -48,7 +52,7 @@ export class CouponListComponent implements OnInit {
   };
   rangePreviewCount = 0;
   loadingPreview = false;
-  
+
   // Deactivation form
   deactivation = {
     from_reference: '',
@@ -56,15 +60,46 @@ export class CouponListComponent implements OnInit {
     deactivation_reason: ''
   };
 
+  // Permission flags
+  canCreateCoupon = false;
+  canEditCoupon = false;
+  canDeleteCoupon = false;
+  canViewCoupons = false;
+
+  private appContextSubscription?: Subscription;
+
   constructor(
     private rewardsService: RewardsService,
     private router: Router,
-    private cdr: ChangeDetectorRef
-  ) {}
+    private cdr: ChangeDetectorRef,
+    private appContextService: AppContextService,
+    private authService: AuthService,
+  ) {
+    // Initialize permission flags
+    this.canCreateCoupon = this.authService.hasPermission('create_coupon');
+    this.canEditCoupon = this.authService.hasPermission('edit_coupon');
+    this.canDeleteCoupon = this.authService.hasPermission('delete_coupon');
+    this.canViewCoupons = this.authService.hasPermission('view_coupons');
+    console.log('Permission Flags:', {
+      canCreateCoupon: this.canCreateCoupon,
+      canEditCoupon: this.canEditCoupon,
+      canDeleteCoupon: this.canDeleteCoupon,
+      canViewCoupons: this.canViewCoupons
+    });
+  }
 
   ngOnInit() {
     this.loadVerificationApps();
     this.loadCoupons();
+
+    // Reload coupons when app selection changes
+    this.appContextSubscription = this.appContextService.appContext$.subscribe(() => {
+      this.loadCoupons();
+    });
+  }
+
+  ngOnDestroy() {
+    this.appContextSubscription?.unsubscribe();
   }
 
   toggleCoupon(couponId: string) {
@@ -82,21 +117,18 @@ export class CouponListComponent implements OnInit {
   onScroll(event: any) {
     const element = event.target;
     const atBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-    
+
     if (atBottom && !this.loadingMore && this.hasMore && !this.loading) {
       this.loadMoreCoupons();
     }
   }
 
   loadVerificationApps() {
-    this.rewardsService.getVerificationApps().subscribe({
-      next: (response) => {
-        this.verificationApps = response.apps;
-      },
-      error: (err) => {
-        console.error('Failed to load verification apps:', err);
-      }
-    });
+    this.subscription.add(
+      this.verificationAppsFacade.allApps$.subscribe(apps => {
+        this.verificationApps = apps;
+      })
+    )
   }
 
   loadCoupons() {
@@ -104,12 +136,18 @@ export class CouponListComponent implements OnInit {
     this.error = '';
     this.currentPage = 1;
     this.hasMore = true;
-    
+
     const params: any = { page: this.currentPage, limit: 20 };
     if (this.statusFilter !== 'all') params.status = this.statusFilter;
-    if (this.appFilter !== 'all') params.verification_app_id = this.appFilter;
+
+    // Use app context service instead of appFilter
+    const selectedAppId = this.appContextService.getSelectedAppId();
+    if (selectedAppId !== null) {
+      params.verification_app_id = selectedAppId;
+    }
+
     if (this.searchQuery) params.search = this.searchQuery;
-    
+
     this.rewardsService.getCoupons(params)
       .pipe(finalize(() => {
         this.loading = false;
@@ -129,15 +167,21 @@ export class CouponListComponent implements OnInit {
 
   loadMoreCoupons() {
     if (!this.hasMore || this.loadingMore) return;
-    
+
     this.loadingMore = true;
     this.currentPage++;
-    
+
     const params: any = { page: this.currentPage, limit: 20 };
     if (this.statusFilter !== 'all') params.status = this.statusFilter;
-    if (this.appFilter !== 'all') params.verification_app_id = this.appFilter;
+
+    // Use app context service instead of appFilter
+    const selectedAppId = this.appContextService.getSelectedAppId();
+    if (selectedAppId !== null) {
+      params.verification_app_id = selectedAppId;
+    }
+
     if (this.searchQuery) params.search = this.searchQuery;
-    
+
     this.rewardsService.getCoupons(params)
       .pipe(finalize(() => {
         this.loadingMore = false;
@@ -278,12 +322,12 @@ export class CouponListComponent implements OnInit {
 
   markAsPrinted(coupon: Coupon) {
     let confirmMessage = 'Mark this coupon as printed?';
-    
+
     // Check if already printed
     if (coupon.printed_at && coupon.printed_count && coupon.printed_count > 0) {
       confirmMessage = `This coupon has already been printed ${coupon.printed_count} time(s).\n\nLast printed: ${new Date(coupon.printed_at).toLocaleString()}\n\nDo you want to mark it as printed again?`;
     }
-    
+
     if (confirm(confirmMessage)) {
       this.loading = true;
       this.rewardsService.markCouponAsPrinted(coupon.id)
@@ -350,7 +394,7 @@ export class CouponListComponent implements OnInit {
     const selectedDraftCoupons = this.coupons.filter(
       c => this.selectedCouponIds.has(c.id) && c.status === 'draft'
     );
-    
+
     const selectedPrintedCoupons = this.coupons.filter(
       c => this.selectedCouponIds.has(c.id) && c.status === 'printed'
     );
@@ -364,33 +408,15 @@ export class CouponListComponent implements OnInit {
       return;
     }
 
-    let confirmMessage = `Mark ${selectedDraftCoupons.length} coupon(s) as printed?`;
-    
     if (selectedPrintedCoupons.length > 0) {
-      confirmMessage += `\n\nNote: ${selectedPrintedCoupons.length} already printed coupon(s) will be skipped.`;
+      const message = `${selectedDraftCoupons.length} draft coupon(s) will be shown in print preview.\n\n${selectedPrintedCoupons.length} already printed coupon(s) will be skipped.`;
+      alert(message);
     }
 
-    if (confirm(confirmMessage)) {
-      this.loading = true;
-      const couponIds = selectedDraftCoupons.map(c => c.id);
-      
-      this.rewardsService.bulkMarkAsPrinted(couponIds)
-        .pipe(finalize(() => {
-          this.loading = false;
-          this.cdr.detectChanges();
-        }))
-        .subscribe({
-          next: (response) => {
-            alert(`Success! ${response.printed_count} coupon(s) marked as printed`);
-            this.clearSelection();
-            this.loadCoupons();
-          },
-          error: (err) => {
-            console.error('Bulk print error:', err);
-            alert(err.error?.error || err.message || 'Failed to mark coupons as printed');
-          }
-        });
-    }
+    // Navigate to print page with selected draft coupons
+    this.router.navigate(['/tenant/coupons/print'], {
+      state: { coupons: selectedDraftCoupons }
+    });
   }
 
   bulkActivate() {
@@ -408,30 +434,22 @@ export class CouponListComponent implements OnInit {
       return;
     }
 
-    const fromRef = selectedPrintedCoupons[0].coupon_reference;
-    const toRef = selectedPrintedCoupons[selectedPrintedCoupons.length - 1].coupon_reference;
-
-    if (!fromRef || !toRef) {
-      alert('Selected coupons must have reference codes');
-      return;
-    }
-
     if (confirm(`Activate ${selectedPrintedCoupons.length} coupon(s)?`)) {
       this.loading = true;
-      
-      this.rewardsService.activateCouponRange({
-        from_reference: fromRef,
-        to_reference: toRef,
-        status_filter: 'printed',
-        activation_note: 'Bulk activation from selection'
-      })
+      const couponIds = selectedPrintedCoupons.map(c => c.id);
+
+      this.rewardsService.bulkActivateCoupons(couponIds, 'Bulk activation from selection')
         .pipe(finalize(() => {
           this.loading = false;
           this.cdr.detectChanges();
         }))
         .subscribe({
           next: (response) => {
-            alert(`Success! ${response.activated_count} coupon(s) activated`);
+            let message = `Success! ${response.activated_count} coupon(s) activated`;
+            if (response.skipped_count > 0) {
+              message += `. ${response.skipped_count} skipped (already active or invalid status)`;
+            }
+            alert(message);
             this.clearSelection();
             this.loadCoupons();
           },
@@ -505,7 +523,7 @@ export class CouponListComponent implements OnInit {
     // For now, just estimate based on reference pattern (CP-###)
     const fromMatch = this.rangeActivation.from_reference.match(/(\d+)$/);
     const toMatch = this.rangeActivation.to_reference.match(/(\d+)$/);
-    
+
     if (fromMatch && toMatch) {
       const fromNum = parseInt(fromMatch[1]);
       const toNum = parseInt(toMatch[1]);

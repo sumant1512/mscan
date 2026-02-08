@@ -1,6 +1,6 @@
 .batch-wizard-container {
   padding: 2rem;
-  max-width: 900px;
+  max-width: 56.2500rem;
   margin: 0 auto;
 }
 
@@ -35,8 +35,8 @@
 }
 
 .step-number {
-  width: 40px;
-  height: 40px;
+  width: 2.5000rem;
+  height: 2.5000rem;
   border-radius: 50%;
   background-color: #e0e0e0;
   color: #666;
@@ -75,12 +75,12 @@
 
 .step-line {
   flex: 1;
-  height: 2px;
+  height: 0.1250rem;
   background-color: #e0e0e0;
   margin: 0 1rem;
   transition: background-color 0.3s;
   position: relative;
-  top: -20px;
+  top: -1.2500rem;
 }
 
 .step-line.active {
@@ -91,29 +91,29 @@
 .alert {
   padding: 1rem;
   margin-bottom: 1.5rem;
-  border-radius: 4px;
+  border-radius: 0.2500rem;
   animation: slideDown 0.3s ease;
 }
 
 .alert-success {
   background-color: #d4edda;
-  border: 1px solid #c3e6cb;
+  border: 0.0625rem solid #c3e6cb;
   color: #155724;
 }
 
 .alert-error {
   background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
+  border: 0.0625rem solid #f5c6cb;
   color: #721c24;
 }
 
 /* Step Content */
 .step-content {
   background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  border: 0.0625rem solid #e0e0e0;
+  border-radius: 0.5000rem;
   padding: 2rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0.1250rem 0.2500rem rgba(0, 0, 0, 0.1);
 }
 
 .step-content h3 {
@@ -143,8 +143,8 @@
 .form-group select {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 0.0625rem solid #ddd;
+  border-radius: 0.2500rem;
   font-size: 1rem;
   transition: border-color 0.2s;
 }
@@ -172,7 +172,7 @@
 .btn {
   padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 4px;
+  border-radius: 0.2500rem;
   font-size: 1rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -225,11 +225,11 @@
 }
 
 .spinner {
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #4CAF50;
+  border: 0.2500rem solid #f3f3f3;
+  border-top: 0.2500rem solid #4CAF50;
   border-radius: 50%;
-  width: 50px;
-  height: 50px;
+  width: 3.1250rem;
+  height: 3.1250rem;
   animation: spin 1s linear infinite;
   margin: 0 auto 1rem;
 }
@@ -242,8 +242,8 @@
 /* Success Card */
 .success-card {
   background: #d4edda;
-  border: 1px solid #c3e6cb;
-  border-radius: 4px;
+  border: 0.0625rem solid #c3e6cb;
+  border-radius: 0.2500rem;
   padding: 1.5rem;
   margin-top: 1rem;
 }
@@ -281,8 +281,8 @@
 /* Info Card */
 .info-card {
   background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
+  border: 0.0625rem solid #dee2e6;
+  border-radius: 0.2500rem;
   padding: 1.5rem;
   margin-bottom: 2rem;
 }
@@ -326,8 +326,8 @@
 
 .type-btn {
   padding: 1.5rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  border: 0.1250rem solid #e0e0e0;
+  border-radius: 0.5000rem;
   background: white;
   cursor: pointer;
   transition: all 0.2s;
@@ -373,7 +373,7 @@
   margin-top: 1.5rem;
   padding: 1rem;
   background: #f8f9fa;
-  border-radius: 4px;
+  border-radius: 0.2500rem;
 }
 
 .validation-row {
@@ -400,7 +400,7 @@
 @keyframes slideDown {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(-0.6250rem);
   }
   to {
     opacity: 1;

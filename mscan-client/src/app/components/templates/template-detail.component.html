@@ -1,0 +1,156 @@
+<div class="template-detail-container">
+  <div class="page-header">
+    <button class="btn-back" (click)="goBack()">← Back to Templates</button>
+    <h1>Template Details</h1>
+  </div>
+
+  <!-- Alert Messages -->
+  <div *ngIf="error" class="alert alert-error">
+    <span class="icon">⚠️</span>
+    {{ error }}
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading template...</p>
+  </div>
+
+  <!-- Template Details -->
+  <div *ngIf="!loading && template">
+    <!-- Template Overview -->
+    <div class="template-overview">
+      <div class="overview-header">
+        <div class="template-icon">
+          📋
+        </div>
+        <div class="template-info">
+          <h2>
+            {{ template.name }}
+            <span *ngIf="template.is_system_template" class="badge badge-system"
+              >System Template</span
+            >
+            <span *ngIf="!template.is_active" class="badge badge-inactive">Inactive</span>
+          </h2>
+          <div class="template-meta">
+            <span class="meta-item">
+              <span class="material-icons">view_module</span>
+              {{ attributes.length }} Attributes
+            </span>
+          </div>
+          <p *ngIf="template.description" class="template-description">
+            {{ template.description }}
+          </p>
+        </div>
+      </div>
+
+      <div class="overview-actions">
+        <button class="btn btn-outline" (click)="duplicateTemplate()">
+          <span class="material-icons">content_copy</span>
+          Duplicate
+        </button>
+        <button
+          *ngIf="!template.is_system_template"
+          class="btn btn-primary"
+          (click)="editTemplate()"
+        >
+          <span class="material-icons">edit</span>
+          Edit Template
+        </button>
+        <button
+          *ngIf="!template.is_system_template"
+          class="btn btn-danger"
+          (click)="deleteTemplate()"
+        >
+          <span class="material-icons">delete</span>
+          Delete
+        </button>
+      </div>
+    </div>
+
+    <!-- Attributes Section -->
+    <div class="attributes-section">
+      <h3>Template Attributes</h3>
+
+      <div *ngIf="attributes.length === 0" class="empty-state">
+        <span class="material-icons">view_module</span>
+        <p>No attributes defined for this template</p>
+      </div>
+
+      <div *ngFor="let group of getAttributeGroups()" class="attribute-group">
+        <h4 class="group-title">{{ group }}</h4>
+
+        <div class="attributes-grid">
+          <div *ngFor="let attribute of getAttributesInGroup(group)" class="attribute-card">
+            <div class="attribute-header">
+              <div class="attribute-name">
+                <span class="material-icons">{{ getDataTypeIcon(attribute.data_type) }}</span>
+                <strong>{{ attribute.attribute_name }}</strong>
+                <span *ngIf="attribute.is_required" class="required-indicator">*</span>
+              </div>
+              <span class="data-type-badge">{{ getDataTypeLabel(attribute.data_type) }}</span>
+            </div>
+
+            <div class="attribute-details">
+              <div class="detail-row">
+                <span class="detail-label">Key:</span>
+                <code>{{ attribute.attribute_key }}</code>
+              </div>
+
+              <div *ngIf="attribute.default_value" class="detail-row">
+                <span class="detail-label">Default:</span>
+                <span>{{ attribute.default_value }}</span>
+              </div>
+
+              <div *ngIf="attribute.help_text" class="detail-row">
+                <span class="detail-label">Help:</span>
+                <span class="help-text">{{ attribute.help_text }}</span>
+              </div>
+
+              <div *ngIf="attribute.placeholder" class="detail-row">
+                <span class="detail-label">Placeholder:</span>
+                <span class="placeholder-text">"{{ attribute.placeholder }}"</span>
+              </div>
+
+              <div *ngIf="getValidationRulesText(attribute).length > 0" class="validation-rules">
+                <span class="detail-label">Validation:</span>
+                <ul class="rules-list">
+                  <li *ngFor="let rule of getValidationRulesText(attribute)">{{ rule }}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Template Metadata -->
+    <div class="metadata-section">
+      <h3>Template Information</h3>
+      <div class="metadata-grid">
+        <div class="metadata-item">
+          <span class="metadata-label">Template ID:</span>
+          <code>{{ template.id }}</code>
+        </div>
+        <div class="metadata-item">
+          <span class="metadata-label">Status:</span>
+          <span [class]="template.is_active ? 'status-active' : 'status-inactive'">
+            {{ template.is_active ? 'Active' : 'Inactive' }}
+          </span>
+        </div>
+        <div class="metadata-item">
+          <span class="metadata-label">Type:</span>
+          <span>{{ template.is_system_template ? 'System Template' : 'Custom Template' }}</span>
+        </div>
+        <div class="metadata-item">
+          <span class="metadata-label">Created:</span>
+          <span>{{ template.created_at | date: 'medium' }}</span>
+        </div>
+        <div class="metadata-item">
+          <span class="metadata-label">Last Updated:</span>
+          <span>{{ template.updated_at | date: 'medium' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

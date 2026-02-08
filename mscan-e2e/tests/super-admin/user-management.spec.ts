@@ -14,34 +14,4 @@ test.describe('Super Admin - User Management', () => {
     // Login as super admin
     await authHelper.loginAsSuperAdmin();
   });
-
-  test('should display user list', async ({ page }) => {
-    // User management feature not yet implemented for super admin
-    test.skip();
-  });
-
-  test('should create new user', async ({ page }) => {
-    // User management feature not yet implemented for super admin
-    test.skip();
-  });
-
-  test('should view user details', async ({ page }) => {
-    // User management feature not yet implemented for super admin
-    test.skip();
-  });
-
-  test('should edit user details', async ({ page }) => {
-    // User management feature not yet implemented for super admin
-    test.skip();
-  });
-
-  test('should filter users by role', async ({ page }) => {
-    // User management feature not yet implemented for super admin
-    test.skip();
-  });
-
-  test('should search users', async ({ page }) => {
-    // User management feature not yet implemented for super admin
-    test.skip();
-  });
 });

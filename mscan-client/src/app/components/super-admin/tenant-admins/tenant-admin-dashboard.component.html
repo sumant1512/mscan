@@ -1,0 +1,164 @@
+<div class="tenant-admin-dashboard">
+  <div class="dashboard-header">
+    <h1>Tenant Admin Management</h1>
+    <button class="btn btn-primary" (click)="navigateToAddAdmin()">
+      <span class="material-icons">add</span>
+      Add Tenant Admin
+    </button>
+  </div>
+
+  <!-- Stats Cards -->
+  <ng-container *ngIf="stats$ | async as stats">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #e3f2fd;">
+          <span class="material-icons" style="color: #1976d2;">business</span>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Total Tenants</div>
+          <div class="stat-value">{{ stats.total }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #e8f5e9;">
+          <span class="material-icons" style="color: #388e3c;">check_circle</span>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">With Admins</div>
+          <div class="stat-value">{{ stats.tenantsWithAdmins }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #fff3e0;">
+          <span class="material-icons" style="color: #f57c00;">warning</span>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Without Admins</div>
+          <div class="stat-value">{{ stats.tenantsWithoutAdmins }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #f3e5f5;">
+          <span class="material-icons" style="color: #7b1fa2;">admin_panel_settings</span>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Total Admins</div>
+          <div class="stat-value">{{ stats.totalAdmins }}</div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- Filters -->
+  <div class="filters-bar">
+    <div class="search-box">
+      <span class="material-icons">search</span>
+      <input 
+        type="text" 
+        placeholder="Search tenants by name or domain..."
+        (input)="onSearchChange($any($event.target).value)"
+      />
+    </div>
+
+    <div class="filter-dropdown">
+      <label>Filter:</label>
+      <select (change)="onFilterChange($any($event.target).value)">
+        <option value="all">All Tenants</option>
+        <option value="withAdmins">With Admins</option>
+        <option value="withoutAdmins">Without Admins</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading$ | async" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading tenants...</p>
+  </div>
+
+  <!-- Error State -->
+  <ng-container *ngIf="error$ | async as error">
+    <div *ngIf="!(loading$ | async)" class="error-state">
+      <span class="material-icons">error</span>
+      <p>{{ error }}</p>
+      <button class="btn btn-secondary" (click)="loadTenants()">Retry</button>
+    </div>
+  </ng-container>
+
+  <!-- Tenants Table -->
+  <ng-container *ngIf="tenants$ | async as tenants">
+    <div *ngIf="!(loading$ | async) && !(error$ | async)" class="tenants-table-container">
+      <table class="tenants-table">
+      <thead>
+        <tr>
+          <th>Tenant Name</th>
+          <th>Domain</th>
+          <th>Email</th>
+          <th>Admins</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let tenant of tenants">
+          <td>
+            <div class="tenant-name">
+              {{ tenant.tenant_name }}
+              <span *ngIf="hasNoAdmins(tenant)" class="warning-badge" title="No Tenant Admins assigned">
+                <span class="material-icons">warning</span>
+              </span>
+            </div>
+          </td>
+          <td>
+            <a [href]="getSubdomainUrl(tenant)" target="_blank" class="subdomain-link">
+              {{ tenant.subdomain_slug }}
+            </a>
+          </td>
+          <td>{{ tenant.email }}</td>
+          <td>
+            <div class="admin-count" [class.zero]="hasNoAdmins(tenant)">
+              <span class="material-icons">admin_panel_settings</span>
+              <span>{{ getTenantAdminCount(tenant) }}</span>
+            </div>
+          </td>
+          <td>
+            <span class="status-badge" [class.active]="tenant.status === 'active'" [class.inactive]="tenant.status !== 'active'">
+              {{ tenant.status }}
+            </span>
+          </td>
+          <td>
+            <div class="actions">
+              <button 
+                *ngIf="getTenantAdminCount(tenant) > 0"
+                class="btn btn-sm btn-secondary" 
+                (click)="viewTenantAdmins(tenant.id)"
+                title="View Admins"
+              >
+                <span class="material-icons">visibility</span>
+                View Admins
+              </button>
+              <button 
+                class="btn btn-sm btn-primary" 
+                (click)="navigateToAddAdmin(tenant)"
+                title="Add Admin"
+              >
+                <span class="material-icons">person_add</span>
+                Add Admin
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="tenants.length === 0">
+          <td colspan="6" class="no-results">
+            <span class="material-icons">search_off</span>
+            <p>No tenants found matching your filters</p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </ng-container>
+</div>

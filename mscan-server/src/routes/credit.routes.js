@@ -18,21 +18,32 @@ const requireSuperAdmin = (req, res, next) => {
 };
 
 const requireTenant = (req, res, next) => {
-  if (!req.user.tenant_id) {
-    return res.status(403).json({ 
-      error: 'Access denied. Tenant access required.' 
+  // Explicitly block super admin
+  if (req.user.role === 'SUPER_ADMIN') {
+    return res.status(403).json({
+      error: 'Access denied. This endpoint is for tenant admins only.'
     });
   }
+
+  // Check for tenant context
+  if (!req.user.tenant_id) {
+    return res.status(403).json({
+      error: 'Access denied. Tenant access required.'
+    });
+  }
+
   next();
 };
 
 // Apply auth middleware to all routes
 router.use(authMiddleware.authenticate);
 
-// Tenant routes
+// Tenant-only routes (blocked for super admin)
 router.post('/request', requireTenant, creditController.requestCredits);
 router.get('/requests/my', requireTenant, creditController.getMyCreditRequests);
 router.get('/balance', requireTenant, creditController.getCreditBalance);
+
+// Shared routes (works for both super admin and tenant admin)
 router.get('/transactions', creditController.getCreditTransactions);
 
 // Super Admin routes

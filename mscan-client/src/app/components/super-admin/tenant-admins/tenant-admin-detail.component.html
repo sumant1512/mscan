@@ -1,0 +1,130 @@
+<div class="tenant-admin-detail">
+  <!-- Header -->
+  <div class="page-header">
+    <button class="btn-back" (click)="navigateBack()" aria-label="Go back">
+      <span class="material-icons">arrow_back</span>
+    </button>
+    <div class="header-content">
+      <h1>Tenant Administrators</h1>
+      <div class="tenant-info">
+        <span class="tenant-name">{{ tenantName$ | async }}</span>
+        <span class="tenant-domain">{{ tenantDomain$ | async }}</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary" (click)="viewTenantDashboard()">
+        <span class="material-icons">dashboard</span>
+        View Tenant Dashboard
+      </button>
+      <button class="btn btn-primary" (click)="addAnotherAdmin()">
+        <span class="material-icons">add</span>
+        Add Another Admin
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading$ | async" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading administrators...</p>
+  </div>
+
+  <!-- Error State -->
+  <ng-container *ngIf="error$ | async as error">
+    <div *ngIf="!(loading$ | async)" class="alert alert-error">
+      <span class="material-icons">error</span>
+      <span>{{ error }}</span>
+    </div>
+  </ng-container>
+
+  <!-- Admins List -->
+  <ng-container *ngIf="admins$ | async as admins">
+    <div *ngIf="!(loading$ | async) && !(error$ | async)" class="admins-container">
+      <!-- Stats -->
+      <div class="stats-bar">
+        <div class="stat">
+          <span class="stat-value">{{ admins.length }}</span>
+          <span class="stat-label">Total Administrators</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">{{ activeAdminsCount$ | async }}</span>
+          <span class="stat-label">Active</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">{{ inactiveAdminsCount$ | async }}</span>
+          <span class="stat-label">Inactive</span>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="admins.length === 0" class="empty-state">
+        <span class="material-icons empty-icon">people_outline</span>
+        <h3>No Administrators Found</h3>
+        <p>This tenant doesn't have any administrators yet.</p>
+        <button class="btn btn-primary" (click)="addAnotherAdmin()">
+          <span class="material-icons">add</span>
+          Add First Administrator
+        </button>
+      </div>
+
+      <!-- Admins Grid -->
+      <div *ngIf="admins.length > 0" class="admins-grid">
+        <div *ngFor="let admin of admins" class="admin-card">
+          <div class="admin-header">
+            <div class="admin-avatar">
+              {{ getInitials(admin.full_name) }}
+            </div>
+            <div class="admin-info">
+              <h3 class="admin-name">{{ admin.full_name }}</h3>
+              <span class="admin-email" (click)="copyEmail(admin.email)" title="Click to copy">
+                <span class="material-icons email-icon">email</span>
+                {{ admin.email }}
+              </span>
+            </div>
+          <div class="admin-status">
+            <span 
+              class="status-badge" 
+              [style.background-color]="getStatusColor(admin.is_active)">
+              {{ admin.is_active ? 'Active' : 'Inactive' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="admin-details">
+          <div class="detail-row" *ngIf="admin.phone_number">
+            <span class="material-icons">phone</span>
+            <span>{{ admin.phone_number }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="material-icons">assignment_ind</span>
+            <span>{{ admin.role }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="material-icons">event</span>
+            <span>Created: {{ formatDate(admin.created_at) }}</span>
+          </div>
+          <div class="detail-row" *ngIf="admin.last_login">
+            <span class="material-icons">login</span>
+            <span>Last login: {{ formatDate(admin.last_login) }}</span>
+          </div>
+          <div class="detail-row" *ngIf="!admin.last_login">
+            <span class="material-icons">info</span>
+            <span class="warning-text">Never logged in</span>
+          </div>
+        </div>
+
+        <div class="admin-permissions">
+          <div class="permission-header">
+            <span class="material-icons">verified_user</span>
+            <span>Permissions</span>
+          </div>
+          <div class="permission-badge">
+            <span class="material-icons">check_circle</span>
+            Full Access (All Permissions)
+          </div>
+        </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

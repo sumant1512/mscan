@@ -1,0 +1,356 @@
+<div class="product-form-container">
+  <div class="page-header">
+    <h2>{{ isEditMode ? 'Edit Product' : 'Create New Product' }}</h2>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading && isEditMode" class="loading">
+    <div class="spinner"></div>
+    <p>Loading product...</p>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="error" class="error-message">
+    {{ error }}
+  </div>
+
+  <!-- Form -->
+  <form *ngIf="!loading || !isEditMode" (ngSubmit)="onSubmit()" class="product-form">
+
+    <!-- Basic Information Section -->
+    <div class="form-section">
+      <h3>Basic Information</h3>
+
+      <!-- Verification App -->
+      <div class="form-group">
+        <label class="required">Verification App</label>
+        <select
+          class="form-control"
+          [(ngModel)]="product.verification_app_id"
+          name="verification_app_id"
+          required
+          [disabled]="isEditMode"
+          (change)="onAppChange()"
+        >
+          <option value="">Select an app</option>
+          <option *ngFor="let app of availableApps" [value]="app.verification_app_id">
+            {{ app.app_name }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Product Name -->
+      <div class="form-group">
+        <label class="required">Product Name</label>
+        <input
+          type="text"
+          class="form-control"
+          [(ngModel)]="product.product_name"
+          name="product_name"
+          placeholder="e.g., Asian Paints Royale Premium Emulsion"
+          required
+        />
+      </div>
+
+      <!-- Currency -->
+      <div class="form-group">
+        <label>Currency</label>
+        <select
+          class="form-control"
+          [(ngModel)]="product.currency"
+          name="currency"
+        >
+          <option value="INR">INR (₹)</option>
+          <option value="USD">USD ($)</option>
+          <option value="EUR">EUR (€)</option>
+        </select>
+      </div>
+
+      <!-- Active Status -->
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            [(ngModel)]="product.is_active"
+            name="is_active"
+          />
+          <span>Active</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Template Info (Auto-selected from App) -->
+    <div class="form-section" *ngIf="selectedTemplate">
+      <h3>Product Template</h3>
+      <div class="template-info-box">
+        <div class="info-icon">📋</div>
+        <div class="info-content">
+          <strong>{{ selectedTemplate.template_name }}</strong>
+          <p class="small-text">Template automatically applied from verification app settings</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- No Template Info -->
+    <div class="form-section" *ngIf="!selectedTemplate && product.verification_app_id">
+      <h3>Product Template</h3>
+      <div class="info-message">
+        <span class="info-icon">ℹ️</span>
+        <p>No template is assigned to this verification app. Products will use basic fields only.</p>
+        <p class="small-text">To use structured product attributes, assign a product template to the verification app in the app settings.</p>
+      </div>
+    </div>
+
+    <!-- Tags Section -->
+    <div class="form-section" *ngIf="availableTags.length > 0">
+      <h3>Tags</h3>
+      <div class="tags-grid">
+        <button
+          type="button"
+          *ngFor="let tag of availableTags"
+          class="tag-chip"
+          [class.selected]="isTagSelected(tag.id)"
+          (click)="toggleTag(tag.id)"
+        >
+          <span class="material-icons">{{ tag.icon || 'label' }}</span>
+          <span>{{ tag.name }}</span>
+          <span class="material-icons check-icon" *ngIf="isTagSelected(tag.id)">check_circle</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Variants Section (Dynamic based on template) -->
+    <div class="form-section" *ngIf="selectedTemplate && selectedTemplate.variant_config">
+      <h3>{{ selectedTemplate.variant_config.variant_label || 'Variants' }}</h3>
+      <p class="section-help">Add variants based on {{ getDimensionLabels() }}</p>
+
+      <div *ngFor="let variant of variants; let i = index" class="variant-card">
+        <div class="variant-header">
+          <h4>Variant {{ i + 1 }}</h4>
+          <button
+            type="button"
+            class="btn-icon"
+            (click)="removeVariant(i)"
+            *ngIf="variants.length > 1"
+            title="Remove variant"
+          >
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+
+        <div class="variant-grid">
+          <!-- Dimension Fields -->
+          <div
+            *ngFor="let dim of selectedTemplate.variant_config.dimensions"
+            class="form-group"
+          >
+            <label [class.required]="dim.required">{{ dim.attribute_name }}</label>
+            <select
+              *ngIf="dim.type === 'select'"
+              class="form-control"
+              [(ngModel)]="variant[dim.attribute_key]"
+              [name]="'variant_' + i + '_' + dim.attribute_key"
+              [required]="dim.required"
+            >
+              <option value="">Select {{ dim.attribute_name }}</option>
+              <option *ngFor="let option of dim.options" [value]="option">
+                {{ option }}
+              </option>
+            </select>
+            <input
+              *ngIf="dim.type === 'text'"
+              type="text"
+              class="form-control"
+              [(ngModel)]="variant[dim.attribute_key]"
+              [name]="'variant_' + i + '_' + dim.attribute_key"
+              [placeholder]="dim.placeholder || ''"
+              [required]="dim.required"
+            />
+            <input
+              *ngIf="dim.type === 'number'"
+              type="number"
+              class="form-control"
+              [(ngModel)]="variant[dim.attribute_key]"
+              [name]="'variant_' + i + '_' + dim.attribute_key"
+              [min]="dim.min ?? null"
+              [max]="dim.max ?? null"
+              [required]="dim.required"
+            />
+            <small class="help-text" *ngIf="dim.help_text">{{ dim.help_text }}</small>
+          </div>
+
+          <!-- Common Fields -->
+          <div
+            *ngFor="let field of selectedTemplate.variant_config.common_fields"
+            class="form-group"
+          >
+            <label [class.required]="field.required">{{ field.attribute_name }}</label>
+            <input
+              *ngIf="field.type === 'text'"
+              type="text"
+              class="form-control"
+              [(ngModel)]="variant[field.attribute_key]"
+              [name]="'variant_' + i + '_' + field.attribute_key"
+              [placeholder]="field.placeholder || ''"
+              [required]="!!field.required"
+            />
+            <input
+              *ngIf="field.type === 'number'"
+              type="number"
+              class="form-control"
+              [(ngModel)]="variant[field.attribute_key]"
+              [name]="'variant_' + i + '_' + field.attribute_key"
+              [min]="field.min ?? null"
+              [max]="field.max ?? null"
+              [required]="!!field.required"
+            />
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-secondary" (click)="addVariant()">
+        <span class="material-icons">add</span>
+        Add Another Variant
+      </button>
+    </div>
+
+    <!-- Custom Fields Section (Dynamic based on template) -->
+    <div class="form-section" *ngIf="selectedTemplate && selectedTemplate.custom_fields && selectedTemplate.custom_fields.length > 0">
+      <h3>Product Specifications</h3>
+
+      <div class="custom-fields-grid">
+        <div *ngFor="let field of selectedTemplate.custom_fields" class="form-group">
+          <label [class.required]="field.is_required">{{ field.attribute_name }}</label>
+
+          <select
+            *ngIf="field.data_type === 'select' || field.data_type === 'multi-select'"
+            class="form-control"
+            [(ngModel)]="customFields[field.attribute_key]"
+            [name]="'custom_' + field.attribute_key"
+            [required]="!!field.is_required"
+          >
+            <option value="">Select {{ field.attribute_name }}</option>
+            <option *ngFor="let option of field.validation_rules?.options || field.options" [value]="option">
+              {{ option }}
+            </option>
+          </select>
+
+          <input
+            *ngIf="field.data_type === 'string'"
+            type="text"
+            class="form-control"
+            [(ngModel)]="customFields[field.attribute_key]"
+            [name]="'custom_' + field.attribute_key"
+            [placeholder]="field.placeholder || ''"
+            [required]="!!field.is_required"
+          />
+
+          <input
+            *ngIf="field.data_type === 'url'"
+            type="url"
+            class="form-control"
+            [(ngModel)]="customFields[field.attribute_key]"
+            [name]="'custom_' + field.attribute_key"
+            [placeholder]="field.placeholder || ''"
+            [required]="!!field.is_required"
+          />
+
+          <input
+            *ngIf="field.data_type === 'number'"
+            type="number"
+            class="form-control"
+            [(ngModel)]="customFields[field.attribute_key]"
+            [name]="'custom_' + field.attribute_key"
+            [min]="field.validation_rules?.min_value ?? field.min ?? null"
+            [max]="field.validation_rules?.max_value ?? field.max ?? null"
+            [required]="!!field.is_required"
+          />
+
+          <!-- Note for structured-list type -->
+          <div *ngIf="field.data_type === 'structured-list'" class="info-message">
+            <p class="small-text">
+              <strong>{{ field.attribute_name }}</strong> is managed in the "Description Sections" area below.
+            </p>
+          </div>
+
+          <small class="help-text" *ngIf="field.help_text && field.data_type !== 'structured-list'">{{ field.help_text }}</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Description Sections -->
+    <div class="form-section">
+      <h3>Description Sections</h3>
+      <p class="section-help">Add structured descriptions with headings and bullet points</p>
+
+      <div *ngFor="let section of descriptionSections; let i = index" class="description-section-card">
+        <div class="section-header">
+          <input
+            type="text"
+            class="form-control heading-input"
+            [(ngModel)]="section.heading"
+            [name]="'section_heading_' + i"
+            placeholder="e.g., Key Features, Technical Specifications"
+          />
+          <button
+            type="button"
+            class="btn-icon"
+            (click)="removeDescriptionSection(i)"
+            title="Remove section"
+          >
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+
+        <div class="descriptions-list">
+          <div
+            *ngFor="let desc of section.descriptions; let j = index"
+            class="description-item"
+          >
+            <textarea
+              class="form-control"
+              [(ngModel)]="section.descriptions[j]"
+              [name]="'section_' + i + '_desc_' + j"
+              placeholder="Enter description (max 250 characters)"
+              maxlength="250"
+              rows="2"
+            ></textarea>
+            <div class="description-meta">
+              <small class="char-count">{{ getRemainingChars(desc) }} chars remaining</small>
+              <button
+                type="button"
+                class="btn-icon-small"
+                (click)="removeDescription(i, j)"
+                *ngIf="section.descriptions.length > 1"
+                title="Remove description"
+              >
+                <span class="material-icons">close</span>
+              </button>
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-text" (click)="addDescription(i)">
+            <span class="material-icons">add</span>
+            Add Description
+          </button>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-secondary" (click)="addDescriptionSection()">
+        <span class="material-icons">add</span>
+        Add Section
+      </button>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+      <button type="button" class="btn btn-secondary" (click)="cancel()">
+        Cancel
+      </button>
+      <button type="submit" class="btn btn-primary" [disabled]="loading || !selectedTemplate">
+        <span *ngIf="!loading">{{ isEditMode ? 'Update Product' : 'Create Product' }}</span>
+        <span *ngIf="loading">Saving...</span>
+      </button>
+    </div>
+  </form>
+</div>

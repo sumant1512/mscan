@@ -1,0 +1,171 @@
+<div class="template-list-container">
+  <div class="page-header">
+    <div class="header-content">
+      <h1>Product Templates</h1>
+      <p class="subtitle">Manage dynamic attribute templates for your product catalog</p>
+    </div>
+    <button class="btn btn-primary" (click)="createTemplate()">
+      <span class="icon">➕</span> Create Template
+    </button>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-section">
+    <div class="search-box">
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        (keyup.enter)="onSearch()"
+        placeholder="Search templates..."
+        class="search-input"
+      />
+      <button class="btn btn-secondary" (click)="onSearch()">Search</button>
+    </div>
+
+    <div class="filter-controls">
+      <div class="filter-group">
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            [(ngModel)]="includeSystem"
+            (change)="onFilterChange()"
+          />
+          <span>Include System Templates</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="error" class="alert alert-error">
+    <span class="icon">⚠️</span>
+    {{ error }}
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading templates...</p>
+  </div>
+
+  <!-- Templates Grid -->
+  <div *ngIf="!loading && templates.length > 0" class="templates-grid">
+    <div *ngFor="let template of templates" class="template-card">
+      <div class="template-header">
+        <div class="template-icon">
+          📋
+        </div>
+        <div class="template-badges">
+          <span *ngIf="template.is_system_template" class="badge badge-system">System</span>
+          <span *ngIf="!template.is_active" class="badge badge-inactive">Inactive</span>
+        </div>
+      </div>
+
+      <div class="template-body">
+        <h3 class="template-name">{{ template.name }}</h3>
+        <p *ngIf="template.description" class="template-description">
+          {{ template.description }}
+        </p>
+        <div class="template-meta">
+          <span class="meta-item">
+            <span class="icon">🏷️</span> {{ template.attribute_count || 0 }} attributes
+          </span>
+          <span class="meta-item">
+            <span class="icon">📅</span> {{ template.created_at | date:'short' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="template-actions">
+        <button class="btn btn-sm btn-outline" (click)="viewTemplate(template)">
+          View
+        </button>
+        <button
+          *ngIf="!template.is_system_template"
+          class="btn btn-sm btn-outline"
+          (click)="editTemplate(template)"
+        >
+          Edit
+        </button>
+        <button class="btn btn-sm btn-outline" (click)="duplicateTemplate(template)">
+          Duplicate
+        </button>
+        <button
+          *ngIf="!template.is_system_template"
+          class="btn btn-sm btn-danger"
+          (click)="deleteTemplate(template)"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && templates.length === 0" class="empty-state">
+    <div class="empty-icon">📋</div>
+    <h3>No Templates Found</h3>
+    <p *ngIf="searchTerm">
+      Try adjusting your filters or search term.
+    </p>
+    <p *ngIf="!searchTerm">
+      Create your first template to get started with dynamic product attributes.
+    </p>
+    <button class="btn btn-primary" (click)="createTemplate()">
+      Create Template
+    </button>
+  </div>
+
+  <!-- Pagination -->
+  <div *ngIf="!loading && templates.length > 0 && totalPages > 1" class="pagination">
+    <button
+      class="btn btn-sm btn-outline"
+      [disabled]="currentPage === 1"
+      (click)="onPageChange(currentPage - 1)"
+    >
+      Previous
+    </button>
+
+    <div class="page-numbers">
+      <button
+        *ngIf="currentPage > 3"
+        class="btn btn-sm btn-outline"
+        (click)="onPageChange(1)"
+      >
+        1
+      </button>
+      <span *ngIf="currentPage > 3" class="page-ellipsis">...</span>
+
+      <button
+        *ngFor="let page of getPageNumbers()"
+        class="btn btn-sm"
+        [class.btn-primary]="page === currentPage"
+        [class.btn-outline]="page !== currentPage"
+        (click)="onPageChange(page)"
+      >
+        {{ page }}
+      </button>
+
+      <span *ngIf="currentPage < totalPages - 2" class="page-ellipsis">...</span>
+      <button
+        *ngIf="currentPage < totalPages - 2"
+        class="btn btn-sm btn-outline"
+        (click)="onPageChange(totalPages)"
+      >
+        {{ totalPages }}
+      </button>
+    </div>
+
+    <button
+      class="btn btn-sm btn-outline"
+      [disabled]="currentPage === totalPages"
+      (click)="onPageChange(currentPage + 1)"
+    >
+      Next
+    </button>
+
+    <span class="pagination-info">
+      Page {{ currentPage }} of {{ totalPages }} ({{ totalTemplates }} total)
+    </span>
+  </div>
+</div>

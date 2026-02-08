@@ -135,66 +135,71 @@ class TenantController {
   }
 
   /**
-   * Get all tenants with pagination and filters
+   * Get all tenants with admin details
    * GET /api/tenants
    * Role: SUPER_ADMIN only
+   * Returns all tenants with their admin count and admin details (no pagination)
    */
   async getAllTenants(req, res) {
     try {
-      const { 
-        page = 1, 
-        limit = 20, 
-        status, 
-        search 
-      } = req.query;
+      // Simple query - get all tenants with admin count
+      const query = `SELECT t.*, 
+           COUNT(DISTINCT u.id) FILTER (WHERE u.role = 'TENANT_ADMIN') as tenant_admin_count
+           FROM tenants t
+           LEFT JOIN users u ON u.tenant_id = t.id
+           GROUP BY t.id
+           ORDER BY t.created_at DESC`;
 
-      const offset = (page - 1) * limit;
-      let query = 'SELECT * FROM tenants WHERE 1=1';
-      let countQuery = 'SELECT COUNT(*) FROM tenants WHERE 1=1';
-      const params = [];
-      let paramIndex = 1;
-
-      // Status filter
-      if (status) {
-        const isActive = status === 'active';
-        query += ` AND is_active = $${paramIndex}`;
-        countQuery += ` AND is_active = $${paramIndex}`;
-        params.push(isActive);
-        paramIndex++;
-      }
-
-      // Search filter
-      if (search) {
-        query += ` AND (tenant_name ILIKE $${paramIndex} OR email ILIKE $${paramIndex})`;
-        countQuery += ` AND (tenant_name ILIKE $${paramIndex} OR email ILIKE $${paramIndex})`;
-        params.push(`%${search}%`);
-        paramIndex++;
-      }
-
-      // Get total count
-      const countResult = await pool.query(countQuery, params);
-      const totalCount = parseInt(countResult.rows[0].count);
-
-      // Add sorting and pagination
-      query += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-      params.push(limit, offset);
-
-      const result = await pool.query(query, params);
+      const result = await pool.query(query);
 
       // Map is_active to status for frontend
       const tenants = result.rows.map(tenant => ({
         ...tenant,
-        status: tenant.is_active ? 'active' : 'inactive'
+        status: tenant.is_active ? 'active' : 'inactive',
+        tenant_admin_count: parseInt(tenant.tenant_admin_count || 0)
       }));
+
+      // Fetch all admins for all tenants in one query
+      if (tenants.length > 0) {
+        const tenantIds = tenants.map(t => t.id);
+        
+        const adminsQuery = `
+          SELECT 
+            u.id,
+            u.email,
+            u.full_name,
+            u.phone,
+            u.role,
+            u.tenant_id,
+            u.is_active,
+            u.created_at,
+            u.updated_at
+          FROM users u
+          WHERE u.tenant_id = ANY($1) 
+            AND u.role = 'TENANT_ADMIN'
+          ORDER BY u.created_at DESC
+        `;
+        
+        const adminsResult = await pool.query(adminsQuery, [tenantIds]);
+        
+        // Group admins by tenant_id
+        const adminsByTenant = {};
+        adminsResult.rows.forEach(admin => {
+          if (!adminsByTenant[admin.tenant_id]) {
+            adminsByTenant[admin.tenant_id] = [];
+          }
+          adminsByTenant[admin.tenant_id].push(admin);
+        });
+        
+        // Add admins array to each tenant
+        tenants.forEach(tenant => {
+          tenant.admins = adminsByTenant[tenant.id] || [];
+        });
+      }
 
       res.json({
         tenants,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total: totalCount,
-          totalPages: Math.ceil(totalCount / limit)
-        }
+        total: tenants.length
       });
 
     } catch (error) {
@@ -429,6 +434,72 @@ class TenantController {
       res.status(500).json({ error: 'Failed to generate suggestions' });
     }
   }
+
+  /**
+   * Get all Tenant Admins for a specific tenant
+   * GET /api/tenants/:tenantId/admins
+   * Role: SUPER_ADMIN only
+   */
+  async getTenantAdmins(req, res) {
+    try {
+      const { tenantId } = req.params;
+
+      // Get tenant info
+      const tenantResult = await pool.query(
+        'SELECT id, tenant_name, subdomain_slug, email FROM tenants WHERE id = $1',
+        [tenantId]
+      );
+
+      if (tenantResult.rows.length === 0) {
+        return res.status(404).json({ 
+          success: false,
+          error: 'Tenant not found' 
+        });
+      }
+
+      const tenant = tenantResult.rows[0];
+
+      // Get all TENANT_ADMIN users for this tenant
+      const adminsResult = await pool.query(
+        `SELECT 
+          u.id,
+          u.email,
+          u.full_name,
+          u.phone,
+          u.role,
+          u.tenant_id,
+          u.is_active,
+          u.created_at,
+          u.updated_at
+         FROM users u
+         WHERE u.tenant_id = $1 
+           AND u.role = 'TENANT_ADMIN'
+         ORDER BY u.created_at DESC`,
+        [tenantId]
+      );
+
+      res.json({
+        success: true,
+        data: {
+          admins: adminsResult.rows,
+          tenant: {
+            id: tenant.id,
+            name: tenant.tenant_name,
+            domain: `${tenant.subdomain_slug}.${process.env.DOMAIN_BASE || 'mscan.com'}`,
+            subdomain: tenant.subdomain_slug
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('Get tenant admins error:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to fetch tenant admins' 
+      });
+    }
+  }
 }
 
 module.exports = new TenantController();
+

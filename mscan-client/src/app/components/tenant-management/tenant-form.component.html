@@ -6,8 +6,8 @@
     </button>
   </div>
 
-  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
-  <div *ngIf="success" class="alert alert-success">{{ success }}</div>
+  <div *ngIf="error$ | async as error" class="alert alert-error">{{ error }}</div>
+  <div *ngIf="successMessage$ | async as success" class="alert alert-success">{{ success }}</div>
 
   <form [formGroup]="tenantForm" (ngSubmit)="onSubmit()" class="tenant-form">
     <div class="form-group">
@@ -148,12 +148,12 @@
     </div>
 
     <div class="form-actions">
-      <button type="button" (click)="cancel()" class="btn-secondary" [disabled]="loading">
+      <button type="button" (click)="cancel()" class="btn-secondary" [disabled]="loading$ | async">
         Cancel
       </button>
-      <button type="submit" class="btn-primary" 
-        [disabled]="loading || tenantForm.invalid || (!isEditMode && (checkingAvailability || subdomainAvailable !== true))">
-        {{ loading ? 'Saving...' : (isEditMode ? 'Update Tenant' : 'Create Tenant') }}
+      <button type="submit" class="btn-primary"
+        [disabled]="(loading$ | async) || tenantForm.invalid || (!isEditMode && (checkingAvailability || subdomainAvailable !== true))">
+        {{ (loading$ | async) ? 'Saving...' : (isEditMode ? 'Update Tenant' : 'Create Tenant') }}
       </button>
     </div>
   </form>

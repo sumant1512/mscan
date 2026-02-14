@@ -6,8 +6,7 @@ import { CreditRequest } from '../../models/rewards.model';
 import { TenantsFacade } from '../../store/tenants';
 import { CreditRequestsFacade } from '../../store/credit-requests';
 import { Tenant } from '../../models/tenant-admin.model';
-import { Observable, Subject, BehaviorSubject } from 'rxjs';
-import { switchMap } from 'rxjs/operators';
+import { Observable, Subject } from 'rxjs';
 
 @Component({
   selector: 'app-credit-approval-list',
@@ -24,10 +23,9 @@ export class CreditApprovalListComponent implements OnInit, OnDestroy {
   loading$: Observable<boolean>;
   error$: Observable<string | null>;
   tenants$: Observable<Tenant[]>;
-  
+
   tenantFilter: string = 'all';
-  private tenantFilterSubject = new BehaviorSubject<string>('all');
-  
+
   selectedRequest?: CreditRequest;
   showRejectModal = false;
   rejectReason = '';
@@ -43,17 +41,12 @@ export class CreditApprovalListComponent implements OnInit, OnDestroy {
     this.loading$ = this.creditRequestsFacade.loading$;
     this.error$ = this.creditRequestsFacade.error$;
     this.tenants$ = this.tenantsFacade.allTenants$;
-    
-    // Setup filtering via facade selector
-    this.pendingRequests$ = this.tenantFilterSubject.pipe(
-      switchMap(tenantId => this.creditRequestsFacade.getPendingRequestsByTenant(tenantId))
-    );
+    this.pendingRequests$ = this.creditRequestsFacade.pendingRequests$;
   }
 
   ngOnInit() {
     // Load data
-    this.tenantsFacade.loadTenants();
-    this.creditRequestsFacade.loadPendingRequests();
+    this.loadPendingRequests();
   }
 
   ngOnDestroy() {
@@ -61,8 +54,14 @@ export class CreditApprovalListComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  loadPendingRequests() {
+    // Pass tenant_id to API if not 'all'
+    const tenantId = this.tenantFilter !== 'all' ? this.tenantFilter : undefined;
+    this.creditRequestsFacade.loadPendingRequests(tenantId);
+  }
+
   onTenantFilterChange() {
-    this.tenantFilterSubject.next(this.tenantFilter);
+    this.loadPendingRequests();
   }
 
   approveRequest(request: CreditRequest) {

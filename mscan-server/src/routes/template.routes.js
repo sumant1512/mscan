@@ -58,6 +58,16 @@ router.delete('/:id',
 );
 
 /**
+ * @route   PATCH /api/templates/:id/toggle-status
+ * @desc    Toggle template status (activate/deactivate)
+ * @access  Private (Tenant Admin, Super Admin)
+ */
+router.patch('/:id/toggle-status',
+  requireRole(['TENANT_ADMIN', 'SUPER_ADMIN']),
+  templateController.toggleTemplateStatus
+);
+
+/**
  * @route   POST /api/templates/:id/duplicate
  * @desc    Duplicate template
  * @access  Private (Tenant Admin, Super Admin)

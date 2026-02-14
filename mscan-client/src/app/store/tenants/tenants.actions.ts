@@ -17,6 +17,70 @@ export const loadTenantsFailure = createAction(
   props<{ error: string }>()
 );
 
+// Create tenant
+export const createTenant = createAction(
+  '[Tenants] Create Tenant',
+  props<{ tenant: Partial<Tenant> }>()
+);
+
+export const createTenantSuccess = createAction(
+  '[Tenants] Create Tenant Success',
+  props<{ tenant: Tenant; message: string }>()
+);
+
+export const createTenantFailure = createAction(
+  '[Tenants] Create Tenant Failure',
+  props<{ error: string }>()
+);
+
+// Update tenant
+export const updateTenant = createAction(
+  '[Tenants] Update Tenant',
+  props<{ id: string; tenant: Partial<Tenant> }>()
+);
+
+export const updateTenantSuccess = createAction(
+  '[Tenants] Update Tenant Success',
+  props<{ tenant: Tenant; message: string }>()
+);
+
+export const updateTenantFailure = createAction(
+  '[Tenants] Update Tenant Failure',
+  props<{ error: string }>()
+);
+
+// Toggle tenant status (activate/deactivate)
+export const toggleTenantStatus = createAction(
+  '[Tenants] Toggle Tenant Status',
+  props<{ id: string }>()
+);
+
+export const toggleTenantStatusSuccess = createAction(
+  '[Tenants] Toggle Tenant Status Success',
+  props<{ tenant: Tenant; message: string }>()
+);
+
+export const toggleTenantStatusFailure = createAction(
+  '[Tenants] Toggle Tenant Status Failure',
+  props<{ error: string }>()
+);
+
+// Delete tenant (if needed in future)
+export const deleteTenant = createAction(
+  '[Tenants] Delete Tenant',
+  props<{ id: string }>()
+);
+
+export const deleteTenantSuccess = createAction(
+  '[Tenants] Delete Tenant Success',
+  props<{ id: string; message: string }>()
+);
+
+export const deleteTenantFailure = createAction(
+  '[Tenants] Delete Tenant Failure',
+  props<{ error: string }>()
+);
+
 // Select tenant
 export const selectTenant = createAction(
   '[Tenants] Select Tenant',
@@ -57,7 +121,11 @@ export const resetFilters = createAction(
   '[Tenants] Reset Filters'
 );
 
-// Clear error
+// Clear error and success message
 export const clearError = createAction(
   '[Tenants] Clear Error'
+);
+
+export const clearSuccess = createAction(
+  '[Tenants] Clear Success'
 );

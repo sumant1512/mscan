@@ -75,3 +75,15 @@ export const selectTenantStats = createSelector(
     tenantsWithoutAdmins: tenants.filter(t => (t.tenant_admin_count || 0) === 0).length
   })
 );
+
+// Success message state
+export const selectSuccessMessage = createSelector(
+  selectTenantsState,
+  (state) => state.successMessage
+);
+
+// Operation in progress state
+export const selectOperationInProgress = createSelector(
+  selectTenantsState,
+  (state) => state.operationInProgress
+);

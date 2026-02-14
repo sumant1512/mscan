@@ -23,20 +23,11 @@
 
       <!-- Verification App -->
       <div class="form-group">
-        <label class="required">Verification App</label>
-        <select
-          class="form-control"
-          [(ngModel)]="product.verification_app_id"
-          name="verification_app_id"
-          required
-          [disabled]="isEditMode"
-          (change)="onAppChange()"
-        >
-          <option value="">Select an app</option>
-          <option *ngFor="let app of availableApps" [value]="app.verification_app_id">
-            {{ app.app_name }}
-          </option>
-        </select>
+        <label>Verification App</label>
+        <div class="form-control" style="background-color: #f5f5f5; cursor: not-allowed;">
+          {{ getSelectedAppName() || 'No app selected' }}
+        </div>
+        <small class="help-text">App is automatically selected from the header</small>
       </div>
 
       <!-- Product Name -->
@@ -52,20 +43,6 @@
         />
       </div>
 
-      <!-- Currency -->
-      <div class="form-group">
-        <label>Currency</label>
-        <select
-          class="form-control"
-          [(ngModel)]="product.currency"
-          name="currency"
-        >
-          <option value="INR">INR (₹)</option>
-          <option value="USD">USD ($)</option>
-          <option value="EUR">EUR (€)</option>
-        </select>
-      </div>
-
       <!-- Active Status -->
       <div class="form-group">
         <label class="checkbox-label">
@@ -76,6 +53,74 @@
           />
           <span>Active</span>
         </label>
+      </div>
+    </div>
+
+    <!-- Product Images Section -->
+    <div class="form-section">
+      <h3>Product Images</h3>
+      <p class="section-help">Manage product images including thumbnail and gallery images</p>
+
+      <!-- Thumbnail Image -->
+      <div class="form-group">
+        <label class="required">Thumbnail Image</label>
+        <input
+          type="url"
+          class="form-control"
+          [(ngModel)]="product.thumbnail_url"
+          name="thumbnail_url"
+          placeholder="https://example.com/thumbnail.jpg"
+          required
+        />
+        <small class="help-text">Main featured image for the product (required)</small>
+      </div>
+
+      <!-- Product Images Gallery -->
+      <div class="form-group">
+        <label>Product Images Gallery</label>
+        <p class="help-text">Add multiple product images. Mark one as the first image to display.</p>
+
+        <div class="product-images-list">
+          <div *ngFor="let img of productImages; let i = index; trackBy: trackByIndex" class="image-item">
+            <div class="image-row">
+              <input
+                type="url"
+                [(ngModel)]="img.url"
+                [name]="'product_image_url_' + i"
+                placeholder="https://example.com/product-image.jpg"
+                class="form-control image-url-input"
+              />
+
+              <label class="first-image-checkbox">
+                <input
+                  type="radio"
+                  name="first_image"
+                  [value]="i"
+                  [checked]="img.is_first"
+                  (change)="setFirstImage(i)"
+                />
+                <span>First</span>
+              </label>
+
+              <button
+                type="button"
+                class="btn-remove"
+                (click)="removeProductImage(i)"
+                title="Remove image"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            class="btn-add-image"
+            (click)="addProductImage()"
+          >
+            + Add Product Image
+          </button>
+        </div>
       </div>
     </div>
 
@@ -107,7 +152,7 @@
       <div class="tags-grid">
         <button
           type="button"
-          *ngFor="let tag of availableTags"
+          *ngFor="let tag of availableTags; trackBy: trackById"
           class="tag-chip"
           [class.selected]="isTagSelected(tag.id)"
           (click)="toggleTag(tag.id)"
@@ -124,7 +169,7 @@
       <h3>{{ selectedTemplate.variant_config.variant_label || 'Variants' }}</h3>
       <p class="section-help">Add variants based on {{ getDimensionLabels() }}</p>
 
-      <div *ngFor="let variant of variants; let i = index" class="variant-card">
+      <div *ngFor="let variant of variants; let i = index; trackBy: trackByIndex" class="variant-card">
         <div class="variant-header">
           <h4>Variant {{ i + 1 }}</h4>
           <button
@@ -141,7 +186,7 @@
         <div class="variant-grid">
           <!-- Dimension Fields -->
           <div
-            *ngFor="let dim of selectedTemplate.variant_config.dimensions"
+            *ngFor="let dim of selectedTemplate.variant_config.dimensions; trackBy: trackByAttributeKey"
             class="form-group"
           >
             <label [class.required]="dim.required">{{ dim.attribute_name }}</label>
@@ -181,7 +226,7 @@
 
           <!-- Common Fields -->
           <div
-            *ngFor="let field of selectedTemplate.variant_config.common_fields"
+            *ngFor="let field of selectedTemplate.variant_config.common_fields; trackBy: trackByAttributeKey"
             class="form-group"
           >
             <label [class.required]="field.required">{{ field.attribute_name }}</label>
@@ -219,7 +264,7 @@
       <h3>Product Specifications</h3>
 
       <div class="custom-fields-grid">
-        <div *ngFor="let field of selectedTemplate.custom_fields" class="form-group">
+        <div *ngFor="let field of selectedTemplate.custom_fields; trackBy: trackByAttributeKey" class="form-group">
           <label [class.required]="field.is_required">{{ field.attribute_name }}</label>
 
           <select
@@ -283,7 +328,7 @@
       <h3>Description Sections</h3>
       <p class="section-help">Add structured descriptions with headings and bullet points</p>
 
-      <div *ngFor="let section of descriptionSections; let i = index" class="description-section-card">
+      <div *ngFor="let section of descriptionSections; let i = index; trackBy: trackByIndex" class="description-section-card">
         <div class="section-header">
           <input
             type="text"
@@ -304,7 +349,7 @@
 
         <div class="descriptions-list">
           <div
-            *ngFor="let desc of section.descriptions; let j = index"
+            *ngFor="let desc of section.descriptions; let j = index; trackBy: trackByIndex"
             class="description-item"
           >
             <textarea
@@ -316,7 +361,7 @@
               rows="2"
             ></textarea>
             <div class="description-meta">
-              <small class="char-count">{{ getRemainingChars(desc) }} chars remaining</small>
+              <small class="char-count">{{ desc | remainingChars:250 }} chars remaining</small>
               <button
                 type="button"
                 class="btn-icon-small"

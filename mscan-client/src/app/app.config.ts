@@ -20,7 +20,7 @@ export const appConfig: ApplicationConfig = {
       maxAge: 25,
       logOnly: !isDevMode(),
       connectInZone: true,
-      name: 'MSCAN ADMIN'
+      name: 'MSCAN'
     })
   ]
 };

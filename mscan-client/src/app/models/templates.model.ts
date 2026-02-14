@@ -157,6 +157,8 @@ export interface ProductTemplate {
 
   // Computed/joined fields
   attribute_count?: number;
+  product_count?: number;
+  app_count?: number;
 }
 
 /**
@@ -217,7 +219,17 @@ export interface TemplateListResponse {
  */
 export interface TemplateResponse {
   success: boolean;
+  message?: string;
   data: ProductTemplate;
+}
+
+/**
+ * Product image interface
+ */
+export interface ProductImage {
+  url: string;
+  is_first: boolean;
+  order: number;
 }
 
 /**
@@ -232,6 +244,8 @@ export interface ProductWithAttributes {
   price?: number;
   currency?: string;
   image_url?: string;
+  thumbnail_url: string;
+  product_images?: ProductImage[];
   verification_app_id: string;
   template_id?: string;
   attributes?: { [key: string]: any };
@@ -285,8 +299,9 @@ export interface CreateProductRequest {
   product_sku?: string;
   description?: string;
   price?: number;
-  currency?: string;
   image_url?: string;
+  thumbnail_url: string;
+  product_images?: ProductImage[];
   verification_app_id: string;
   template_id: string;
   attributes: ProductAttributes | { [key: string]: any };

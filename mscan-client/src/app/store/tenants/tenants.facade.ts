@@ -86,11 +86,21 @@ export class TenantsFacade {
     TenantsSelectors.selectTenantStats
   );
 
+  /** Success message state */
+  readonly successMessage$: Observable<string | null> = this.store.select(
+    TenantsSelectors.selectSuccessMessage
+  );
+
+  /** Operation in progress state (for create/update/delete) */
+  readonly operationInProgress$: Observable<boolean> = this.store.select(
+    TenantsSelectors.selectOperationInProgress
+  );
+
   // Action dispatchers
 
   /**
    * Load all tenants from the API
-   * 
+   *
    * @example
    * ```typescript
    * ngOnInit() {
@@ -100,6 +110,81 @@ export class TenantsFacade {
    */
   loadTenants(): void {
     this.store.dispatch(TenantsActions.loadTenants());
+  }
+
+  /**
+   * Create a new tenant
+   *
+   * @param tenant - Partial tenant object with required fields
+   *
+   * @example
+   * ```typescript
+   * onSubmit() {
+   *   this.facade.createTenant({
+   *     tenant_name: 'Acme Corp',
+   *     email: 'admin@acme.com',
+   *     contact_person: 'John Doe',
+   *     subdomain_slug: 'acme'
+   *   });
+   * }
+   * ```
+   */
+  createTenant(tenant: Partial<Tenant>): void {
+    this.store.dispatch(TenantsActions.createTenant({ tenant }));
+  }
+
+  /**
+   * Update an existing tenant
+   *
+   * @param id - Tenant ID
+   * @param tenant - Partial tenant object with fields to update
+   *
+   * @example
+   * ```typescript
+   * onUpdate() {
+   *   this.facade.updateTenant(this.tenantId, {
+   *     tenant_name: 'Updated Name',
+   *     contact_person: 'Jane Doe'
+   *   });
+   * }
+   * ```
+   */
+  updateTenant(id: string, tenant: Partial<Tenant>): void {
+    this.store.dispatch(TenantsActions.updateTenant({ id, tenant }));
+  }
+
+  /**
+   * Toggle tenant status (activate/deactivate)
+   *
+   * @param id - Tenant ID
+   *
+   * @example
+   * ```typescript
+   * onToggleStatus(tenantId: string) {
+   *   this.facade.toggleTenantStatus(tenantId);
+   * }
+   * ```
+   */
+  toggleTenantStatus(id: string): void {
+    this.store.dispatch(TenantsActions.toggleTenantStatus({ id }));
+  }
+
+  /**
+   * Delete a tenant (if backend supports it)
+   *
+   * @param id - Tenant ID
+   *
+   * @example
+   * ```typescript
+   * onDelete(tenantId: string) {
+   *   if (confirm('Are you sure?')) {
+   *     this.facade.deleteTenant(tenantId);
+   *   }
+   * }
+   * ```
+   */
+  deleteTenant(id: string): void {
+    this.store.dispatch(TenantsActions.deleteTenant({ id }));
   }
 
   /**
@@ -257,7 +342,7 @@ export class TenantsFacade {
 
   /**
    * Clear any error state
-   * 
+   *
    * @example
    * ```typescript
    * this.facade.clearError();
@@ -265,5 +350,17 @@ export class TenantsFacade {
    */
   clearError(): void {
     this.store.dispatch(TenantsActions.clearError());
+  }
+
+  /**
+   * Clear success message
+   *
+   * @example
+   * ```typescript
+   * this.facade.clearSuccess();
+   * ```
+   */
+  clearSuccess(): void {
+    this.store.dispatch(TenantsActions.clearSuccess());
   }
 }

@@ -17,8 +17,13 @@ export class CreditRequestsEffects {
   loadPendingRequests$ = createEffect(() =>
     this.actions$.pipe(
       ofType(CreditRequestsActions.loadPendingRequests),
-      switchMap(() =>
-        this.creditService.getAllRequests('pending', 1, 100).pipe(
+      switchMap(({ tenantId }) =>
+        this.creditService.getRequests({
+          status: 'pending',
+          page: 1,
+          limit: 100,
+          tenant_id: tenantId
+        }).pipe(
           map((response) =>
             CreditRequestsActions.loadPendingRequestsSuccess({ requests: response.requests })
           ),
@@ -37,8 +42,13 @@ export class CreditRequestsEffects {
   loadApprovedRequests$ = createEffect(() =>
     this.actions$.pipe(
       ofType(CreditRequestsActions.loadApprovedRequests),
-      switchMap(() =>
-        this.creditService.getAllRequests('approved', 1, 100).pipe(
+      switchMap(({ tenantId }) =>
+        this.creditService.getRequests({
+          status: 'approved',
+          page: 1,
+          limit: 100,
+          tenant_id: tenantId
+        }).pipe(
           map((response) =>
             CreditRequestsActions.loadApprovedRequestsSuccess({ requests: response.requests })
           ),
@@ -57,8 +67,13 @@ export class CreditRequestsEffects {
   loadRejectedRequests$ = createEffect(() =>
     this.actions$.pipe(
       ofType(CreditRequestsActions.loadRejectedRequests),
-      switchMap(() =>
-        this.creditService.getAllRequests('rejected', 1, 100).pipe(
+      switchMap(({ tenantId }) =>
+        this.creditService.getRequests({
+          status: 'rejected',
+          page: 1,
+          limit: 100,
+          tenant_id: tenantId
+        }).pipe(
           map((response) =>
             CreditRequestsActions.loadRejectedRequestsSuccess({ requests: response.requests })
           ),
@@ -77,10 +92,10 @@ export class CreditRequestsEffects {
   loadAllRequests$ = createEffect(() =>
     this.actions$.pipe(
       ofType(CreditRequestsActions.loadAllRequests),
-      mergeMap(() => [
-        CreditRequestsActions.loadPendingRequests(),
-        CreditRequestsActions.loadApprovedRequests(),
-        CreditRequestsActions.loadRejectedRequests(),
+      mergeMap(({ tenantId }) => [
+        CreditRequestsActions.loadPendingRequests({ tenantId }),
+        CreditRequestsActions.loadApprovedRequests({ tenantId }),
+        CreditRequestsActions.loadRejectedRequests({ tenantId }),
       ])
     )
   );
@@ -92,7 +107,7 @@ export class CreditRequestsEffects {
         this.creditService.approveRequest(id).pipe(
           mergeMap(() => [
             CreditRequestsActions.approveRequestSuccess({ id }),
-            CreditRequestsActions.loadApprovedRequests(),
+            CreditRequestsActions.loadApprovedRequests({ tenantId: undefined }),
           ]),
           catchError((error) =>
             of(
@@ -113,7 +128,7 @@ export class CreditRequestsEffects {
         this.creditService.rejectRequest(id, reason).pipe(
           mergeMap(() => [
             CreditRequestsActions.rejectRequestSuccess({ id }),
-            CreditRequestsActions.loadRejectedRequests(),
+            CreditRequestsActions.loadRejectedRequests({ tenantId: undefined }),
           ]),
           catchError((error) =>
             of(

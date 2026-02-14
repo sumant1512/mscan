@@ -1,0 +1,82 @@
+<div class="request-card">
+  <div class="card-header">
+    <div class="tenant-info">
+      <h3 *ngIf="showTenantInfo && data.tenant_name">{{ data.tenant_name }}</h3>
+      <span class="transaction-id">#{{ data.id }}</span>
+      <span class="transaction-date">{{ formatDate(data.requested_at || data.created_at) }}</span>
+    </div>
+    <span class="status-badge" [ngClass]="getTransactionTypeClass()">
+      {{ data.type }}
+    </span>
+  </div>
+
+  <div class="card-body">
+    <div class="amount-display" [ngClass]="getAmountClass()">
+      <div class="amount-label">{{ getAmountLabel() }}</div>
+      <div class="amount-value">{{ formatCurrency(data.amount) }}</div>
+      <div class="amount-unit">credits</div>
+    </div>
+
+    <!-- Status info for PENDING/APPROVED -->
+    <div class="info-section" *ngIf="shouldShowStatusInfo()">
+      <div class="info-item">
+        <span class="label">Status:</span>
+        <span class="value" [ngClass]="getStatusClass()">{{ getStatusText() }}</span>
+      </div>
+      <div class="info-item" *ngIf="data.requested_by_name">
+        <span class="label">Requested By:</span>
+        <span class="value">{{ data.requested_by_name }}</span>
+      </div>
+    </div>
+
+    <!-- Rejection reason for REJECTED -->
+    <div class="info-section" *ngIf="shouldShowRejectionReason()">
+      <div class="info-item rejection-info">
+        <span class="label">Rejection Reason:</span>
+        <span class="value rejection-reason">{{ data.rejection_reason }}</span>
+      </div>
+    </div>
+
+    <!-- Description or Justification -->
+    <div *ngIf="getDescription()" class="justification-section">
+      <div class="label">{{ getDescriptionLabel() }}</div>
+      <p class="justification-text">{{ getDescription() }}</p>
+    </div>
+
+    <!-- Balance info for CREDIT/DEBIT transactions -->
+    <div class="info-section" *ngIf="shouldShowBalanceInfo()">
+      <div class="info-item">
+        <span class="label">Balance Before:</span>
+        <span class="value">{{ formatCurrency(data.balance_before!) }} credits</span>
+      </div>
+      <div class="info-item">
+        <span class="label">Balance After:</span>
+        <span class="value">{{ formatCurrency(data.balance_after!) }} credits</span>
+      </div>
+    </div>
+
+    <!-- Additional info -->
+    <div class="processing-info">
+      <div *ngIf="data.reference_type" class="info-item">
+        <span class="label">Reference Type:</span>
+        <span class="value">{{ data.reference_type }}</span>
+      </div>
+      <div *ngIf="data.reference_id" class="info-item">
+        <span class="label">Reference ID:</span>
+        <span class="value">#{{ data.reference_id }}</span>
+      </div>
+      <div *ngIf="data.created_by_name && data.type !== 'PENDING'" class="info-item">
+        <span class="label">Created By:</span>
+        <span class="value">{{ data.created_by_name }}</span>
+      </div>
+      <div *ngIf="data.requested_by_email && data.type === 'PENDING'" class="info-item">
+        <span class="label">Email:</span>
+        <span class="value">{{ data.requested_by_email }}</span>
+      </div>
+      <div *ngIf="data.processed_by_name && data.type !== 'PENDING'" class="info-item">
+        <span class="label">Processed By:</span>
+        <span class="value">{{ data.processed_by_name }}</span>
+      </div>
+    </div>
+  </div>
+</div>

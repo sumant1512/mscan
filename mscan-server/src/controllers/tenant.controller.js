@@ -74,10 +74,10 @@ class TenantController {
 
       // Create tenant with subdomain
       const result = await client.query(
-        `INSERT INTO tenants (tenant_name, subdomain_slug, email, phone, contact_person, address, is_active, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `INSERT INTO tenants (tenant_name, subdomain_slug, email, phone, contact_person, address, created_by, is_active, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
          RETURNING *`,
-        [tenant_name, slug, email, phone, contact_person, address]
+        [tenant_name, slug, email, phone, contact_person, address, createdBy]
       );
 
       const tenant = result.rows[0];
@@ -142,12 +142,15 @@ class TenantController {
    */
   async getAllTenants(req, res) {
     try {
-      // Simple query - get all tenants with admin count
-      const query = `SELECT t.*, 
-           COUNT(DISTINCT u.id) FILTER (WHERE u.role = 'TENANT_ADMIN') as tenant_admin_count
+      // Simple query - get all tenants with admin count and creator info
+      const query = `SELECT t.*,
+           COUNT(DISTINCT u.id) FILTER (WHERE u.role = 'TENANT_ADMIN') as tenant_admin_count,
+           creator.full_name as created_by_name,
+           creator.email as created_by_email
            FROM tenants t
            LEFT JOIN users u ON u.tenant_id = t.id
-           GROUP BY t.id
+           LEFT JOIN users creator ON t.created_by = creator.id
+           GROUP BY t.id, creator.full_name, creator.email
            ORDER BY t.created_at DESC`;
 
       const result = await pool.query(query);
@@ -218,14 +221,17 @@ class TenantController {
       const { id } = req.params;
 
       const result = await pool.query(
-        `SELECT t.*, 
+        `SELECT t.*,
                 tcb.balance as credit_balance,
                 tcb.total_received as total_credits_received,
                 tcb.total_spent as total_credits_spent,
+                u.full_name as created_by_name,
+                u.email as created_by_email,
                 (SELECT COUNT(*) FROM credit_requests WHERE tenant_id = t.id AND status = 'pending') as pending_credit_requests,
                 (SELECT COUNT(*) FROM coupons WHERE tenant_id = t.id) as total_coupons
          FROM tenants t
          LEFT JOIN tenant_credit_balance tcb ON t.id = tcb.tenant_id
+         LEFT JOIN users u ON t.created_by = u.id
          WHERE t.id = $1`,
         [id]
       );

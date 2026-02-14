@@ -14,7 +14,8 @@
     "test:auth": "playwright test tests/auth --headed",
     "test:auth:headless": "playwright test tests/auth",
     "report": "playwright show-report",
-    "codegen": "playwright codegen"
+    "codegen": "playwright codegen http://localhost:4300",
+    "install:browsers": "playwright install"
   },
   "keywords": [
     "e2e",

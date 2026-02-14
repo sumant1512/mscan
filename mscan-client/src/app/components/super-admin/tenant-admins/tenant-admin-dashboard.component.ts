@@ -39,11 +39,6 @@ export class TenantAdminDashboardComponent implements OnInit {
   );
 
   ngOnInit() {
-    this.tenantsFacade.loadTenants();
-  }
-
-  loadTenants() {
-    this.tenantsFacade.loadTenants();
   }
 
   onSearchChange(searchTerm: string) {

@@ -6,6 +6,7 @@
 -- EXTENSIONS
 -- ============================================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- ============================================
 -- ENUMS
@@ -36,9 +37,8 @@ CREATE TABLE IF NOT EXISTS tenants (
     address TEXT,
     is_active BOOLEAN DEFAULT true,
     status VARCHAR(20) DEFAULT 'active',
-    contact_name VARCHAR(255),
     contact_person VARCHAR(255),
-    created_by UUID,
+    created_by UUID, -- References the SUPER_ADMIN user who created this tenant
     subdomain_slug VARCHAR(100) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS tenants (
 
 CREATE INDEX IF NOT EXISTS idx_tenants_email ON tenants(email);
 CREATE INDEX IF NOT EXISTS idx_tenants_subdomain ON tenants(subdomain_slug);
+CREATE INDEX IF NOT EXISTS idx_tenants_created_by ON tenants(created_by);
 
 CREATE TRIGGER update_tenants_updated_at BEFORE UPDATE ON tenants
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -97,6 +98,11 @@ CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- Add foreign key constraint for tenants.created_by now that users table exists
+-- This references the SUPER_ADMIN who created the tenant
+ALTER TABLE tenants ADD CONSTRAINT fk_tenants_created_by
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+
 -- OTP
 CREATE TABLE IF NOT EXISTS otps (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -130,16 +136,25 @@ CREATE INDEX IF NOT EXISTS idx_token_blacklist_expires_at ON token_blacklist(exp
 CREATE TABLE IF NOT EXISTS audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    actor_id UUID REFERENCES users(id),
+    actor_role VARCHAR(50),
     action VARCHAR(100) NOT NULL,
     resource_type VARCHAR(100),
     resource_id UUID,
+    target_type VARCHAR(50),
+    target_id UUID,
     ip_address VARCHAR(45),
     user_agent TEXT,
+    metadata JSONB DEFAULT '{}',
+    request_id VARCHAR(100),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_actor_id ON audit_logs(actor_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_target ON audit_logs(target_type, target_id) WHERE target_type IS NOT NULL;
 
 -- ============================================
 -- VERIFICATION APPS
@@ -162,9 +177,11 @@ CREATE TABLE IF NOT EXISTS verification_apps (
   post_scan_redirect_url TEXT,
   enable_scanning BOOLEAN DEFAULT true,
   is_active BOOLEAN DEFAULT true,
+  currency VARCHAR(3) DEFAULT 'INR',
   template_id UUID,  -- FK added after product_templates created
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT check_verification_app_currency CHECK (currency IN ('USD', 'EUR', 'GBP', 'INR', 'AUD', 'CAD', 'JPY', 'CNY', 'CHF', 'SGD', 'AED', 'MYR', 'THB', 'ZAR', 'NZD', 'MXN', 'BRL', 'KRW', 'HKD', 'SEK', 'NOK', 'DKK'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_verification_apps_tenant ON verification_apps(tenant_id);
@@ -203,6 +220,7 @@ CREATE TABLE IF NOT EXISTS product_templates (
 CREATE INDEX IF NOT EXISTS idx_product_templates_tenant ON product_templates(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_product_templates_industry ON product_templates(industry_type);
 CREATE INDEX IF NOT EXISTS idx_product_templates_active ON product_templates(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_product_templates_tenant_active ON product_templates(tenant_id, is_active);
 
 COMMENT ON TABLE product_templates IS 'Template definitions for different product industries';
 COMMENT ON COLUMN product_templates.template_name IS 'Name of the template (e.g., "Wall Paint", "T-Shirt")';
@@ -255,14 +273,24 @@ CREATE TABLE IF NOT EXISTS products (
   price DECIMAL(10,2),
   currency VARCHAR(3) DEFAULT 'INR',
   image_url TEXT,
+  thumbnail_url TEXT NOT NULL,
+  product_images JSONB DEFAULT '[]'::jsonb,
   attributes JSONB DEFAULT '{}'::jsonb,
   is_active BOOLEAN DEFAULT true,
   status VARCHAR(50) DEFAULT 'active',
   template_id UUID REFERENCES product_templates(id) ON DELETE SET NULL,
   verification_app_id UUID REFERENCES verification_apps(id) ON DELETE SET NULL,
   category_id INTEGER,  -- FK added after categories created
+  stock_quantity INTEGER DEFAULT 0,
+  low_stock_threshold INTEGER DEFAULT 10,
+  track_inventory BOOLEAN DEFAULT false,
+  allow_backorder BOOLEAN DEFAULT false,
+  stock_status VARCHAR(50) DEFAULT 'in_stock',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT check_stock_quantity_positive CHECK (stock_quantity >= 0),
+  CONSTRAINT check_low_stock_threshold_positive CHECK (low_stock_threshold >= 0),
+  CONSTRAINT check_stock_status CHECK (stock_status IN ('in_stock', 'low_stock', 'out_of_stock', 'discontinued'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_products_tenant ON products(tenant_id);
@@ -271,11 +299,20 @@ CREATE INDEX IF NOT EXISTS idx_products_template ON products(template_id);
 CREATE INDEX IF NOT EXISTS idx_products_verification_app ON products(verification_app_id);
 CREATE INDEX IF NOT EXISTS idx_products_status ON products(status);
 CREATE INDEX IF NOT EXISTS idx_products_attributes ON products USING GIN (attributes);
+CREATE INDEX IF NOT EXISTS idx_products_stock_status ON products(stock_status) WHERE track_inventory = true;
+CREATE INDEX IF NOT EXISTS idx_products_tenant_app ON products(tenant_id, verification_app_id) WHERE is_active = true;
 
 COMMENT ON TABLE products IS 'Product catalog for tenants';
 COMMENT ON COLUMN products.template_id IS 'References the product template used for this product';
 COMMENT ON COLUMN products.verification_app_id IS 'Links product to a specific verification app';
 COMMENT ON COLUMN products.attributes IS 'Dynamic product attributes stored as JSONB based on template';
+COMMENT ON COLUMN products.thumbnail_url IS 'Main/featured image URL for the product (mandatory)';
+COMMENT ON COLUMN products.product_images IS 'Array of product image objects with url, is_first, and order fields';
+COMMENT ON COLUMN products.stock_quantity IS 'Current available stock quantity';
+COMMENT ON COLUMN products.low_stock_threshold IS 'Threshold for low stock alerts';
+COMMENT ON COLUMN products.track_inventory IS 'Whether to track inventory for this product';
+COMMENT ON COLUMN products.allow_backorder IS 'Allow orders when out of stock';
+COMMENT ON COLUMN products.stock_status IS 'Current stock status: in_stock, low_stock, out_of_stock, discontinued';
 
 CREATE TRIGGER update_products_updated_at BEFORE UPDATE ON products
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -363,6 +400,54 @@ COMMENT ON COLUMN tags.verification_app_id IS 'Tags belong to a specific verific
 
 CREATE TRIGGER update_tags_updated_at BEFORE UPDATE ON tags
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Product-Tags Junction Table
+CREATE TABLE IF NOT EXISTS product_tags (
+  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (product_id, tag_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_tags_product ON product_tags(product_id);
+CREATE INDEX IF NOT EXISTS idx_product_tags_tag ON product_tags(tag_id);
+
+COMMENT ON TABLE product_tags IS 'Many-to-many relationship between products and tags';
+
+-- Helper function: Get all tags for a verification app
+CREATE OR REPLACE FUNCTION get_tags_for_app(app_id UUID)
+RETURNS TABLE (
+  id UUID,
+  name VARCHAR(100),
+  description TEXT,
+  icon VARCHAR(50),
+  is_active BOOLEAN
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT t.id, t.name, t.description, t.icon, t.is_active
+  FROM tags t
+  WHERE t.verification_app_id = app_id AND t.is_active = true
+  ORDER BY t.name;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Helper function: Get tags for a product
+CREATE OR REPLACE FUNCTION get_product_tags(prod_id INTEGER)
+RETURNS TABLE (
+  tag_id UUID,
+  tag_name VARCHAR(100),
+  tag_icon VARCHAR(50)
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT t.id, t.name, t.icon
+  FROM tags t
+  JOIN product_tags pt ON pt.tag_id = t.id
+  WHERE pt.product_id = prod_id AND t.is_active = true
+  ORDER BY t.name;
+END;
+$$ LANGUAGE plpgsql;
 
 -- ============================================
 -- REWARD CAMPAIGNS
@@ -558,6 +643,34 @@ BEFORE UPDATE ON coupons
 FOR EACH ROW
 EXECUTE FUNCTION update_coupon_status();
 
+-- Function to generate next sequential coupon reference per tenant
+CREATE OR REPLACE FUNCTION get_next_coupon_reference(p_tenant_id UUID)
+RETURNS VARCHAR(20) AS $$
+DECLARE
+    v_max_num INTEGER;
+    v_next_ref VARCHAR(20);
+BEGIN
+    -- Find the maximum reference number for this tenant
+    SELECT COALESCE(
+        MAX(
+            CASE
+                WHEN coupon_reference ~ '^CP-[0-9]+$'
+                THEN CAST(SUBSTRING(coupon_reference FROM 4) AS INTEGER)
+                ELSE 0
+            END
+        ),
+        0
+    ) INTO v_max_num
+    FROM coupons
+    WHERE tenant_id = p_tenant_id;
+
+    -- Generate next reference with zero-padding
+    v_next_ref := 'CP-' || LPAD((v_max_num + 1)::TEXT, 3, '0');
+
+    RETURN v_next_ref;
+END;
+$$ LANGUAGE plpgsql;
+
 -- ============================================
 -- SCANS
 -- ============================================
@@ -650,6 +763,134 @@ CREATE TRIGGER update_serial_number_tracker_updated_at BEFORE UPDATE ON serial_n
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================
+-- INVENTORY MANAGEMENT
+-- ============================================
+
+-- Stock Movements (audit log for inventory changes)
+CREATE TABLE IF NOT EXISTS stock_movements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  movement_type VARCHAR(50) NOT NULL,
+  quantity INTEGER NOT NULL,
+  previous_quantity INTEGER NOT NULL,
+  new_quantity INTEGER NOT NULL,
+  reference_type VARCHAR(50),
+  reference_id VARCHAR(255),
+  notes TEXT,
+  created_by UUID,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_stock_movements_product ON stock_movements(product_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_stock_movements_tenant ON stock_movements(tenant_id, created_at DESC);
+
+COMMENT ON TABLE stock_movements IS 'Audit log for all stock/inventory changes';
+COMMENT ON COLUMN stock_movements.movement_type IS 'Type: restock, sale, adjustment, reservation, return';
+COMMENT ON COLUMN stock_movements.reference_type IS 'Related entity: order, coupon_scan, manual, etc.';
+
+-- Webhooks
+CREATE TABLE IF NOT EXISTS webhooks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  verification_app_id UUID NOT NULL REFERENCES verification_apps(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  event_type VARCHAR(100) NOT NULL,
+  webhook_url TEXT NOT NULL,
+  secret_key VARCHAR(255),
+  is_active BOOLEAN DEFAULT true,
+  retry_count INTEGER DEFAULT 3,
+  timeout_seconds INTEGER DEFAULT 30,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_webhooks_app_event ON webhooks(verification_app_id, event_type) WHERE is_active = true;
+
+COMMENT ON TABLE webhooks IS 'Webhook configurations for event notifications';
+COMMENT ON COLUMN webhooks.event_type IS 'Event types: low_stock, out_of_stock, product_updated, order_created, etc.';
+COMMENT ON COLUMN webhooks.secret_key IS 'Secret key for webhook signature validation';
+
+CREATE TRIGGER update_webhooks_updated_at BEFORE UPDATE ON webhooks
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Webhook Logs
+CREATE TABLE IF NOT EXISTS webhook_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  webhook_id UUID NOT NULL REFERENCES webhooks(id) ON DELETE CASCADE,
+  event_type VARCHAR(100) NOT NULL,
+  payload JSONB NOT NULL,
+  response_status INTEGER,
+  response_body TEXT,
+  delivery_status VARCHAR(50) NOT NULL,
+  attempts INTEGER DEFAULT 1,
+  last_attempt_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_webhook_logs_webhook ON webhook_logs(webhook_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_webhook_logs_status ON webhook_logs(delivery_status, created_at DESC);
+
+COMMENT ON TABLE webhook_logs IS 'Logs for webhook delivery attempts';
+COMMENT ON COLUMN webhook_logs.delivery_status IS 'Status: pending, success, failed, retrying';
+
+-- Auto-update stock status trigger
+CREATE OR REPLACE FUNCTION update_product_stock_status()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.track_inventory = true THEN
+    IF NEW.stock_quantity <= 0 THEN
+      NEW.stock_status = 'out_of_stock';
+    ELSIF NEW.stock_quantity <= NEW.low_stock_threshold THEN
+      NEW.stock_status = 'low_stock';
+    ELSE
+      NEW.stock_status = 'in_stock';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_stock_status
+  BEFORE INSERT OR UPDATE OF stock_quantity, low_stock_threshold, track_inventory
+  ON products
+  FOR EACH ROW
+  EXECUTE FUNCTION update_product_stock_status();
+
+COMMENT ON FUNCTION update_product_stock_status() IS 'Automatically updates stock_status based on quantity and threshold';
+
+-- Auto-log stock movements trigger
+CREATE OR REPLACE FUNCTION log_stock_movement()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF OLD.stock_quantity IS DISTINCT FROM NEW.stock_quantity AND NEW.track_inventory = true THEN
+    INSERT INTO stock_movements (
+      product_id, tenant_id, movement_type, quantity,
+      previous_quantity, new_quantity, notes
+    ) VALUES (
+      NEW.id, NEW.tenant_id,
+      CASE
+        WHEN NEW.stock_quantity > OLD.stock_quantity THEN 'restock'
+        WHEN NEW.stock_quantity < OLD.stock_quantity THEN 'deduction'
+        ELSE 'adjustment'
+      END,
+      ABS(NEW.stock_quantity - OLD.stock_quantity),
+      OLD.stock_quantity, NEW.stock_quantity,
+      'Automatic stock movement log'
+    );
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_log_stock_movement
+  AFTER UPDATE OF stock_quantity
+  ON products
+  FOR EACH ROW
+  EXECUTE FUNCTION log_stock_movement();
+
+COMMENT ON FUNCTION log_stock_movement() IS 'Automatically logs stock movements when quantity changes';
+
+-- ============================================
 -- CREDIT MANAGEMENT
 -- ============================================
 CREATE TABLE IF NOT EXISTS tenant_credit_balance (
@@ -671,12 +912,13 @@ CREATE TABLE IF NOT EXISTS credit_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   requested_by UUID NOT NULL REFERENCES users(id),
-  amount INTEGER NOT NULL CHECK (amount > 0),
+  requested_amount INTEGER NOT NULL CHECK (requested_amount > 0),
   status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-  request_note TEXT,
-  approved_by UUID REFERENCES users(id),
-  approved_at TIMESTAMP WITH TIME ZONE,
+  justification TEXT,
+  processed_by UUID REFERENCES users(id),
+  processed_at TIMESTAMP WITH TIME ZONE,
   rejection_reason TEXT,
+  requested_at TIMESTAMP WITH TIME ZONE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -684,6 +926,8 @@ CREATE TABLE IF NOT EXISTS credit_requests (
 CREATE INDEX IF NOT EXISTS idx_credit_requests_tenant ON credit_requests(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_credit_requests_status ON credit_requests(status);
 CREATE INDEX IF NOT EXISTS idx_credit_requests_requested_by ON credit_requests(requested_by);
+CREATE INDEX IF NOT EXISTS idx_credit_requests_processed_by ON credit_requests(processed_by);
+CREATE INDEX IF NOT EXISTS idx_credit_requests_requested_at ON credit_requests(requested_at);
 
 CREATE TRIGGER update_credit_requests_updated_at BEFORE UPDATE ON credit_requests
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -706,6 +950,48 @@ CREATE INDEX IF NOT EXISTS idx_credit_transactions_tenant ON credit_transactions
 CREATE INDEX IF NOT EXISTS idx_credit_transactions_type ON credit_transactions(transaction_type);
 CREATE INDEX IF NOT EXISTS idx_credit_transactions_created_at ON credit_transactions(created_at);
 CREATE INDEX IF NOT EXISTS idx_credit_transactions_reference ON credit_transactions(reference_type, reference_id);
+
+-- ============================================
+-- USER CREDITS (Reward Credits)
+-- ============================================
+CREATE TABLE IF NOT EXISTS user_credits (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    credit_amount DECIMAL(10,2) DEFAULT 0.00,
+    currency VARCHAR(10) DEFAULT 'USD',
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, tenant_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_credits_user ON user_credits(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_credits_tenant ON user_credits(tenant_id);
+
+COMMENT ON TABLE user_credits IS 'User reward credits - shared across all verification apps';
+COMMENT ON COLUMN user_credits.credit_amount IS 'Current credit balance for user';
+
+CREATE TABLE IF NOT EXISTS user_credit_transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_credit_id UUID NOT NULL REFERENCES user_credits(id) ON DELETE CASCADE,
+    verification_app_id UUID REFERENCES verification_apps(id) ON DELETE SET NULL,
+    transaction_type VARCHAR(50) NOT NULL CHECK (transaction_type IN ('earned', 'spent', 'adjusted', 'transferred')),
+    amount DECIMAL(10,2) NOT NULL,
+    balance_after DECIMAL(10,2) NOT NULL,
+    description TEXT,
+    reference_id UUID,
+    reference_type VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_credit_transactions_user_credit ON user_credit_transactions(user_credit_id);
+CREATE INDEX IF NOT EXISTS idx_user_credit_transactions_app ON user_credit_transactions(verification_app_id);
+CREATE INDEX IF NOT EXISTS idx_user_credit_transactions_created ON user_credit_transactions(created_at);
+CREATE INDEX IF NOT EXISTS idx_user_credit_transactions_type ON user_credit_transactions(transaction_type);
+
+COMMENT ON TABLE user_credit_transactions IS 'Transaction history for user reward credits';
+COMMENT ON COLUMN user_credit_transactions.verification_app_id IS 'Which app generated/consumed the credits';
 
 -- ============================================
 -- MOBILE & POINTS SYSTEM
@@ -832,6 +1118,8 @@ CREATE INDEX IF NOT EXISTS idx_api_usage_logs_timestamp ON api_usage_logs(reques
 -- ============================================
 -- PERMISSIONS SYSTEM
 -- ============================================
+
+-- Tenant User Roles
 CREATE TABLE IF NOT EXISTS tenant_user_roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -848,6 +1136,7 @@ CREATE INDEX IF NOT EXISTS idx_tenant_user_roles_tenant ON tenant_user_roles(ten
 CREATE TRIGGER update_tenant_user_roles_updated_at BEFORE UPDATE ON tenant_user_roles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- App-Level User Permissions
 CREATE TABLE IF NOT EXISTS user_permissions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -866,6 +1155,98 @@ CREATE INDEX IF NOT EXISTS idx_user_permissions_tenant ON user_permissions(tenan
 CREATE INDEX IF NOT EXISTS idx_user_permissions_app ON user_permissions(verification_app_id);
 CREATE INDEX IF NOT EXISTS idx_user_permissions_resource ON user_permissions(resource_type, resource_id);
 
+-- Permission Definitions (Dynamic Permission System)
+CREATE TABLE IF NOT EXISTS permissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(255) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    scope VARCHAR(50) NOT NULL CHECK (scope IN ('GLOBAL', 'TENANT', 'USER')),
+    allowed_assigners TEXT[] DEFAULT '{"SUPER_ADMIN"}',
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_by UUID REFERENCES users(id),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_permissions_scope ON permissions(scope);
+CREATE INDEX IF NOT EXISTS idx_permissions_created_at ON permissions(created_at DESC);
+
+COMMENT ON TABLE permissions IS 'Stores reusable permission definitions that can be assigned to users or tenants';
+COMMENT ON COLUMN permissions.code IS 'Unique permission identifier (e.g., tenant.user.create)';
+COMMENT ON COLUMN permissions.scope IS 'Permission applicability: GLOBAL (system-wide), TENANT (tenant-specific), USER (user-specific)';
+COMMENT ON COLUMN permissions.allowed_assigners IS 'Array of roles that can assign this permission';
+
+CREATE TRIGGER update_permissions_updated_at BEFORE UPDATE ON permissions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Permission Assignments
+CREATE TABLE IF NOT EXISTS permission_assignments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    assigned_by UUID NOT NULL REFERENCES users(id),
+    assigned_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    is_tenant_level BOOLEAN NOT NULL DEFAULT false,
+    metadata JSONB DEFAULT '{}',
+    CONSTRAINT check_assignment_target CHECK (
+        (is_tenant_level = true AND tenant_id IS NOT NULL AND user_id IS NULL) OR
+        (is_tenant_level = false AND user_id IS NOT NULL)
+    )
+);
+
+CREATE INDEX IF NOT EXISTS idx_permission_assignments_permission ON permission_assignments(permission_id);
+CREATE INDEX IF NOT EXISTS idx_permission_assignments_tenant ON permission_assignments(tenant_id) WHERE tenant_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_permission_assignments_user ON permission_assignments(user_id) WHERE user_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_permission_assignments_tenant_user ON permission_assignments(tenant_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_permission_assignments_assigned_at ON permission_assignments(assigned_at DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_permission_assignments_unique_tenant
+    ON permission_assignments(permission_id, tenant_id)
+    WHERE is_tenant_level = true;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_permission_assignments_unique_user
+    ON permission_assignments(permission_id, user_id)
+    WHERE is_tenant_level = false;
+
+COMMENT ON TABLE permission_assignments IS 'Links permissions to tenants (tenant-level) or users (user-level)';
+COMMENT ON COLUMN permission_assignments.is_tenant_level IS 'true = tenant-level assignment, false = user-level assignment';
+
+-- Helper: Get effective permissions for a user (tenant-level + user-level)
+CREATE OR REPLACE FUNCTION get_user_effective_permissions(p_user_id UUID, p_tenant_id UUID)
+RETURNS TABLE(permission_code VARCHAR(255)) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT DISTINCT p.code
+    FROM permissions p
+    INNER JOIN permission_assignments pa ON p.id = pa.permission_id
+    WHERE (
+        (pa.is_tenant_level = true AND pa.tenant_id = p_tenant_id)
+        OR
+        (pa.is_tenant_level = false AND pa.user_id = p_user_id)
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION get_user_effective_permissions IS 'Returns union of tenant-level and user-level permissions for a user';
+
+-- ============================================
+-- PERFORMANCE INDEXES (Trigram & Fuzzy Search)
+-- ============================================
+
+-- Trigram indexes for fuzzy search on product names
+CREATE INDEX IF NOT EXISTS idx_products_name_trgm ON products USING GIN (product_name gin_trgm_ops);
+COMMENT ON INDEX idx_products_name_trgm IS 'GIN trigram index for fuzzy search on product names';
+
+-- Trigram indexes for fuzzy search on template names
+CREATE INDEX IF NOT EXISTS idx_templates_name_trgm ON product_templates USING GIN (template_name gin_trgm_ops);
+COMMENT ON INDEX idx_templates_name_trgm IS 'GIN trigram index for fuzzy search on template names';
+
+-- Partial indexes for template queries
+CREATE INDEX IF NOT EXISTS idx_templates_system ON product_templates(tenant_id) WHERE is_system_template = true;
+CREATE INDEX IF NOT EXISTS idx_templates_custom ON product_templates(tenant_id) WHERE is_system_template = false AND is_active = true;
+
 -- ============================================
 -- SEED DATA
 -- ============================================
@@ -879,3 +1260,162 @@ ON CONFLICT (email) DO NOTHING;
 INSERT INTO tenant_credit_balance (tenant_id, balance, total_received, total_spent)
 SELECT id, 0, 0, 0 FROM tenants
 ON CONFLICT (tenant_id) DO NOTHING;
+
+-- ============================================
+-- SEED: Permission Definitions
+-- ============================================
+
+-- App management permissions
+INSERT INTO permissions (code, name, description, scope, allowed_assigners) VALUES
+('create_app', 'Create Verification App', 'Allows creating new verification apps', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN"}'),
+('edit_app', 'Edit Verification App', 'Allows modifying verification app settings', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN"}'),
+('delete_app', 'Delete Verification App', 'Allows deleting verification apps', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN"}'),
+('view_apps', 'View Verification Apps', 'Allows viewing verification apps', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN", "TENANT_USER"}')
+ON CONFLICT (code) DO NOTHING;
+
+-- Coupon management permissions
+INSERT INTO permissions (code, name, description, scope, allowed_assigners) VALUES
+('create_coupon', 'Create Coupon', 'Allows creating new coupons', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN"}'),
+('edit_coupon', 'Edit Coupon', 'Allows modifying coupon details and status', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN"}'),
+('delete_coupon', 'Delete Coupon', 'Allows deleting coupons', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN"}'),
+('view_coupons', 'View Coupons', 'Allows viewing coupon list and details', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN", "TENANT_USER"}')
+ON CONFLICT (code) DO NOTHING;
+
+-- Batch management permissions
+INSERT INTO permissions (code, name, description, scope, allowed_assigners) VALUES
+('create_batch', 'Create Coupon Batch', 'Allows creating coupon batches', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN"}'),
+('edit_batch', 'Edit Coupon Batch', 'Allows modifying coupon batch details', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN"}'),
+('delete_batch', 'Delete Coupon Batch', 'Allows deleting coupon batches', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN"}')
+ON CONFLICT (code) DO NOTHING;
+
+-- Product management permissions
+INSERT INTO permissions (code, name, description, scope, allowed_assigners) VALUES
+('create_product', 'Create Product', 'Allows adding products to catalogue', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN"}'),
+('edit_product', 'Edit Product', 'Allows modifying product details', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN"}'),
+('delete_product', 'Delete Product', 'Allows removing products from catalogue', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN"}'),
+('view_products', 'View Products', 'Allows viewing product catalogue', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN", "TENANT_USER"}')
+ON CONFLICT (code) DO NOTHING;
+
+-- Category management permissions
+INSERT INTO permissions (code, name, description, scope, allowed_assigners) VALUES
+('create_category', 'Create Category', 'Allows creating product categories', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN"}'),
+('edit_category', 'Edit Category', 'Allows modifying category details', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN"}'),
+('delete_category', 'Delete Category', 'Allows deleting product categories', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN"}'),
+('view_categories', 'View Categories', 'Allows viewing category list', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN", "TENANT_USER"}')
+ON CONFLICT (code) DO NOTHING;
+
+-- Credit management permissions
+INSERT INTO permissions (code, name, description, scope, allowed_assigners) VALUES
+('request_credits', 'Request Credits', 'Allows requesting credit top-ups', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN"}'),
+('view_credit_balance', 'View Credit Balance', 'Allows viewing current credit balance', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN", "TENANT_USER"}'),
+('view_credit_transactions', 'View Credit Transactions', 'Allows viewing credit transaction history', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN", "TENANT_USER"}')
+ON CONFLICT (code) DO NOTHING;
+
+-- Analytics permissions
+INSERT INTO permissions (code, name, description, scope, allowed_assigners) VALUES
+('view_analytics', 'View Analytics', 'Allows viewing analytics dashboard', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN", "TENANT_USER"}'),
+('view_scans', 'View Scan History', 'Allows viewing coupon scan history', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN", "TENANT_USER"}')
+ON CONFLICT (code) DO NOTHING;
+
+-- User management permissions
+INSERT INTO permissions (code, name, description, scope, allowed_assigners) VALUES
+('manage_tenant_users', 'Manage Tenant Users', 'Allows managing users within tenant', 'TENANT', '{"SUPER_ADMIN", "TENANT_ADMIN"}')
+ON CONFLICT (code) DO NOTHING;
+
+-- System-level permissions (SUPER_ADMIN only)
+INSERT INTO permissions (code, name, description, scope, allowed_assigners) VALUES
+('manage_tenants', 'Manage Tenants', 'Full tenant CRUD operations', 'GLOBAL', '{"SUPER_ADMIN"}'),
+('approve_credits', 'Approve Credit Requests', 'Approve or reject credit top-up requests', 'GLOBAL', '{"SUPER_ADMIN"}'),
+('view_all_data', 'View All System Data', 'Access all system data across tenants', 'GLOBAL', '{"SUPER_ADMIN"}'),
+('manage_system_settings', 'Manage System Settings', 'System configuration and settings', 'GLOBAL', '{"SUPER_ADMIN"}')
+ON CONFLICT (code) DO NOTHING;
+
+-- ============================================
+-- SEED: System Templates (requires a tenant)
+-- ============================================
+DO $$
+DECLARE
+    v_tenant_id UUID;
+BEGIN
+    -- Get the first tenant (if any exist)
+    SELECT id INTO v_tenant_id FROM tenants ORDER BY created_at LIMIT 1;
+
+    IF v_tenant_id IS NULL THEN
+        RAISE NOTICE 'No tenants found - skipping system template seeding (run after first tenant is created)';
+        RETURN;
+    END IF;
+
+    -- Skip if system templates already exist for this tenant
+    IF EXISTS (SELECT 1 FROM product_templates WHERE tenant_id = v_tenant_id AND is_system_template = true) THEN
+        RAISE NOTICE 'System templates already exist for tenant, skipping';
+        RETURN;
+    END IF;
+
+    -- 1. Basic Product
+    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
+        variant_config, custom_fields)
+    VALUES (v_tenant_id, 'Basic Product', 'basic', 'Simple product template with essential fields only', 'inventory_2', true, true,
+        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+
+    -- 2. Clothing & Apparel
+    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
+        variant_config, custom_fields)
+    VALUES (v_tenant_id, 'Clothing & Apparel', 'clothing', 'Template for shirts, pants, dresses, and other clothing items', 'checkroom', true, true,
+        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+
+    -- 3. Footwear
+    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
+        variant_config, custom_fields)
+    VALUES (v_tenant_id, 'Footwear', 'footwear', 'Template for shoes, sandals, boots, and other footwear', 'run_circle', true, true,
+        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+
+    -- 4. Jewelry & Accessories
+    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
+        variant_config, custom_fields)
+    VALUES (v_tenant_id, 'Jewelry & Accessories', 'jewelry', 'Template for rings, necklaces, bracelets, and other jewelry', 'diamond', true, true,
+        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+
+    -- 5. Wall Paint & Coatings
+    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
+        variant_config, custom_fields)
+    VALUES (v_tenant_id, 'Wall Paint & Coatings', 'paint', 'Template for paints, varnishes, and coating products', 'format_paint', true, true,
+        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+
+    -- 6. Bags & Luggage
+    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
+        variant_config, custom_fields)
+    VALUES (v_tenant_id, 'Bags & Luggage', 'bags', 'Template for backpacks, suitcases, handbags, and travel bags', 'work_outline', true, true,
+        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+
+    -- 7. Electronics & Gadgets
+    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
+        variant_config, custom_fields)
+    VALUES (v_tenant_id, 'Electronics & Gadgets', 'electronics', 'Template for phones, tablets, laptops, and electronic devices', 'devices', true, true,
+        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+
+    -- 8. Cosmetics & Beauty
+    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
+        variant_config, custom_fields)
+    VALUES (v_tenant_id, 'Cosmetics & Beauty', 'cosmetics', 'Template for skincare, makeup, fragrances, and beauty products', 'face_retouching_natural', true, true,
+        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+
+    -- 9. Food & Beverage
+    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
+        variant_config, custom_fields)
+    VALUES (v_tenant_id, 'Food & Beverage', 'food', 'Template for packaged food items and beverages', 'restaurant', true, true,
+        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+
+    -- 10. Home & Furniture
+    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
+        variant_config, custom_fields)
+    VALUES (v_tenant_id, 'Home & Furniture', 'furniture', 'Template for furniture, home decor, and appliances', 'weekend', true, true,
+        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+
+    -- 11. Sports & Fitness
+    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
+        variant_config, custom_fields)
+    VALUES (v_tenant_id, 'Sports & Fitness', 'sports', 'Template for sports equipment, fitness gear, and athletic apparel', 'fitness_center', true, true,
+        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+
+    RAISE NOTICE 'Successfully created 11 system templates';
+END $$;

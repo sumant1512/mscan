@@ -55,7 +55,11 @@
       "Bash(openspec validate:*)",
       "Bash(python3:*)",
       "Bash(node:*)",
-      "Bash(PGPASSWORD=\"$DB_PASSWORD:-admin\" psql:*)"
+      "Bash(PGPASSWORD=\"$DB_PASSWORD:-admin\" psql:*)",
+      "Bash(ps:*)",
+      "Bash(E2E_TESTS_ENABLED=true npx jest:*)",
+      "Bash(npx jest:*)",
+      "Bash(wc:*)"
     ]
   }
 }

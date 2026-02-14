@@ -26,7 +26,6 @@ export class TenantListComponent implements OnInit {
   filters$ = this.tenantsFacade.filters$;
 
   ngOnInit() {
-    this.tenantsFacade.loadTenants();
   }
 
   onSearch(searchQuery: string) {

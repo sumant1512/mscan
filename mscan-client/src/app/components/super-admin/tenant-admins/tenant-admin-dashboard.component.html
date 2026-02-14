@@ -84,7 +84,7 @@
     <div *ngIf="!(loading$ | async)" class="error-state">
       <span class="material-icons">error</span>
       <p>{{ error }}</p>
-      <button class="btn btn-secondary" (click)="loadTenants()">Retry</button>
+      <button class="btn btn-secondary" (click)="tenantsFacade.loadTenants()">Retry</button>
     </div>
   </ng-container>
 

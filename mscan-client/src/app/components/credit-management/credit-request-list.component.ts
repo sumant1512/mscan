@@ -5,7 +5,9 @@ import { RouterLink } from '@angular/router';
 import { CreditRequest } from '../../models/rewards.model';
 import { CreditService } from '../../services/credit.service';
 import { AuthService } from '../../services/auth.service';
-import { Subject } from 'rxjs';
+import { Tenant } from '../../models/tenant-admin.model';
+import { TenantsFacade } from '../../store/tenants';
+import { Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 @Component({
@@ -20,12 +22,14 @@ export class CreditRequestListComponent implements OnInit, OnDestroy {
 
   requests: CreditRequest[] = [];
   filteredRequests: CreditRequest[] = [];
+  tenants$!: Observable<Tenant[]>;
   loading = false;
   error: string | null = null;
   isSuperAdmin = false;
 
   // Filtering
   statusFilter: string = 'all';
+  tenantFilter: string = '';
 
   // Pagination
   currentPage = 1;
@@ -35,11 +39,15 @@ export class CreditRequestListComponent implements OnInit, OnDestroy {
   constructor(
     private readonly creditService: CreditService,
     private readonly authService: AuthService,
+    private readonly tenantsFacade: TenantsFacade,
     private readonly cdr: ChangeDetectorRef
-  ) {}
+  ) {
+    this.tenants$ = this.tenantsFacade.allTenants$;
+  }
 
   ngOnInit() {
     this.isSuperAdmin = this.authService.isSuperAdmin();
+
     this.loadRequests();
   }
 
@@ -52,65 +60,53 @@ export class CreditRequestListComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.error = null;
 
-    if (this.isSuperAdmin) {
-      // Super admin: get all requests with pagination
-      this.creditService.getAllRequests(this.statusFilter, this.currentPage, this.pageSize)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (response) => {
-            this.requests = response.requests || [];
-            this.filteredRequests = this.requests;
-            this.totalRequests = response.pagination?.total || 0;
-            this.loading = false;
-            this.cdr.markForCheck();
-          },
-          error: (err) => {
-            this.error = err.error?.error || 'Failed to load requests';
-            this.loading = false;
-            this.cdr.markForCheck();
-          }
-        });
-    } else {
-      // Tenant admin: get own requests (all statuses)
-      this.creditService.getMyRequests()
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (response) => {
-            this.requests = response.requests || [];
-            this.applyFilters();
-            this.loading = false;
-            this.cdr.markForCheck();
-          },
-          error: (err) => {
-            this.error = err.error?.error || 'Failed to load requests';
-            this.loading = false;
-            this.cdr.markForCheck();
-          }
-        });
+    const params: any = {
+      status: this.statusFilter,
+      page: this.currentPage,
+      limit: this.pageSize
+    };
+
+    // Super admin can filter by tenant
+    if (this.isSuperAdmin && this.tenantFilter && this.tenantFilter !== '') {
+      params.tenant_id = this.tenantFilter;
     }
+
+    // Use unified getRequests method for both super admin and tenant admin
+    // Tenant isolation is handled automatically by backend
+    this.creditService.getRequests(params)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.requests = response.requests || [];
+          this.filteredRequests = this.requests;
+          this.totalRequests = response.pagination?.total || 0;
+          this.loading = false;
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.error = err.error?.error || 'Failed to load requests';
+          this.loading = false;
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   applyFilters() {
-    let filtered = [...this.requests];
-
-    // Filter by status
-    if (this.statusFilter !== 'all') {
-      filtered = filtered.filter(r => r.status === this.statusFilter);
-    }
-
-    this.filteredRequests = filtered;
-    this.totalRequests = filtered.length;
+    // No longer needed - filtering done server-side
+    // Kept for backward compatibility but now just triggers reload
+    this.loadRequests();
   }
 
   onStatusFilterChange() {
-    if (this.isSuperAdmin) {
-      // For super admin, reload from server with new status
-      this.currentPage = 1;
-      this.loadRequests();
-    } else {
-      // For tenant admin, filter client-side
-      this.applyFilters();
-    }
+    // For both super admin and tenant admin, reload from server with new status
+    this.currentPage = 1;
+    this.loadRequests();
+  }
+
+  onTenantFilterChange() {
+    // Reset to first page when tenant filter changes
+    this.currentPage = 1;
+    this.loadRequests();
   }
 
   onPageChange(newPage: number) {

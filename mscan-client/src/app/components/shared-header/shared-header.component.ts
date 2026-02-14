@@ -5,6 +5,7 @@ import { User, UserRole } from '../../models';
 import { AppSelectorComponent } from '../app-selector/app-selector.component';
 import { Observable, map, Subscription } from 'rxjs';
 import { VerificationAppsFacade } from '../../store/verification-apps';
+import { TenantsFacade } from '../../store/tenants';
 
 @Component({
   selector: 'app-shared-header',
@@ -23,17 +24,18 @@ export class SharedHeaderComponent implements OnInit, OnDestroy {
 
   constructor(
     private authService: AuthService,
-    private verificationAppsFacade: VerificationAppsFacade
+    private verificationAppsFacade: VerificationAppsFacade,
+    private tenantsFacade: TenantsFacade,
   ) {
     this.currentUser$ = this.authService.currentUser$;
     this.currentTenantName$ = this.authService.currentUser$.pipe(
-      map((user) => user?.tenant?.tenant_name || 'Dashboard')
+      map((user) => user?.tenant?.tenant_name || 'Dashboard'),
     );
     this.isSuperAdmin$ = this.authService.currentUser$.pipe(
-      map((user) => user?.role === UserRole.SUPER_ADMIN)
+      map((user) => user?.role === UserRole.SUPER_ADMIN),
     );
     this.isTenantRole$ = this.authService.currentUser$.pipe(
-      map((user) => user?.role === UserRole.TENANT_ADMIN || user?.role === UserRole.TENANT_USER)
+      map((user) => user?.role === UserRole.TENANT_ADMIN || user?.role === UserRole.TENANT_USER),
     );
   }
 
@@ -42,6 +44,9 @@ export class SharedHeaderComponent implements OnInit, OnDestroy {
     this.subscription = this.currentUser$.subscribe((user) => {
       if (user?.role === UserRole.TENANT_ADMIN || user?.role === UserRole.TENANT_USER) {
         this.verificationAppsFacade.loadApps();
+      }
+      if (user?.role === UserRole.SUPER_ADMIN) {
+        this.tenantsFacade.loadTenants();
       }
     });
   }

@@ -1,0 +1,38 @@
+<div class="approval-container">
+  <div class="header">
+    <h2>Pending Credit Requests</h2>
+    <div class="header-actions">
+      <button class="btn btn-secondary" (click)="refresh()" [disabled]="loading">
+        <span *ngIf="!loading">🔄 Refresh</span>
+        <span *ngIf="loading">Loading...</span>
+      </button>
+      <a routerLink="/tenant/credits/request" class="btn btn-primary">
+        + New Request
+      </a>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="error" class="error">
+    {{ error }}
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading && !error" class="loading">
+    Loading pending requests...
+  </div>
+
+  <!-- Pending Requests Grid -->
+  <div class="requests-grid">
+    <app-credit-card
+      *ngFor="let card of cardData"
+      [data]="card"
+      [showTenantInfo]="false">
+    </app-credit-card>
+
+    <!-- Empty State -->
+    <div *ngIf="!loading && !error && cardData.length === 0" class="no-data">
+      No pending credit requests
+    </div>
+  </div>
+</div>

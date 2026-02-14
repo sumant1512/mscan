@@ -1470,26 +1470,54 @@ Request credits for the tenant.
 
 ---
 
-#### 8.2 Get My Credit Requests
+#### 8.2 Get Credit Requests (Unified Endpoint)
 
-Get credit requests for the tenant.
+Get credit requests with automatic tenant isolation. Works for both tenant admins (shows their own requests) and super admins (can filter by tenant).
 
-**Endpoint:** `GET /api/credits/requests/my`
+**Endpoint:** `GET /api/credits/requests?status=pending&page=1&limit=20&tenant_id=xxx`
 **Auth Required:** Yes
-**Permissions:** Required tenant role
+**Permissions:** Tenant admin (own requests) or SUPER_ADMIN (all requests)
+
+**Query Parameters:**
+- `status`: Filter by status - **pending** | **approved** | **rejected** | **history** (approved+rejected) | **all** (default: pending)
+- `page`: Page number (default: 1)
+- `limit`: Results per page (default: 20)
+- `tenant_id`: (Super Admin only) Filter by specific tenant ID. Omit to see all tenants.
+
+**Tenant Isolation:**
+- **Tenant Admin**: Automatically scoped to their tenant (cannot specify tenant_id)
+- **Super Admin**: Can filter by tenant_id or omit to see all tenants
 
 **Response (200):**
 ```json
 {
   "requests": [
     {
-      "id": "req-001",
+      "id": 123,
+      "tenant_id": "660e8400-e29b-41d4-a716-446655440000",
+      "tenant_name": "Acme Corporation",
+      "contact_email": "admin@acme.com",
+      "requested_by": 45,
+      "requested_by_name": "John Doe",
+      "requested_by_email": "john@acme.com",
       "requested_amount": 1000,
-      "status": "pending",
       "justification": "Need credits for January campaign",
-      "requested_at": "2026-01-26T10:30:00Z"
+      "status": "pending",
+      "requested_at": "2026-01-26T10:30:00Z",
+      "processed_by": null,
+      "processed_by_name": null,
+      "processed_at": null,
+      "rejection_reason": null,
+      "created_at": "2026-01-26T10:30:00Z",
+      "updated_at": "2026-01-26T10:30:00Z"
     }
-  ]
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 1,
+    "totalPages": 1
+  }
 }
 ```
 
@@ -1519,91 +1547,97 @@ Get current credit balance for the tenant.
 
 #### 8.4 Get Credit Transactions
 
-Get credit transaction history.
+Get credit transaction history including both actual transactions (CREDIT/DEBIT/REFUND) and rejected credit requests. Automatically tenant-isolated.
 
-**Endpoint:** `GET /api/credits/transactions?page=1&limit=20&type=CREDIT`
+**Endpoint:** `GET /api/credits/transactions?page=1&limit=20&type=CREDIT&tenant_id=xxx&app_id=yyy`
 **Auth Required:** Yes
-**Permissions:** Required authentication
+**Permissions:** Tenant admin (own transactions) or SUPER_ADMIN (all transactions)
 
 **Query Parameters:**
-- `page`: Page number
-- `limit`: Results per page
-- `type`: Filter by type (CREDIT/DEBIT)
-- `tenant_id`: (Super Admin only) Filter by tenant
+- `page`: Page number (default: 1)
+- `limit`: Results per page (default: 20)
+- `type`: Filter by type - **CREDIT** | **DEBIT** | **REFUND** | **all** (default: all)
+- `tenant_id`: (Super Admin only) Filter by specific tenant ID
+- `app_id`: Filter by verification app ID
+
+**Tenant Isolation:**
+- **Tenant Admin**: Automatically scoped to their tenant
+- **Super Admin**: Can filter by tenant_id or omit to see all tenants
+
+**Transaction Types:**
+- **CREDIT**: Credit added to balance (e.g., approved request)
+- **DEBIT**: Credit deducted from balance (e.g., coupon creation)
+- **REFUND**: Credit refunded to balance
+- **REJECTED**: Rejected credit request (includes justification and rejection_reason)
 
 **Response (200):**
 ```json
 {
   "transactions": [
     {
-      "id": "tx-001",
+      "id": 101,
+      "tenant_id": "660e8400-e29b-41d4-a716-446655440000",
+      "tenant_name": "Acme Corporation",
       "transaction_type": "CREDIT",
       "amount": 1000,
       "balance_before": 4000,
       "balance_after": 5000,
       "reference_type": "CREDIT_APPROVAL",
-      "reference_id": "req-001",
+      "reference_id": 123,
       "description": "Credit request approved",
       "created_at": "2026-01-26T10:30:00Z",
-      "created_by_name": "Super Admin"
+      "created_by": 1,
+      "created_by_name": "Super Admin",
+      "justification": null,
+      "rejection_reason": null
     },
     {
-      "id": "tx-002",
+      "id": 102,
+      "tenant_id": "660e8400-e29b-41d4-a716-446655440000",
+      "tenant_name": "Acme Corporation",
       "transaction_type": "DEBIT",
       "amount": 10,
       "balance_before": 5000,
       "balance_after": 4990,
       "reference_type": "COUPON_CREATION",
-      "reference_id": "coupon-123",
-      "description": "Coupon created",
-      "created_at": "2026-01-26T11:00:00Z"
-    }
-  ],
-  "total": 2
-}
-```
-
----
-
-#### 8.5 Get All Credit Requests (Super Admin)
-
-Get all credit requests from all tenants.
-
-**Endpoint:** `GET /api/credits/requests?status=pending&page=1&limit=20`
-**Auth Required:** Yes
-**Roles:** SUPER_ADMIN
-
-**Query Parameters:**
-- `status`: Filter by status (pending, approved, rejected)
-- `page`: Page number
-- `limit`: Results per page
-
-**Response (200):**
-```json
-{
-  "requests": [
+      "reference_id": 456,
+      "description": "Coupon batch created",
+      "created_at": "2026-01-26T11:00:00Z",
+      "created_by": 45,
+      "created_by_name": "John Doe",
+      "justification": null,
+      "rejection_reason": null
+    },
     {
-      "id": "req-001",
+      "id": 789,
       "tenant_id": "660e8400-e29b-41d4-a716-446655440000",
       "tenant_name": "Acme Corporation",
-      "contact_email": "admin@acme.com",
-      "requested_amount": 1000,
-      "justification": "Need credits for January campaign",
-      "status": "pending",
-      "requested_at": "2026-01-26T10:30:00Z"
+      "transaction_type": "REJECTED",
+      "amount": 500,
+      "balance_before": null,
+      "balance_after": null,
+      "reference_type": "CREDIT_REQUEST",
+      "reference_id": 789,
+      "description": "Credit Request Rejected",
+      "created_at": "2026-01-25T15:00:00Z",
+      "created_by": 1,
+      "created_by_name": "Super Admin",
+      "justification": "Need credits for campaign",
+      "rejection_reason": "Insufficient justification provided"
     }
   ],
   "pagination": {
     "page": 1,
     "limit": 20,
-    "total": 1
+    "total": 3,
+    "totalPages": 1
   }
 }
 ```
 
 ---
 
-#### 8.6 Approve Credit Request (Super Admin)
+#### 8.5 Approve Credit Request (Super Admin)
 
 Approve a credit request.
 
@@ -1622,7 +1656,7 @@ Approve a credit request.
 
 ---
 
-#### 8.7 Reject Credit Request (Super Admin)
+#### 8.6 Reject Credit Request (Super Admin)
 
 Reject a credit request.
 

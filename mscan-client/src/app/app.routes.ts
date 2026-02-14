@@ -18,6 +18,7 @@ import { CreditApprovalListComponent } from './components/credit-management/cred
 import { CreditDashboardComponent } from './components/credit-management/credit-dashboard.component';
 import { CreditTransactionHistoryComponent } from './components/credit-management/credit-transaction-history.component';
 import { CreditRequestListComponent } from './components/credit-management/credit-request-list.component';
+import { CreditPendingRequestsComponent } from './components/credit-management/credit-pending-requests.component';
 
 // Rewards
 import { CouponCreateComponent } from './components/rewards/coupon-create.component';
@@ -26,7 +27,6 @@ import { CouponPrintPageComponent } from './components/rewards/coupon-print-page
 
 // Products
 import { ProductListComponent } from './components/products/product-list.component';
-import { ProductFormComponent } from './components/products/product-form.component';
 import { TemplateProductFormComponent } from './components/products/template-product-form.component';
 
 // Templates
@@ -106,6 +106,7 @@ export const routes: Routes = [
         data: { requiredPermission: 'request_credits' }
       },
       { path: 'credits/requests', component: CreditRequestListComponent },
+      { path: 'credits/pending', component: CreditPendingRequestsComponent },
       { path: 'credits/history', component: CreditTransactionHistoryComponent },
       { path: 'verification-app', component: VerificationAppListComponent },
       {

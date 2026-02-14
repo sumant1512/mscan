@@ -3,16 +3,18 @@
  */
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, switchMap, throwError } from 'rxjs';
+import { catchError, switchMap, throwError, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
+import { InactivityService } from '../services/inactivity.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
+  const inactivityService = inject(InactivityService);
 
   // Skip interceptor for auth endpoints
-  if (req.url.includes('/auth/request-otp') || 
+  if (req.url.includes('/auth/request-otp') ||
       req.url.includes('/auth/verify-otp') ||
       req.url.includes('/auth/refresh')) {
     return next(req);
@@ -28,7 +30,14 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     });
   }
 
+  // Record user activity on API calls
+  inactivityService.recordActivity();
+
   return next(req).pipe(
+    tap(() => {
+      // Record activity on successful API response
+      inactivityService.recordActivity();
+    }),
     catchError((error: HttpErrorResponse) => {
       // Handle 401 - Token expired
       if (error.status === 401) {

@@ -740,25 +740,27 @@ erDiagram
 |--------|------|-------------|---------|-------------|
 | id | UUID | PRIMARY KEY | gen_random_uuid() | Unique request ID |
 | tenant_id | UUID | NOT NULL, FK → tenants(id) ON DELETE CASCADE | - | Requesting tenant |
+| requested_by | UUID | NOT NULL, FK → users(id) | - | User who made the request |
 | requested_amount | INTEGER | NOT NULL, CHECK > 0 | - | Credits requested |
+| status | VARCHAR(20) | CHECK IN (pending, approved, rejected) | 'pending' | Request status |
 | justification | TEXT | - | - | Reason for request |
-| status | VARCHAR(20) | CHECK | 'pending' | Request status |
-| requested_at | TIMESTAMPTZ | - | CURRENT_TIMESTAMP | Request submission time |
-| processed_at | TIMESTAMPTZ | - | - | When request was processed |
 | processed_by | UUID | FK → users(id) | - | Admin who processed request |
+| processed_at | TIMESTAMPTZ | - | - | When request was processed |
 | rejection_reason | TEXT | - | - | Reason if rejected |
+| requested_at | TIMESTAMPTZ | NOT NULL | - | Request submission time |
+| created_at | TIMESTAMPTZ | - | CURRENT_TIMESTAMP | Record creation time |
+| updated_at | TIMESTAMPTZ | - | CURRENT_TIMESTAMP | Last update time |
 
 **Valid Status Values:**
 - `pending`: Awaiting approval
 - `approved`: Approved and credits allocated
 - `rejected`: Request denied
 
-**Constraints:**
-- `chk_rejection_reason`: Must provide rejection_reason when status is 'rejected'
-
 **Indexes:**
 - `idx_credit_requests_tenant` on (tenant_id)
 - `idx_credit_requests_status` on (status)
+- `idx_credit_requests_requested_by` on (requested_by)
+- `idx_credit_requests_processed_by` on (processed_by)
 - `idx_credit_requests_requested_at` on (requested_at)
 
 ---
@@ -787,29 +789,31 @@ erDiagram
 |--------|------|-------------|---------|-------------|
 | id | UUID | PRIMARY KEY | gen_random_uuid() | Unique transaction ID |
 | tenant_id | UUID | NOT NULL, FK → tenants(id) ON DELETE CASCADE | - | Associated tenant |
-| transaction_type | VARCHAR(20) | NOT NULL, CHECK | - | Type of transaction |
+| transaction_type | VARCHAR(20) | NOT NULL, CHECK IN (CREDIT, DEBIT, REFUND) | - | Type of transaction |
 | amount | INTEGER | NOT NULL, CHECK > 0 | - | Credits amount |
 | balance_before | INTEGER | NOT NULL | - | Balance before transaction |
 | balance_after | INTEGER | NOT NULL | - | Balance after transaction |
-| reference_id | UUID | - | - | Related record ID |
-| reference_type | VARCHAR(50) | CHECK | - | Type of reference |
 | description | TEXT | - | - | Transaction description |
-| created_at | TIMESTAMPTZ | - | CURRENT_TIMESTAMP | Transaction time |
+| reference_id | UUID | - | - | Related record ID |
+| reference_type | VARCHAR(50) | - | - | Type of reference |
 | created_by | UUID | FK → users(id) | - | User who initiated |
+| created_at | TIMESTAMPTZ | - | CURRENT_TIMESTAMP | Transaction time |
 
 **Valid Transaction Types:**
-- `CREDIT`: Credits added to account
-- `DEBIT`: Credits deducted from account
+- `CREDIT`: Credits added to account (e.g., approved request)
+- `DEBIT`: Credits deducted from account (e.g., coupon creation)
+- `REFUND`: Credits refunded to account
 
 **Valid Reference Types:**
 - `CREDIT_APPROVAL`: From approved credit request
-- `COUPON_CREATION`: For creating coupons
+- `COUPON_CREATION`: For creating coupon batches
 - `COUPON_EDIT`: For editing coupons
 
 **Indexes:**
-- `idx_credit_trans_tenant` on (tenant_id)
-- `idx_credit_trans_type` on (transaction_type)
-- `idx_credit_trans_created_at` on (created_at)
+- `idx_credit_transactions_tenant` on (tenant_id)
+- `idx_credit_transactions_type` on (transaction_type)
+- `idx_credit_transactions_created_at` on (created_at)
+- `idx_credit_transactions_reference` on (reference_type, reference_id)
 
 ---
 

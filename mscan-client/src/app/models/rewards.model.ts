@@ -1,16 +1,21 @@
 export interface CreditRequest {
   id: number;
   tenant_id: string;
+  requested_by?: number; // User ID who requested
+  requested_by_name?: string; // Name of tenant admin who requested
+  requested_by_email?: string; // Email of requester
   requested_amount: number;
   justification?: string;
   status: 'pending' | 'approved' | 'rejected';
   requested_at: string;
   processed_at?: string;
-  processed_by?: number;
+  processed_by?: number; // User ID who approved/rejected
+  processed_by_name?: string; // Name of super admin who approved/rejected
   rejection_reason?: string;
   tenant_name?: string;
   contact_email?: string;
-  processed_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CreditBalance {
@@ -26,7 +31,7 @@ export interface CreditBalance {
 export interface CreditTransaction {
   id: number;
   tenant_id: string;
-  transaction_type: 'CREDIT' | 'DEBIT';
+  transaction_type: 'CREDIT' | 'DEBIT' | 'REJECTED' | 'REFUND';
   amount: number;
   balance_before: number;
   balance_after: number;
@@ -35,7 +40,12 @@ export interface CreditTransaction {
   description?: string;
   created_at: string;
   created_by?: number;
-  created_by_name?: string;
+  created_by_name?: string; // Name of the person who requested the credit
+  created_by_email?: string; // Email of the requester
+  processed_by_name?: string; // Name of super admin who approved/rejected
+  justification?: string; // For rejected requests
+  rejection_reason?: string; // For rejected requests
+  tenant_name?: string;
 }
 
 export interface VerificationApp {

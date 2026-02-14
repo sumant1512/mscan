@@ -31,7 +31,9 @@ class TemplateController {
         is_active: t.is_active,
         created_at: t.created_at,
         updated_at: t.updated_at,
-        attribute_count: t.custom_fields ? (Array.isArray(t.custom_fields) ? t.custom_fields.length : 0) : 0
+        attribute_count: t.custom_fields ? (Array.isArray(t.custom_fields) ? t.custom_fields.length : 0) : 0,
+        product_count: t.product_count || 0,
+        app_count: t.app_count || 0
       }));
 
       // Calculate pagination
@@ -164,6 +166,13 @@ class TemplateController {
     } catch (error) {
       console.error('Error in updateTemplate:', error);
 
+      if (error.message.includes('Cannot update template')) {
+        return res.status(409).json({
+          success: false,
+          message: error.message
+        });
+      }
+
       if (error.message.includes('variant_config') || error.message.includes('custom_fields') || error.message.includes('industry_type')) {
         return res.status(400).json({
           success: false,
@@ -205,7 +214,7 @@ class TemplateController {
     } catch (error) {
       console.error('Error in deleteTemplate:', error);
 
-      if (error.message.includes('in use')) {
+      if (error.message.includes('Cannot delete template')) {
         return res.status(409).json({
           success: false,
           message: error.message
@@ -299,6 +308,49 @@ class TemplateController {
     }
   }
 
+  /**
+   * Toggle template status (activate/deactivate)
+   * PATCH /api/templates/:id/toggle-status
+   */
+  async toggleTemplateStatus(req, res) {
+    try {
+      const { id } = req.params;
+      const tenantId = req.user.tenant_id;
+
+      const template = await templateService.toggleTemplateStatus(id, tenantId);
+
+      if (!template) {
+        return res.status(404).json({
+          success: false,
+          message: 'Template not found'
+        });
+      }
+
+      const action = template.is_active ? 'activated' : 'deactivated';
+
+      res.status(200).json({
+        success: true,
+        message: `Template ${action} successfully`,
+        data: template
+      });
+    } catch (error) {
+      console.error('Error in toggleTemplateStatus:', error);
+
+      if (error.message.includes('Cannot deactivate')) {
+        return res.status(409).json({
+          success: false,
+          message: error.message
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to toggle template status',
+        error: error.message
+      });
+    }
+  }
+
 }
 
 // Export controller instance
@@ -312,5 +364,6 @@ module.exports = {
   updateTemplate: controller.updateTemplate.bind(controller),
   deleteTemplate: controller.deleteTemplate.bind(controller),
   getTemplatesForApp: controller.getTemplatesForApp.bind(controller),
-  duplicateTemplate: controller.duplicateTemplate.bind(controller)
+  duplicateTemplate: controller.duplicateTemplate.bind(controller),
+  toggleTemplateStatus: controller.toggleTemplateStatus.bind(controller)
 };

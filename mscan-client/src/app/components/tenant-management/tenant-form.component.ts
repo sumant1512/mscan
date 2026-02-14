@@ -1,10 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TenantService } from '../../services/tenant.service';
-import { debounceTime, distinctUntilChanged, switchMap, finalize } from 'rxjs/operators';
-import { of } from 'rxjs';
+import { TenantsFacade } from '../../store/tenants';
+import { debounceTime, distinctUntilChanged, switchMap, finalize, filter, takeUntil } from 'rxjs/operators';
+import { of, Subject, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -14,23 +15,28 @@ import { environment } from '../../../environments/environment';
   templateUrl: './tenant-form.component.html',
   styleUrls: ['./tenant-form.component.css']
 })
-export class TenantFormComponent implements OnInit {
+export class TenantFormComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   tenantForm: FormGroup;
-  loading = false;
-  error = '';
-  success = '';
   isEditMode = false;
   tenantId?: string;
-  
+
   // Subdomain validation
   subdomainAvailable: boolean | null = null;
   checkingAvailability = false;
   suggestions: string[] = [];
   domainBase = environment.domainBase || 'localhost';
 
+  // NgRx state observables
+  loading$!: Observable<boolean>;
+  error$!: Observable<string | null>;
+  successMessage$!: Observable<string | null>;
+
   constructor(
     private fb: FormBuilder,
     private tenantService: TenantService,
+    private tenantsFacade: TenantsFacade,
     private router: Router,
     private route: ActivatedRoute
   ) {
@@ -50,8 +56,27 @@ export class TenantFormComponent implements OnInit {
   }
 
   ngOnInit() {
+    // Initialize NgRx observables
+    this.loading$ = this.tenantsFacade.operationInProgress$;
+    this.error$ = this.tenantsFacade.error$;
+    this.successMessage$ = this.tenantsFacade.successMessage$;
+
     const id = this.route.snapshot.paramMap.get('id');
     console.log('TenantFormComponent initialized with id:', id);
+
+    // Listen for success messages and navigate
+    this.successMessage$
+      .pipe(
+        filter(msg => !!msg),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        setTimeout(() => {
+          this.tenantsFacade.clearSuccess();
+          this.router.navigate(['/super-admin/tenants']);
+        }, 1500);
+      });
+
     if (id && id !== 'new') {
       this.isEditMode = true;
       this.tenantId = id;
@@ -61,6 +86,11 @@ export class TenantFormComponent implements OnInit {
       // Setup subdomain auto-suggestion and validation for new tenants
       this.setupSubdomainValidation();
     }
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   setupSubdomainValidation() {
@@ -135,27 +165,23 @@ export class TenantFormComponent implements OnInit {
 
   loadTenant() {
     if (!this.tenantId) {
-      this.error = 'Invalid tenant ID';
       return;
     }
-    
-    this.loading = true;
-    this.tenantService.getTenantById(this.tenantId)
-      .pipe(finalize(() => this.loading = false))
+
+    this.tenantsFacade.getTenantById(this.tenantId)
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response) => {
-          this.tenantForm.patchValue({
-            tenant_name: response.tenant.tenant_name,
-            contact_person: response.tenant.contact_person,
-            email: response.tenant.email,
-            phone: response.tenant.phone,
-            address: response.tenant.address,
-            subdomain_slug: response.tenant.subdomain_slug
-          });
-        },
-        error: (err) => {
-          console.error('Load tenant error:', err);
-          this.error = err.error?.error || err.message || 'Failed to load tenant';
+        next: (tenant) => {
+          if (tenant) {
+            this.tenantForm.patchValue({
+              tenant_name: tenant.tenant_name,
+              contact_person: tenant.contact_person,
+              email: tenant.email,
+              phone: tenant.phone,
+              address: tenant.address,
+              subdomain_slug: tenant.subdomain_slug
+            });
+          }
         }
       });
   }
@@ -165,44 +191,22 @@ export class TenantFormComponent implements OnInit {
       Object.keys(this.tenantForm.controls).forEach(key => {
         this.tenantForm.controls[key].markAsTouched();
       });
-      if (!this.isEditMode && this.subdomainAvailable !== true) {
-        this.error = 'Please choose an available subdomain';
-      }
       return;
     }
 
-    this.loading = true;
-    this.error = '';
-    this.success = '';
+    // Clear previous error
+    this.tenantsFacade.clearError();
 
     const formData = this.tenantForm.value;
 
     if (this.isEditMode && this.tenantId) {
-      this.tenantService.updateTenant(this.tenantId, formData)
-        .pipe(finalize(() => this.loading = false))
-        .subscribe({
-          next: () => {
-            this.success = 'Tenant updated successfully';
-            setTimeout(() => this.router.navigate(['/super-admin/tenants']), 1500);
-          },
-          error: (err) => {
-            console.error('Update tenant error:', err);
-            this.error = err.error?.error || err.message || 'Failed to update tenant';
-          }
-        });
+      // Update existing tenant via NgRx
+      this.tenantsFacade.updateTenant(this.tenantId, formData);
+      // List will auto-reload and navigate on success!
     } else {
-      this.tenantService.createTenant(formData)
-        .pipe(finalize(() => this.loading = false))
-        .subscribe({
-          next: () => {
-            this.success = 'Tenant created successfully';
-            setTimeout(() => this.router.navigate(['/super-admin/tenants']), 1500);
-          },
-          error: (err) => {
-            console.error('Create tenant error:', err);
-            this.error = err.error?.error || err.message || 'Failed to create tenant';
-          }
-        });
+      // Create new tenant via NgRx
+      this.tenantsFacade.createTenant(formData);
+      // List will auto-reload and navigate on success!
     }
   }
 

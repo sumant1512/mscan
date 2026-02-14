@@ -57,6 +57,12 @@
           <span class="label">Created:</span>
           <span class="value">{{ tenant.created_at | date : 'medium' }}</span>
         </div>
+        <div class="info-row" *ngIf="tenant.created_by_name">
+          <span class="label">Created By:</span>
+          <span class="value">{{ tenant.created_by_name }}
+            <span *ngIf="tenant.created_by_email" class="email-text"> ({{ tenant.created_by_email }})</span>
+          </span>
+        </div>
         <div class="info-row">
           <span class="label">Last Updated:</span>
           <span class="value">{{ tenant.updated_at | date : 'medium' }}</span>
@@ -67,6 +73,12 @@
         <h3>Total Credit Balance</h3>
         <div class="stat-value">{{ tenant.total_credits_received || 0 }}</div>
         <div class="stat-label">Total Credits</div>
+      </div>
+
+      <div class="card stats-card">
+        <h3>Pending Credit Requests</h3>
+        <div class="stat-value">{{ tenant.pending_credit_requests || 0 }}</div>
+        <div class="stat-label">Requests</div>
       </div>
 
       <div class="card stats-card">

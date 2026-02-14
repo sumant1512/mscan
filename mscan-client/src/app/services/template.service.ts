@@ -125,32 +125,9 @@ export class TemplateService {
   }
 
   /**
-   * Attribute management methods (No-op in JSONB system)
-   * In JSONB system, attributes are managed as part of the template's custom_fields JSONB column
-   * Components should directly update the template with modified custom_fields array
+   * Toggle template status (activate/deactivate)
    */
-
-  /**
-   * @deprecated Attributes are now part of template's custom_fields JSONB column. Update template instead.
-   */
-  addAttribute(templateId: string, attribute: any): Observable<any> {
-    console.warn('addAttribute is deprecated. Attributes are managed via template update with custom_fields');
-    throw new Error('Use updateTemplate() to modify custom_fields array instead');
-  }
-
-  /**
-   * @deprecated Attributes are now part of template's custom_fields JSONB column. Update template instead.
-   */
-  updateAttribute(templateId: string, attributeId: string, data: any): Observable<any> {
-    console.warn('updateAttribute is deprecated. Attributes are managed via template update with custom_fields');
-    throw new Error('Use updateTemplate() to modify custom_fields array instead');
-  }
-
-  /**
-   * @deprecated Attributes are now part of template's custom_fields JSONB column. Update template instead.
-   */
-  deleteAttribute(templateId: string, attributeId: string): Observable<any> {
-    console.warn('deleteAttribute is deprecated. Attributes are managed via template update with custom_fields');
-    throw new Error('Use updateTemplate() to modify custom_fields array instead');
+  toggleTemplateStatus(id: string): Observable<TemplateResponse> {
+    return this.http.patch<TemplateResponse>(`${this.apiUrl}/${id}/toggle-status`, {});
   }
 }

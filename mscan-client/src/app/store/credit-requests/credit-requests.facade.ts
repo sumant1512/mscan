@@ -46,20 +46,20 @@ export class CreditRequestsFacade {
   }
 
   // Actions
-  loadPendingRequests(): void {
-    this.store.dispatch(CreditRequestsActions.loadPendingRequests());
+  loadPendingRequests(tenantId?: string): void {
+    this.store.dispatch(CreditRequestsActions.loadPendingRequests({ tenantId }));
   }
 
-  loadApprovedRequests(): void {
-    this.store.dispatch(CreditRequestsActions.loadApprovedRequests());
+  loadApprovedRequests(tenantId?: string): void {
+    this.store.dispatch(CreditRequestsActions.loadApprovedRequests({ tenantId }));
   }
 
-  loadRejectedRequests(): void {
-    this.store.dispatch(CreditRequestsActions.loadRejectedRequests());
+  loadRejectedRequests(tenantId?: string): void {
+    this.store.dispatch(CreditRequestsActions.loadRejectedRequests({ tenantId }));
   }
 
-  loadAllRequests(): void {
-    this.store.dispatch(CreditRequestsActions.loadAllRequests());
+  loadAllRequests(tenantId?: string): void {
+    this.store.dispatch(CreditRequestsActions.loadAllRequests({ tenantId }));
   }
 
   approveRequest(id: number): void {

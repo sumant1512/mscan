@@ -115,7 +115,17 @@ export class TemplateListComponent implements OnInit {
       return;
     }
 
-    if (!confirm(`Are you sure you want to delete template "${template.name}"?`)) {
+    if (template.product_count && template.product_count > 0) {
+      alert(`Cannot delete template that has ${template.product_count} product(s). Please delete all products first.`);
+      return;
+    }
+
+    if (template.app_count && template.app_count > 0) {
+      alert(`Cannot delete template that is assigned to ${template.app_count} verification app(s). Please unassign from all apps first.`);
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to permanently delete template "${template.name}"? This action cannot be undone.`)) {
       return;
     }
 
@@ -123,7 +133,7 @@ export class TemplateListComponent implements OnInit {
     this.templateService.deleteTemplate(template.id).subscribe({
       next: () => {
         this.loadTemplates();
-        alert('Template deleted successfully');
+        alert('Template permanently deleted successfully');
       },
       error: (error) => {
         console.error('Error deleting template:', error);
@@ -131,6 +141,45 @@ export class TemplateListComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  toggleTemplateStatus(template: ProductTemplate): void {
+    if (template.product_count && template.product_count > 0 && template.is_active) {
+      alert(`Cannot deactivate template that has ${template.product_count} product(s). Please delete all products first.`);
+      return;
+    }
+
+    const action = template.is_active ? 'deactivate' : 'activate';
+    if (!confirm(`Are you sure you want to ${action} template "${template.name}"?`)) {
+      return;
+    }
+
+    this.loading = true;
+    this.templateService.toggleTemplateStatus(template.id).subscribe({
+      next: (response) => {
+        this.loadTemplates();
+        alert(response.message || `Template ${action}d successfully`);
+      },
+      error: (error) => {
+        console.error('Error toggling template status:', error);
+        alert(error.error?.message || `Failed to ${action} template`);
+        this.loading = false;
+      }
+    });
+  }
+
+  canEditTemplate(template: ProductTemplate): boolean {
+    return !template.product_count || template.product_count === 0;
+  }
+
+  canDeleteTemplate(template: ProductTemplate): boolean {
+    return !template.is_system_template &&
+           (!template.product_count || template.product_count === 0) &&
+           (!template.app_count || template.app_count === 0);
+  }
+
+  canDeactivateTemplate(template: ProductTemplate): boolean {
+    return !template.product_count || template.product_count === 0;
   }
 
   createTemplate(): void {

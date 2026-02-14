@@ -453,64 +453,80 @@ export class TenantFormComponent implements OnInit {
 
 **Path:** `components/credit-management/credit-approval-list.component.ts`
 
-**Purpose:** Super Admin view of all pending credit requests from tenants.
+**Purpose:** Super Admin view of all pending credit requests from tenants with server-side filtering.
 
 **Key Features:**
 - List of pending credit requests
-- Filter by tenant
+- Filter by tenant (server-side)
 - Approve/Reject actions with reason
 - View request justification
-- Transaction history
+- Automatic reload on filter changes
 
 **Component Implementation:**
 ```typescript
 export class CreditApprovalListComponent implements OnInit {
-  requests$ = this.creditRequestsFacade.pendingRequests$;
+  pendingRequests$: Observable<CreditRequest[]>;
   loading$ = this.creditRequestsFacade.loading$;
   tenants: Tenant[] = [];
-  tenantFilter: string = '';
+  tenantFilter: string = 'all';
+  isSuperAdmin = false;
 
   constructor(
     private creditRequestsFacade: CreditRequestsFacade,
-    private tenantService: TenantService
+    private tenantService: TenantService,
+    private authService: AuthService
   ) {}
 
   ngOnInit() {
-    this.creditRequestsFacade.loadPendingRequests();
-    this.loadTenants();
+    this.isSuperAdmin = this.authService.isSuperAdmin();
+    this.pendingRequests$ = this.creditRequestsFacade.pendingRequests$;
+
+    if (this.isSuperAdmin) {
+      this.loadTenants();
+    }
+
+    this.loadPendingRequests();
   }
 
   loadTenants() {
     this.tenantService.getAllTenants().subscribe({
       next: (response) => {
-        this.tenants = response.data.tenants;
+        this.tenants = response.tenants || [];
       }
     });
   }
 
-  approveRequest(requestId: string) {
-    const confirmed = confirm('Approve this credit request?');
-    if (confirmed) {
-      this.creditRequestsFacade.approveRequest(requestId);
+  loadPendingRequests() {
+    // Pass tenant_id for server-side filtering
+    const tenantId = this.tenantFilter !== 'all' ? this.tenantFilter : undefined;
+    this.creditRequestsFacade.loadPendingRequests(tenantId);
+  }
+
+  approveRequest(id: number) {
+    if (confirm('Approve this credit request?')) {
+      this.creditRequestsFacade.approveRequest(id);
     }
   }
 
-  rejectRequest(requestId: string) {
+  rejectRequest(id: number) {
     const reason = prompt('Reason for rejection:');
     if (reason) {
-      this.creditRequestsFacade.rejectRequest(requestId, reason);
+      this.creditRequestsFacade.rejectRequest(id, reason);
     }
   }
 
   onTenantFilterChange() {
-    this.creditRequestsFacade.filterByTenant(this.tenantFilter);
+    // Reload with new tenant filter
+    this.loadPendingRequests();
   }
 }
 ```
 
 **NgRx Integration:**
 - Uses `CreditRequestsFacade` for state management
-- Dispatches `approveRequest` and `rejectRequest` actions
+- Dispatches actions with `tenantId` parameter for server-side filtering
+- Effects pass `tenant_id` to service layer
+- Backend enforces tenant isolation automatically
 - Subscribes to `pendingRequests$` and `loading$` observables
 
 ---

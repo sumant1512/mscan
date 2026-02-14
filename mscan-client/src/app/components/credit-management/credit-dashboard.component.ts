@@ -51,8 +51,8 @@ export class CreditDashboardComponent implements OnInit, OnDestroy {
     this.error = '';
 
     if (this.isSuperAdmin) {
-      // Super Admin: Load all requests (no balance endpoint for super admin)
-      this.creditService.getAllRequests('pending', 1, 5)
+      // Super Admin: Load all pending requests (no balance endpoint for super admin)
+      this.creditService.getRequests({ status: 'pending', page: 1, limit: 5 })
         .pipe(finalize(() => {
           this.loading = false;
           this.cdr.detectChanges();
@@ -82,8 +82,8 @@ export class CreditDashboardComponent implements OnInit, OnDestroy {
         }
       });
 
-      // Load recent requests
-      this.creditService.getMyRequests()
+      // Load recent requests (all statuses)
+      this.creditService.getRequests({ status: 'all', page: 1, limit: 5 })
         .pipe(finalize(() => {
           this.loading = false;
           this.cdr.detectChanges();

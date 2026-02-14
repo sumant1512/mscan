@@ -57,9 +57,6 @@ export class AddTenantAdminComponent implements OnInit {
         this.tenantSearch = this.selectedTenantName;
       }
     });
-
-    // Load tenants via facade
-    this.tenantsFacade.loadTenants();
   }
 
   onTenantSearchChange() {

@@ -14,6 +14,7 @@ export interface VerificationApp {
     is_active: boolean;
     template_id?: string;  // Product template for this app
     template_name?: string;
+    currency: string;  // Application currency (ISO 4217 code)
     created_at: string;
     updated_at: string;
     total_coupons?: number;

@@ -8,6 +8,8 @@ export interface TenantsState {
   error: string | null;
   loaded: boolean;
   filters: TenantFilters;
+  successMessage: string | null; // For showing success notifications
+  operationInProgress: boolean; // For create/update/delete operations
 }
 
 export interface TenantFilters {

@@ -69,6 +69,27 @@
             Product template is required
           </span>
         </div>
+
+        <div class="form-group">
+          <label for="currency" class="required">Application Currency</label>
+          <select
+            id="currency"
+            formControlName="currency"
+            class="form-input"
+            [class.input-error]="configForm.get('currency')?.invalid && configForm.get('currency')?.touched"
+          >
+            <option value="">Select Currency</option>
+            <option *ngFor="let curr of currencies" [value]="curr.code">
+              {{ curr.symbol }} {{ curr.code }} - {{ curr.name }}
+            </option>
+          </select>
+          <small class="form-hint">
+            This currency will be used throughout the application for products, rewards, coupons, and transactions.
+          </small>
+          <span class="error-msg" *ngIf="configForm.get('currency')?.invalid && configForm.get('currency')?.touched">
+            Currency is required
+          </span>
+        </div>
       </div>
 
       <div class="form-section">

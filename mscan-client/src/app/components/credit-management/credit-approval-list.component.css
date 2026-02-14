@@ -1,6 +1,6 @@
 .approval-container {
-  padding: 1.5000rem;
-  max-width: 87.5000rem;
+  padding: 1.5rem;
+  max-width: 87.5rem;
   margin: 0 auto;
 }
 
@@ -8,21 +8,21 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5000rem;
+  margin-bottom: 1.5rem;
   flex-wrap: wrap;
   gap: 1rem;
 }
 
 .header h2 {
   margin: 0;
-  font-size: 1.7500rem;
+  font-size: 1.75rem;
   font-weight: 600;
   color: #1a1a1a;
 }
 
 .filters-group {
   display: flex;
-  gap: 0.7500rem;
+  gap: 0.75rem;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -30,34 +30,34 @@
 .filter-item {
   display: flex;
   align-items: center;
-  gap: 0.5000rem;
+  gap: 0.5rem;
 }
 
 .filter-item label {
-  font-size: 0.8750rem;
+  font-size: 0.875rem;
   font-weight: 500;
   color: #4b5563;
 }
 
 .filter-select {
-  padding: 0.6250rem 1rem;
+  padding: 0.625rem 1rem;
   border: 0.0625rem solid #d1d5db;
-  border-radius: 0.3750rem;
-  font-size: 0.8750rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
   background: white;
-  min-width: 11.2500rem;
+  min-width: 11.25rem;
 }
 
 .section-tabs {
   display: flex;
-  gap: 0.5000rem;
-  margin-bottom: 1.5000rem;
-  border-bottom: 0.1250rem solid #e5e7eb;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 0.125rem solid #e5e7eb;
   padding-bottom: 0;
 }
 
 .tab-button {
-  padding: 0.7500rem 1.5000rem;
+  padding: 0.75rem 1.5rem;
   background: none;
   border: none;
   border-bottom: 0.1875rem solid transparent;
@@ -67,10 +67,10 @@
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
-  bottom: -0.1250rem;
+  bottom: -0.125rem;
   display: flex;
   align-items: center;
-  gap: 0.5000rem;
+  gap: 0.5rem;
 }
 
 .tab-button:hover {
@@ -85,11 +85,11 @@
 
 .badge {
   display: inline-block;
-  padding: 0.1250rem 0.5000rem;
+  padding: 0.125rem 0.5rem;
   background: #e5e7eb;
   color: #374151;
-  border-radius: 0.7500rem;
-  font-size: 0.7500rem;
+  border-radius: 0.75rem;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 
@@ -103,10 +103,11 @@
   color: #991b1b;
 }
 
-.loading, .error {
-  padding: 1.2500rem;
+.loading,
+.error {
+  padding: 1.25rem;
   text-align: center;
-  border-radius: 0.3750rem;
+  border-radius: 0.375rem;
 }
 
 .loading {
@@ -122,24 +123,26 @@
 .requests-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(25rem, 1fr));
-  gap: 1.5000rem;
+  gap: 1.5rem;
 }
 
 .request-card {
   background: white;
-  border-radius: 0.7500rem;
+  border-radius: 0.75rem;
   box-shadow: 0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .request-card:hover {
-  transform: translateY(-0.1250rem);
-  box-shadow: 0 0.2500rem 0.3750rem rgba(0, 0, 0, 0.15);
+  transform: translateY(-0.125rem);
+  box-shadow: 0 0.25rem 0.375rem rgba(0, 0, 0, 0.15);
 }
 
 .card-header {
-  padding: 1.2500rem;
+  padding: 1.25rem;
   background: #f9fafb;
   border-bottom: 0.0625rem solid #e5e7eb;
   display: flex;
@@ -148,8 +151,8 @@
 }
 
 .tenant-info h3 {
-  margin: 0 0 0.2500rem 0;
-  font-size: 1.1250rem;
+  margin: 0 0 0.25rem 0;
+  font-size: 1.125rem;
   font-weight: 600;
   color: #1a1a1a;
 }
@@ -160,9 +163,9 @@
 }
 
 .status-badge {
-  padding: 0.3750rem 0.8750rem;
-  border-radius: 0.7500rem;
-  font-size: 0.7500rem;
+  padding: 0.375rem 0.875rem;
+  border-radius: 0.75rem;
+  font-size: 0.75rem;
   font-weight: 500;
   text-transform: uppercase;
 }
@@ -183,31 +186,31 @@
 }
 
 .card-body {
-  padding: 1.2500rem;
+  padding: 1.25rem;
 }
 
 .amount-display {
   text-align: center;
-  padding: 1.2500rem;
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  border-radius: 0.5000rem;
-  margin-bottom: 1.2500rem;
+  padding: 1.25rem;
+  background: linear-gradient(135deg, #cff50b 0%, #ef9c3c 100%);
+  border-radius: 0.5rem;
+  margin-bottom: 1.25rem;
 }
 
 .amount-label {
-  font-size: 0.7500rem;
+  font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.9);
-  margin-bottom: 0.5000rem;
+  margin-bottom: 0.5rem;
 }
 
 .amount-value {
-  font-size: 2.6250rem;
+  font-size: 2.625rem;
   font-weight: 700;
   color: white;
 }
 
 .amount-unit {
-  font-size: 0.8750rem;
+  font-size: 0.875rem;
   color: rgba(255, 255, 255, 0.9);
 }
 
@@ -218,7 +221,7 @@
 .info-item {
   display: flex;
   justify-content: space-between;
-  padding: 0.5000rem 0;
+  padding: 0.5rem 0;
   border-bottom: 0.0625rem solid #f3f4f6;
 }
 
@@ -242,24 +245,25 @@
   font-size: 0.8125rem;
   color: #6b7280;
   font-weight: 500;
-  margin-bottom: 0.5000rem;
+  margin-bottom: 0.5rem;
   display: block;
 }
 
 .justification-text {
   margin: 0;
-  padding: 0.7500rem;
+  padding: 0.75rem;
   background: #f9fafb;
-  border-radius: 0.3750rem;
+  border-radius: 0.375rem;
   font-size: 0.8125rem;
   color: #374151;
   line-height: 1.5;
 }
 
-.approval-info, .rejection-info {
+.approval-info,
+.rejection-info {
   margin-top: 1rem;
-  padding: 0.7500rem;
-  border-radius: 0.3750rem;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
 }
 
 .approval-info {
@@ -273,7 +277,7 @@
 }
 
 .rejection-reason {
-  margin: 0.5000rem 0 0 0;
+  margin: 0.5rem 0 0 0;
   font-size: 0.8125rem;
   color: #991b1b;
   font-style: italic;
@@ -281,18 +285,19 @@
 
 .card-actions {
   display: flex;
-  gap: 0.7500rem;
-  padding: 1rem 1.2500rem;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
   background: #f9fafb;
   border-top: 0.0625rem solid #e5e7eb;
 }
 
-.btn-approve, .btn-reject {
+.btn-approve,
+.btn-reject {
   flex: 1;
-  padding: 0.6250rem;
+  padding: 0.625rem;
   border: none;
-  border-radius: 0.3750rem;
-  font-size: 0.8750rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -329,7 +334,7 @@
 .no-data {
   grid-column: 1 / -1;
   text-align: center;
-  padding: 3.7500rem 1.2500rem;
+  padding: 3.75rem 1.25rem;
   color: #6b7280;
   font-size: 1rem;
   font-style: italic;
@@ -352,33 +357,33 @@
 .modal-content {
   background: white;
   padding: 2rem;
-  border-radius: 0.7500rem;
-  max-width: 31.2500rem;
+  border-radius: 0.75rem;
+  max-width: 31.25rem;
   width: 90%;
-  box-shadow: 0 1.2500rem 1.5625rem -0.3125rem rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1.25rem 1.5625rem -0.3125rem rgba(0, 0, 0, 0.1);
 }
 
 .modal-content h3 {
   margin: 0 0 1rem 0;
-  font-size: 1.2500rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: #1a1a1a;
 }
 
 .modal-content p {
-  margin: 0 0 1.5000rem 0;
-  font-size: 0.8750rem;
+  margin: 0 0 1.5rem 0;
+  font-size: 0.875rem;
   color: #6b7280;
 }
 
 .form-group {
-  margin-bottom: 1.5000rem;
+  margin-bottom: 1.5rem;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 0.5000rem;
-  font-size: 0.8750rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
   font-weight: 500;
   color: #374151;
 }
@@ -389,10 +394,10 @@
 
 .modal-textarea {
   width: 100%;
-  padding: 0.7500rem;
+  padding: 0.75rem;
   border: 0.0625rem solid #d1d5db;
-  border-radius: 0.3750rem;
-  font-size: 0.8750rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
   font-family: inherit;
   resize: vertical;
   box-sizing: border-box;
@@ -406,15 +411,16 @@
 
 .modal-actions {
   display: flex;
-  gap: 0.7500rem;
+  gap: 0.75rem;
   justify-content: flex-end;
 }
 
-.btn-cancel, .btn-confirm-reject {
-  padding: 0.6250rem 1.2500rem;
+.btn-cancel,
+.btn-confirm-reject {
+  padding: 0.625rem 1.25rem;
   border: none;
-  border-radius: 0.3750rem;
-  font-size: 0.8750rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;

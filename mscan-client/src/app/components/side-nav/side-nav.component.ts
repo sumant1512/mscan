@@ -103,7 +103,8 @@ export class SideNavComponent implements OnInit {
       children: [
         { label: 'Balance', icon: 'account_balance', route: '/tenant/credits/balance' },
         { label: 'Request Credits', icon: 'add', route: '/tenant/credits/request' },
-        { label: 'Transaction History', icon: 'receipt', route: '/tenant/credits/history' } 
+        { label: 'Pending Requests', icon: 'pending', route: '/tenant/credits/pending' },
+        { label: 'Transaction History', icon: 'receipt', route: '/tenant/credits/history' }
       ]
     },
     {

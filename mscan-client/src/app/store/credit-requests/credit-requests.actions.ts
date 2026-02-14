@@ -7,19 +7,23 @@ import { CreditRequest } from '../../models/rewards.model';
 
 // Load Actions
 export const loadPendingRequests = createAction(
-  '[Credit Requests] Load Pending Requests'
+  '[Credit Requests] Load Pending Requests',
+  props<{ tenantId?: string }>()
 );
 
 export const loadApprovedRequests = createAction(
-  '[Credit Requests] Load Approved Requests'
+  '[Credit Requests] Load Approved Requests',
+  props<{ tenantId?: string }>()
 );
 
 export const loadRejectedRequests = createAction(
-  '[Credit Requests] Load Rejected Requests'
+  '[Credit Requests] Load Rejected Requests',
+  props<{ tenantId?: string }>()
 );
 
 export const loadAllRequests = createAction(
-  '[Credit Requests] Load All Requests'
+  '[Credit Requests] Load All Requests',
+  props<{ tenantId?: string }>()
 );
 
 // Success Actions

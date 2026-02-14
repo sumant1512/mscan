@@ -18,6 +18,15 @@
         <option value="rejected">Rejected</option>
       </select>
     </div>
+
+    <!-- Tenant filter for super admin -->
+    <div class="filter-group" *ngIf="isSuperAdmin">
+      <label for="tenantFilter">Tenant:</label>
+      <select id="tenantFilter" [(ngModel)]="tenantFilter" (change)="onTenantFilterChange()" class="filter-select">
+        <option value="">All Tenants</option>
+        <option *ngFor="let tenant of tenants$ | async" [value]="tenant.id">{{ tenant.tenant_name }}</option>
+      </select>
+    </div>
   </div>
 
   <div *ngIf="loading" class="loading">Loading requests...</div>

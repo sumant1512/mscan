@@ -144,8 +144,9 @@ const productsController = {
         product_name,
         verification_app_id,
         price,
-        currency = 'USD',
         image_url,
+        thumbnail_url,
+        product_images = [],
         template_id,
         attributes = {}
       } = req.body;
@@ -154,6 +155,26 @@ const productsController = {
       if (!product_name) {
         return res.status(400).json({ error: 'Product name is required' });
       }
+
+      if (!thumbnail_url) {
+        return res.status(400).json({ error: 'Thumbnail image is required' });
+      }
+
+      if (!verification_app_id) {
+        return res.status(400).json({ error: 'Verification app is required' });
+      }
+
+      // Get currency from verification app
+      const appResult = await client.query(
+        'SELECT currency FROM verification_apps WHERE id = $1 AND tenant_id = $2',
+        [verification_app_id, tenantId]
+      );
+
+      if (appResult.rows.length === 0) {
+        return res.status(400).json({ error: 'Invalid verification app' });
+      }
+
+      const currency = appResult.rows[0].currency || 'INR';
 
       // Validate attributes if template_id is provided
       if (template_id) {
@@ -171,8 +192,8 @@ const productsController = {
       // Insert product with attributes in JSONB column
       const productResult = await client.query(
         `INSERT INTO products
-         (tenant_id, product_name, price, currency, image_url, verification_app_id, template_id, attributes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         (tenant_id, product_name, price, currency, image_url, thumbnail_url, product_images, verification_app_id, template_id, attributes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING *`,
         [
           tenantId,
@@ -180,7 +201,9 @@ const productsController = {
           price || null,
           currency,
           image_url || null,
-          verification_app_id && verification_app_id !== '' ? verification_app_id : null,
+          thumbnail_url,
+          JSON.stringify(product_images || []),
+          verification_app_id,
           template_id || null,
           JSON.stringify(attributes || {})
         ]
@@ -228,8 +251,9 @@ const productsController = {
       const {
         product_name,
         price,
-        currency,
         image_url,
+        thumbnail_url,
+        product_images,
         is_active,
         template_id,
         attributes
@@ -237,7 +261,7 @@ const productsController = {
 
       // Check if product exists and belongs to tenant
       const existing = await client.query(
-        'SELECT id, template_id FROM products WHERE id = $1 AND tenant_id = $2',
+        'SELECT id, template_id, verification_app_id FROM products WHERE id = $1 AND tenant_id = $2',
         [id, tenantId]
       );
 
@@ -259,24 +283,26 @@ const productsController = {
 
       await client.query('BEGIN');
 
-      // Update product with attributes in JSONB column
+      // Update product with attributes in JSONB column (currency is not updatable - it comes from verification app)
       const result = await client.query(
         `UPDATE products
          SET product_name = COALESCE($1, product_name),
              price = COALESCE($2, price),
-             currency = COALESCE($3, currency),
-             image_url = COALESCE($4, image_url),
-             is_active = COALESCE($5, is_active),
-             template_id = COALESCE($6, template_id),
-             attributes = COALESCE($7, attributes),
+             image_url = COALESCE($3, image_url),
+             thumbnail_url = COALESCE($4, thumbnail_url),
+             product_images = COALESCE($5, product_images),
+             is_active = COALESCE($6, is_active),
+             template_id = COALESCE($7, template_id),
+             attributes = COALESCE($8, attributes),
              updated_at = CURRENT_TIMESTAMP
-         WHERE id = $8 AND tenant_id = $9
+         WHERE id = $9 AND tenant_id = $10
          RETURNING *`,
         [
           product_name,
           price,
-          currency,
           image_url,
+          thumbnail_url,
+          product_images ? JSON.stringify(product_images) : null,
           is_active,
           template_id,
           attributes ? JSON.stringify(attributes) : null,

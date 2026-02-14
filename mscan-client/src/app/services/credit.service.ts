@@ -26,15 +26,41 @@ export class CreditService {
     );
   }
 
-  getMyRequests(): Observable<{ requests: CreditRequest[] }> {
-    return this.http.get<{ requests: CreditRequest[] }>(`${this.apiUrl}/requests/my`);
-  }
-
   getBalance(): Observable<CreditBalance> {
     return this.http.get<CreditBalance>(`${this.apiUrl}/balance`);
   }
 
-  getTransactions(params?: { page?: number; limit?: number; type?: string; tenant_id?: string; app_id?: string }): Observable<{ transactions: CreditTransaction[] }> {
+  // Unified method for getting requests with status filtering
+  // Works for both Super Admin and Tenant Admin with automatic tenant isolation
+  // Status: pending|approved|rejected|history|all
+  getRequests(params?: {
+    status?: string;
+    page?: number;
+    limit?: number;
+    tenant_id?: string;
+  }): Observable<{ requests: CreditRequest[]; pagination: any }> {
+    let httpParams = new HttpParams();
+    if (params?.status) httpParams = httpParams.set('status', params.status);
+    if (params?.page) httpParams = httpParams.set('page', params.page.toString());
+    if (params?.limit) httpParams = httpParams.set('limit', params.limit.toString());
+    if (params?.tenant_id) httpParams = httpParams.set('tenant_id', params.tenant_id);
+
+    return this.http.get<{ requests: CreditRequest[]; pagination: any }>(
+      `${this.apiUrl}/requests`,
+      { params: httpParams }
+    );
+  }
+
+  // Unified method for getting transactions with type filtering
+  // Works for both Super Admin and Tenant Admin with automatic tenant isolation
+  // Type: CREDIT|DEBIT|REFUND|all
+  getTransactions(params?: {
+    page?: number;
+    limit?: number;
+    type?: string;
+    tenant_id?: string;
+    app_id?: string;
+  }): Observable<{ transactions: CreditTransaction[]; pagination: any }> {
     let httpParams = new HttpParams();
     if (params?.page) httpParams = httpParams.set('page', params.page.toString());
     if (params?.limit) httpParams = httpParams.set('limit', params.limit.toString());
@@ -42,23 +68,9 @@ export class CreditService {
     if (params?.tenant_id) httpParams = httpParams.set('tenant_id', params.tenant_id);
     if (params?.app_id) httpParams = httpParams.set('app_id', params.app_id);
 
-    return this.http.get<{ transactions: CreditTransaction[] }>(
+    return this.http.get<{ transactions: CreditTransaction[]; pagination: any }>(
       `${this.apiUrl}/transactions`,
       { params: httpParams }
-    );
-  }
-
-  // Super Admin operations
-  getAllRequests(status: string = 'pending', page: number = 1, limit: number = 20): Observable<{ requests: CreditRequest[]; pagination: any }> {
-    console.log('Fetching all requests with status:', status);
-    const params = new HttpParams()
-      .set('status', status)
-      .set('page', page.toString())
-      .set('limit', limit.toString());
-
-    return this.http.get<{ requests: CreditRequest[]; pagination: any }>(
-      `${this.apiUrl}/requests`,
-      { params }
     );
   }
 

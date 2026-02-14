@@ -12,7 +12,11 @@ export interface Tenant {
   status: 'active' | 'inactive' | 'suspended';
   created_at: string;
   updated_at: string;
+  created_by?: string; // UUID of the super admin who created this tenant
+  created_by_name?: string; // Full name of the creator
+  created_by_email?: string; // Email of the creator
   total_credits_received?: number;
+  pending_credit_requests?: number;
   total_credits_spent?: number;
   credit_balance?: number;
   total_coupons?: number;

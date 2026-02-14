@@ -278,21 +278,59 @@ SELECT * FROM products WHERE tenant_id = $1;
 
 **Application Level:**
 ```javascript
-// Middleware automatically injects tenant context
+// Auth middleware sets user context
 const authenticate = async (req, res, next) => {
   const token = extractToken(req);
   const decoded = jwt.verify(token, JWT_SECRET);
-  req.user = decoded;
-  req.tenantId = decoded.tenantId;  // Tenant context
+  req.user = decoded;  // User context with tenant_id
   next();
 };
 
-// All queries use tenant context
+// Tenant context middleware enforces isolation
+const tenantContextMiddleware = (req, res, next) => {
+  const user = req.user;
+  let tenantId = null;
+
+  if (user.role === 'SUPER_ADMIN') {
+    // Super admin can specify tenant_id for cross-tenant access
+    tenantId = req.query.tenant_id || req.body.tenant_id || null;
+  } else {
+    // Tenant admin MUST use their own tenant
+    tenantId = user.tenant_id;
+
+    // SECURITY: Prevent tenant admin from accessing other tenants
+    const requestedTenantId = req.query.tenant_id || req.body.tenant_id;
+    if (requestedTenantId && requestedTenantId !== tenantId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+  }
+
+  // Attach tenant context
+  req.tenantContext = {
+    tenantId,
+    isSuperAdmin: user.role === 'SUPER_ADMIN',
+    userId: user.id,
+    userRole: user.role
+  };
+
+  next();
+};
+
+// Services use tenant context for automatic filtering
 const getProducts = async (req, res) => {
-  const products = await db.query(
-    'SELECT * FROM products WHERE tenant_id = $1',
-    [req.tenantId]  // Automatic tenant filtering
-  );
+  const { tenantId, isSuperAdmin } = req.tenantContext;
+
+  let query = 'SELECT * FROM products WHERE 1=1';
+  const params = [];
+
+  // Apply tenant filter (unless super admin querying all)
+  if (tenantId) {
+    query += ' AND tenant_id = $1';
+    params.push(tenantId);
+  }
+
+  const products = await db.query(query, params);
+  res.json({ products });
 };
 ```
 

@@ -71,6 +71,12 @@
             <span class="icon">🏷️</span> {{ template.attribute_count || 0 }} attributes
           </span>
           <span class="meta-item">
+            <span class="icon">📦</span> {{ template.product_count || 0 }} products
+          </span>
+          <span class="meta-item">
+            <span class="icon">📱</span> {{ template.app_count || 0 }} apps
+          </span>
+          <span class="meta-item">
             <span class="icon">📅</span> {{ template.created_at | date:'short' }}
           </span>
         </div>
@@ -83,6 +89,8 @@
         <button
           *ngIf="!template.is_system_template"
           class="btn btn-sm btn-outline"
+          [disabled]="!canEditTemplate(template)"
+          [title]="canEditTemplate(template) ? 'Edit template' : 'Cannot edit template with products'"
           (click)="editTemplate(template)"
         >
           Edit
@@ -92,7 +100,21 @@
         </button>
         <button
           *ngIf="!template.is_system_template"
+          class="btn btn-sm btn-outline"
+          [ngClass]="template.is_active ? 'btn-warning' : 'btn-success'"
+          [disabled]="template.is_active && !canDeactivateTemplate(template)"
+          [title]="template.is_active && !canDeactivateTemplate(template) ? 'Cannot deactivate template with products' : (template.is_active ? 'Deactivate template' : 'Activate template')"
+          (click)="toggleTemplateStatus(template)"
+        >
+          {{ template.is_active ? 'Deactivate' : 'Activate' }}
+        </button>
+        <button
+          *ngIf="!template.is_system_template"
           class="btn btn-sm btn-danger"
+          [disabled]="!canDeleteTemplate(template)"
+          [title]="canDeleteTemplate(template) ? 'Permanently delete template' :
+            (template.product_count && template.product_count > 0 ? 'Cannot delete template with products' :
+            (template.app_count && template.app_count > 0 ? 'Cannot delete template assigned to apps' : 'Cannot delete template'))"
           (click)="deleteTemplate(template)"
         >
           Delete

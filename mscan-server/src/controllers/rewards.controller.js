@@ -27,7 +27,8 @@ class RewardsController {
         scan_success_message,
         scan_failure_message,
         post_scan_redirect_url,
-        template_id
+        template_id,
+        currency
       } = req.body;
 
       if (!app_name) {
@@ -70,14 +71,14 @@ class RewardsController {
       const result = await db.query(
         `INSERT INTO verification_apps
          (tenant_id, app_name, code, api_key, description, logo_url, primary_color, secondary_color,
-          welcome_message, scan_success_message, scan_failure_message, post_scan_redirect_url, template_id, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, true)
+          welcome_message, scan_success_message, scan_failure_message, post_scan_redirect_url, template_id, currency, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true)
          RETURNING *`,
         [tenantId, app_name, code, apiKey, description, logo_url, primary_color, secondary_color,
          welcome_message || 'Welcome! Scan your QR code to redeem your reward.',
          scan_success_message || 'Success! Your coupon has been verified.',
          scan_failure_message || 'Sorry, this coupon is not valid.',
-         post_scan_redirect_url, template_id]
+         post_scan_redirect_url, template_id, currency || 'INR']
       );
 
       res.status(201).json({
@@ -115,6 +116,7 @@ class RewardsController {
                 va.is_active,
                 va.tenant_id,
                 va.template_id,
+                va.currency,
                 pt.template_name,
                 va.created_at,
                 va.updated_at,
@@ -162,6 +164,7 @@ class RewardsController {
                 va.is_active,
                 va.tenant_id,
                 va.template_id,
+                va.currency,
                 pt.template_name,
                 va.created_at,
                 va.updated_at,
@@ -172,7 +175,7 @@ class RewardsController {
          LEFT JOIN scans s ON c.id = s.coupon_id
          LEFT JOIN product_templates pt ON va.template_id = pt.id
          WHERE va.id = $1 AND va.tenant_id = $2
-         GROUP BY va.id, va.app_name, va.code, va.description, va.logo_url, va.primary_color, va.secondary_color, va.welcome_message, va.scan_success_message, va.scan_failure_message, va.post_scan_redirect_url, va.is_active, va.tenant_id, va.template_id, pt.template_name, va.created_at, va.updated_at`,
+         GROUP BY va.id, va.app_name, va.code, va.description, va.logo_url, va.primary_color, va.secondary_color, va.welcome_message, va.scan_success_message, va.scan_failure_message, va.post_scan_redirect_url, va.is_active, va.tenant_id, va.template_id, va.currency, pt.template_name, va.created_at, va.updated_at`,
         [id, tenantId]
       );
 
@@ -210,13 +213,14 @@ class RewardsController {
              scan_failure_message = COALESCE($8, scan_failure_message),
              post_scan_redirect_url = COALESCE($9, post_scan_redirect_url),
              template_id = COALESCE($10, template_id),
+             currency = COALESCE($11, currency),
              updated_at = CURRENT_TIMESTAMP
-         WHERE id = $11 AND tenant_id = $12
+         WHERE id = $12 AND tenant_id = $13
          RETURNING *`,
         [updates.app_name, updates.description, updates.logo_url, updates.primary_color,
          updates.secondary_color, updates.welcome_message, updates.scan_success_message,
          updates.scan_failure_message, updates.post_scan_redirect_url,
-         updates.template_id, id, tenantId]
+         updates.template_id, updates.currency, id, tenantId]
       );
 
       if (result.rows.length === 0) {
@@ -337,8 +341,18 @@ class RewardsController {
         });
       }
 
-      // Generate batch ID for batch coupons
-      const batchId = isBatch ? require('crypto').randomUUID() : null;
+      // Create batch record for batch coupons
+      let batchId = null;
+      if (isBatch) {
+        const batchResult = await client.query(
+          `INSERT INTO coupon_batches
+           (tenant_id, verification_app_id, batch_name, total_coupons, batch_status)
+           VALUES ($1, $2, $3, $4, 'draft')
+           RETURNING id`,
+          [tenantId, verification_app_id, description || 'Batch', actualBatchQuantity]
+        );
+        batchId = batchResult.rows[0].id;
+      }
       const maxScansPerCode = 1; // Default: each coupon can be scanned once
       const createdCoupons = [];
       
@@ -411,10 +425,9 @@ class RewardsController {
       // Deduct credits (once for all coupons)
       const newBalance = currentBalance - costCalculation.total;
       await client.query(
-        `UPDATE tenant_credit_balance 
+        `UPDATE tenant_credit_balance
          SET balance = $1,
-             total_spent = total_spent + $2,
-             last_updated = CURRENT_TIMESTAMP
+             total_spent = total_spent + $2
          WHERE tenant_id = $3`,
         [newBalance, costCalculation.total, tenantId]
       );
@@ -548,7 +561,16 @@ class RewardsController {
 
       for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
         const batch = batches[batchIndex];
-        const batchId = require('crypto').randomUUID();
+
+        // Insert batch record into coupon_batches first (foreign key requirement)
+        const batchResult = await client.query(
+          `INSERT INTO coupon_batches
+           (tenant_id, verification_app_id, batch_name, total_coupons, batch_status)
+           VALUES ($1, $2, $3, $4, 'draft')
+           RETURNING id`,
+          [tenantId, verificationAppId, batch.description, batch.quantity]
+        );
+        const batchId = batchResult.rows[0].id;
 
         for (let i = 0; i < batch.quantity; i++) {
           // Generate unique random coupon code
@@ -616,10 +638,9 @@ class RewardsController {
       // Deduct credits (once for all coupons)
       const newBalance = currentBalance - totalCost;
       await client.query(
-        `UPDATE tenant_credit_balance 
+        `UPDATE tenant_credit_balance
          SET balance = $1,
-             total_spent = total_spent + $2,
-             last_updated = CURRENT_TIMESTAMP
+             total_spent = total_spent + $2
          WHERE tenant_id = $3`,
         [newBalance, totalCost, tenantId]
       );
@@ -832,10 +853,9 @@ class RewardsController {
 
         // Update balance with refund
         await client.query(
-          `UPDATE tenant_credit_balance 
+          `UPDATE tenant_credit_balance
            SET balance = $1,
-               total_spent = total_spent - $2,
-               last_updated = CURRENT_TIMESTAMP
+               total_spent = total_spent - $2
            WHERE tenant_id = $3`,
           [newBalance, coupon.credit_cost, tenantId]
         );

@@ -1,0 +1,120 @@
+.approval-container {
+  padding: 1.5000rem;
+  max-width: 75rem;
+  margin: 0 auto;
+}
+
+.header {
+  margin-bottom: 1.5000rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 1.7500rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.loading, .error {
+  padding: 1.2500rem;
+  text-align: center;
+  border-radius: 0.3750rem;
+  margin-bottom: 1.5000rem;
+}
+
+.loading {
+  background: #f0f9ff;
+  color: #0369a1;
+}
+
+.error {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.requests-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(25rem, 1fr));
+  gap: 1.5000rem;
+}
+
+.no-data {
+  padding: 2.5000rem;
+  text-align: center;
+  color: #666;
+  background: white;
+  border-radius: 0.5000rem;
+  border: 0.0625rem dashed #ddd;
+  grid-column: 1 / -1;
+}
+
+/* Buttons */
+.btn {
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background-color: #3498db;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #2980b9;
+}
+
+.btn-secondary {
+  background-color: white;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.btn-secondary:hover {
+  background-color: #f8f9fa;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .approval-container {
+    padding: 1rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-actions .btn {
+    flex: 1;
+  }
+
+  .requests-grid {
+    grid-template-columns: 1fr;
+  }
+}

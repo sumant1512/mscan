@@ -9,6 +9,7 @@ import { environment } from '../../environments/environment';
 import { LoginResponse, UserContext, User, ApiResponse } from '../models';
 import { SubdomainService } from './subdomain.service';
 import { AuthContextFacade } from '../store/auth-context';
+import { InactivityService } from './inactivity.service';
 
 @Injectable({
   providedIn: 'root'
@@ -39,7 +40,8 @@ export class AuthService {
   constructor(
     private http: HttpClient,
     private router: Router,
-    private subdomainService: SubdomainService
+    private subdomainService: SubdomainService,
+    private inactivityService: InactivityService
   ) {
     // Sync NgRx store user to currentUserSubject for backward compatibility
     this.authContextFacade.currentUser$.subscribe(user => {
@@ -62,6 +64,12 @@ export class AuthService {
       }
     });
 
+    // Subscribe to inactivity events to auto-logout
+    this.inactivityService.inactive$.subscribe(() => {
+      console.log('User inactive for 30 minutes - auto logout');
+      this.logout();
+    });
+
     // Check if user is already logged in
     if (this.getAccessToken()) {
       // Validate subdomain matches stored value
@@ -78,6 +86,7 @@ export class AuthService {
 
       this.loadUserContext();
       this.startTokenRefreshTimer();
+      this.inactivityService.startMonitoring();
     }
   }
 
@@ -109,6 +118,7 @@ export class AuthService {
             );
             this.loadUserContext();
             this.startTokenRefreshTimer();
+            this.inactivityService.startMonitoring();
 
             // Redirect tenant users to their subdomain
             const userType = response.data.userType;
@@ -174,6 +184,7 @@ export class AuthService {
     }
 
     this.stopTokenRefreshTimer();
+    this.inactivityService.stopMonitoring();
     this.clearTokens();
     this.currentUserSubject.next(null);
 
@@ -242,25 +253,34 @@ export class AuthService {
   /**
    * Start automatic token refresh timer
    * Refreshes token every 25 minutes (before 30-minute expiration)
+   * ONLY if user is active - prevents refresh for inactive users
    */
   private startTokenRefreshTimer(): void {
     // Clear any existing timer
     this.stopTokenRefreshTimer();
-    
+
     // Set up new timer
     this.tokenRefreshTimer = setInterval(() => {
       if (this.getRefreshToken()) {
-        this.refreshToken().subscribe({
-          next: () => {
-            console.log('Token refreshed automatically');
-          },
-          error: (err) => {
-            console.error('Auto token refresh failed:', err);
-            // If refresh fails, stop timer and logout
-            this.stopTokenRefreshTimer();
-            this.logout();
-          }
-        });
+        // Check if user is active before refreshing token
+        if (this.inactivityService.isUserActive()) {
+          console.log('User is active - refreshing token');
+          this.refreshToken().subscribe({
+            next: () => {
+              console.log('Token refreshed automatically');
+            },
+            error: (err) => {
+              console.error('Auto token refresh failed:', err);
+              // If refresh fails, stop timer and logout
+              this.stopTokenRefreshTimer();
+              this.logout();
+            }
+          });
+        } else {
+          console.log('User is inactive - skipping token refresh (will auto-logout soon)');
+          // Don't refresh token for inactive users
+          // The inactivity service will trigger logout when timeout is reached
+        }
       } else {
         // No refresh token available, stop timer
         this.stopTokenRefreshTimer();

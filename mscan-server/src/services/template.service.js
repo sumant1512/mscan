@@ -9,19 +9,23 @@ class TemplateService {
     try {
       let query = `
         SELECT
-          id,
-          tenant_id,
-          template_name,
-          industry_type,
-          description,
-          icon,
-          variant_config,
-          custom_fields,
-          is_active,
-          created_at,
-          updated_at
-        FROM product_templates
-        WHERE tenant_id = $1
+          pt.id,
+          pt.tenant_id,
+          pt.template_name,
+          pt.industry_type,
+          pt.description,
+          pt.icon,
+          pt.variant_config,
+          pt.custom_fields,
+          pt.is_active,
+          pt.created_at,
+          pt.updated_at,
+          COALESCE(COUNT(DISTINCT p.id), 0)::INTEGER as product_count,
+          COALESCE(COUNT(DISTINCT va.id), 0)::INTEGER as app_count
+        FROM product_templates pt
+        LEFT JOIN products p ON pt.id = p.template_id
+        LEFT JOIN verification_apps va ON pt.id = va.template_id
+        WHERE pt.tenant_id = $1
       `;
 
       const params = [tenantId];
@@ -29,12 +33,12 @@ class TemplateService {
 
       // Filter by active status
       if (filters.is_active !== undefined) {
-        query += ` AND is_active = $${paramIndex}`;
+        query += ` AND pt.is_active = $${paramIndex}`;
         params.push(filters.is_active);
         paramIndex++;
       }
 
-      query += ` ORDER BY template_name ASC`;
+      query += ` GROUP BY pt.id ORDER BY pt.template_name ASC`;
 
       const result = await db.query(query, params);
       return result.rows;
@@ -51,19 +55,24 @@ class TemplateService {
     try {
       const query = `
         SELECT
-          id,
-          tenant_id,
-          template_name,
-          industry_type,
-          description,
-          icon,
-          variant_config,
-          custom_fields,
-          is_active,
-          created_at,
-          updated_at
-        FROM product_templates
-        WHERE id = $1 AND tenant_id = $2
+          pt.id,
+          pt.tenant_id,
+          pt.template_name,
+          pt.industry_type,
+          pt.description,
+          pt.icon,
+          pt.variant_config,
+          pt.custom_fields,
+          pt.is_active,
+          pt.created_at,
+          pt.updated_at,
+          COALESCE(COUNT(DISTINCT p.id), 0)::INTEGER as product_count,
+          COALESCE(COUNT(DISTINCT va.id), 0)::INTEGER as app_count
+        FROM product_templates pt
+        LEFT JOIN products p ON pt.id = p.template_id
+        LEFT JOIN verification_apps va ON pt.id = va.template_id
+        WHERE pt.id = $1 AND pt.tenant_id = $2
+        GROUP BY pt.id
       `;
 
       const result = await db.query(query, [templateId, tenantId]);
@@ -154,6 +163,16 @@ class TemplateService {
    */
   async updateTemplate(templateId, tenantId, updates) {
     try {
+      // Check if template has products before allowing any updates
+      const usageCheck = await db.query(
+        'SELECT COUNT(*) as count FROM products WHERE template_id = $1',
+        [templateId]
+      );
+
+      if (parseInt(usageCheck.rows[0].count) > 0) {
+        throw new Error('Cannot update template that has products. Please delete all products first or create a new template.');
+      }
+
       const {
         template_name,
         industry_type,
@@ -255,23 +274,33 @@ class TemplateService {
   }
 
   /**
-   * Delete template (soft delete - set is_active to false)
+   * Delete template (hard delete - permanently remove)
    */
   async deleteTemplate(templateId, tenantId) {
     try {
       // Check if template is used by products
-      const usageCheck = await db.query(
+      const productCheck = await db.query(
         'SELECT COUNT(*) as count FROM products WHERE template_id = $1',
         [templateId]
       );
 
-      if (parseInt(usageCheck.rows[0].count) > 0) {
-        throw new Error('Cannot delete template that is in use by products');
+      if (parseInt(productCheck.rows[0].count) > 0) {
+        throw new Error('Cannot delete template that has products. Please delete all products first.');
       }
 
+      // Check if template is assigned to any verification apps
+      const appCheck = await db.query(
+        'SELECT COUNT(*) as count FROM verification_apps WHERE template_id = $1',
+        [templateId]
+      );
+
+      if (parseInt(appCheck.rows[0].count) > 0) {
+        throw new Error('Cannot delete template that is assigned to verification apps. Please unassign from all apps first.');
+      }
+
+      // Hard delete the template
       const query = `
-        UPDATE product_templates
-        SET is_active = false, updated_at = CURRENT_TIMESTAMP
+        DELETE FROM product_templates
         WHERE id = $1 AND tenant_id = $2
         RETURNING id
       `;
@@ -285,6 +314,57 @@ class TemplateService {
       return { success: true, id: result.rows[0].id };
     } catch (error) {
       console.error('Error deleting template:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Toggle template status (activate/deactivate)
+   */
+  async toggleTemplateStatus(templateId, tenantId) {
+    try {
+      // Get current template status
+      const template = await this.getTemplateById(templateId, tenantId);
+
+      if (!template) {
+        throw new Error('Template not found');
+      }
+
+      // Check if template has products before allowing deactivation
+      if (template.is_active && template.product_count > 0) {
+        throw new Error('Cannot deactivate template that has products. Please delete all products first.');
+      }
+
+      // Toggle status
+      const newStatus = !template.is_active;
+
+      const query = `
+        UPDATE product_templates
+        SET is_active = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2 AND tenant_id = $3
+        RETURNING
+          id,
+          tenant_id,
+          template_name,
+          industry_type,
+          description,
+          icon,
+          variant_config,
+          custom_fields,
+          is_active,
+          created_at,
+          updated_at
+      `;
+
+      const result = await db.query(query, [newStatus, templateId, tenantId]);
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error toggling template status:', error);
       throw error;
     }
   }

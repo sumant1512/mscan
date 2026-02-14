@@ -12,13 +12,15 @@ import {
   Tag,
   CreateProductRequest,
   ProductVariant,
-  DescriptionSection
+  DescriptionSection,
+  ProductImage
 } from '../../models/templates.model';
+import { RemainingCharsPipe } from '../../pipes/remaining-chars.pipe';
 
 @Component({
   selector: 'app-template-product-form',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RemainingCharsPipe],
   templateUrl: './template-product-form.component.html',
   styleUrls: ['./template-product-form.component.css']
 })
@@ -45,7 +47,7 @@ export class TemplateProductFormComponent implements OnInit {
     product_name: '',
     verification_app_id: '',
     template_id: '',
-    currency: 'INR',
+    thumbnail_url: '',
     is_active: true
   };
 
@@ -57,6 +59,9 @@ export class TemplateProductFormComponent implements OnInit {
 
   // Description Sections
   descriptionSections: DescriptionSection[] = [];
+
+  // Product Images
+  productImages: ProductImage[] = [];
 
   constructor(
     private productsService: ProductsService,
@@ -78,7 +83,7 @@ export class TemplateProductFormComponent implements OnInit {
       }
     });
 
-    // Load available apps and react to changes from header
+    // Load available apps and auto-set selected app from header
     this.appContextService.appContext$.subscribe(context => {
       console.log('=== [TemplateProductForm] App context subscription fired ===');
       console.log('[TemplateProductForm] Context:', context);
@@ -86,6 +91,7 @@ export class TemplateProductFormComponent implements OnInit {
 
       this.availableApps = context.availableApps;
       const newSelectedAppId = context.selectedAppId;
+      this.selectedAppId = newSelectedAppId;
 
       console.log('[TemplateProductForm] Available apps count:', this.availableApps.length);
       console.log('[TemplateProductForm] New selected app ID from context:', newSelectedAppId);
@@ -103,7 +109,7 @@ export class TemplateProductFormComponent implements OnInit {
         if (appChanged || !this.previousAppId) {
           console.log('[TemplateProductForm] Loading template for app:', appToSelect);
 
-          // Update the selected app
+          // Update the selected app (automatically from header)
           this.product.verification_app_id = appToSelect;
           this.previousAppId = appToSelect;
 
@@ -219,9 +225,14 @@ export class TemplateProductFormComponent implements OnInit {
           product_name: product.product_name,
           verification_app_id: product.verification_app_id,
           template_id: product.template_id,
-          currency: product.currency || 'INR',
+          thumbnail_url: product.thumbnail_url || '',
           is_active: product.is_active !== false
         };
+
+        // Load product images
+        if (product.product_images && Array.isArray(product.product_images)) {
+          this.productImages = product.product_images;
+        }
 
         // Load template and then populate dynamic fields
         this.templateService.getTemplateById(product.template_id).subscribe({
@@ -429,7 +440,8 @@ export class TemplateProductFormComponent implements OnInit {
       product_name: this.product.product_name,
       verification_app_id: this.product.verification_app_id,
       template_id: this.product.template_id,
-      currency: this.product.currency,
+      thumbnail_url: this.product.thumbnail_url || '',
+      product_images: this.productImages,
       tag_ids: this.selectedTagIds.length > 0 ? this.selectedTagIds : undefined,
       is_active: this.product.is_active,
       attributes: {
@@ -472,9 +484,6 @@ export class TemplateProductFormComponent implements OnInit {
     this.router.navigate(['/tenant/products']);
   }
 
-  getRemainingChars(text: string): number {
-    return 250 - (text?.length || 0);
-  }
 
   /**
    * Get dimension labels joined with 'and'
@@ -484,5 +493,59 @@ export class TemplateProductFormComponent implements OnInit {
     return this.selectedTemplate.variant_config.dimensions
       .map(d => d.attribute_name)
       .join(' and ');
+  }
+
+  // Product Images Management
+  addProductImage(): void {
+    this.productImages.push({
+      url: '',
+      is_first: this.productImages.length === 0,
+      order: this.productImages.length
+    });
+  }
+
+  removeProductImage(index: number): void {
+    const wasFirst = this.productImages[index].is_first;
+    this.productImages.splice(index, 1);
+
+    // Reorder remaining images
+    this.productImages.forEach((img, idx) => {
+      img.order = idx;
+    });
+
+    // If removed image was first, mark next one as first
+    if (wasFirst && this.productImages.length > 0) {
+      this.productImages[0].is_first = true;
+    }
+  }
+
+  setFirstImage(index: number): void {
+    // Unmark all as first
+    this.productImages.forEach(img => img.is_first = false);
+    // Mark selected as first
+    this.productImages[index].is_first = true;
+  }
+
+  trackByIndex(index: number): number {
+    return index;
+  }
+
+  trackByAttributeKey(index: number, item: any): string {
+    return item.attribute_key || index;
+  }
+
+  trackById(index: number, item: any): string {
+    return item.id || index;
+  }
+
+  getSelectedAppName(): string {
+    if (this.isEditMode) {
+      // In edit mode, find the app by the product's verification_app_id
+      const app = this.availableApps.find(a => a.verification_app_id === this.product.verification_app_id);
+      return app?.app_name || '';
+    }
+    // In create mode, use the selected app from header
+    const app = this.availableApps.find(a => a.verification_app_id === this.selectedAppId);
+    return app?.app_name || '';
   }
 }

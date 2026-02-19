@@ -1,7 +1,8 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Observable, Subscription, map } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { AppContextService, AppContextState } from '../../services/app-context.service';
 import { VerificationApp } from '../../store/verification-apps/verification-apps.models';
 import { VerificationAppsFacade } from '../../store/verification-apps';
@@ -14,10 +15,11 @@ import { VerificationAppsFacade } from '../../store/verification-apps';
   styleUrls: ['./app-selector.component.css'],
 })
 export class AppSelectorComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   appContext$: Observable<AppContextState>;
   availableApps$: Observable<VerificationApp[]>;
-  selectedAppId: string | null = null;
-  private subscription?: Subscription;
+  selectedAppId: VerificationApp | null = null;
 
   constructor(
     private appContextService: AppContextService,
@@ -28,19 +30,20 @@ export class AppSelectorComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Subscribe only to sync selectedAppId for the ngModel binding
-    this.subscription = this.appContext$.subscribe((context) => {
-      this.selectedAppId = context.selectedAppId;
+    this.verificationAppsFacade.selectedApp$.pipe(takeUntil(this.destroy$)).subscribe((app) => {
+      this.selectedAppId = app ? app : null;
     });
 
     this.appContextService.restoreSelection();
   }
 
   ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   onAppChange(): void {
-    this.appContextService.selectApp(this.selectedAppId);
+    this.verificationAppsFacade.selectApp(this.selectedAppId);
+    this.appContextService.selectApp(this.selectedAppId?.verification_app_id);
   }
 }

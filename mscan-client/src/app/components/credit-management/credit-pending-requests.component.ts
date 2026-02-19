@@ -1,11 +1,12 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { CreditService } from '../../services/credit.service';
 import { AuthService } from '../../services/auth.service';
 import { CreditRequest } from '../../models/rewards.model';
 import { CreditCardComponent, CreditCardData } from '../shared/credit-card/credit-card.component';
-import { finalize } from 'rxjs/operators';
+import { LoadingService } from '../../shared/services/loading.service';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
 
 @Component({
   selector: 'app-credit-pending-requests',
@@ -15,9 +16,11 @@ import { finalize } from 'rxjs/operators';
   styleUrls: ['./credit-pending-requests.component.css']
 })
 export class CreditPendingRequestsComponent implements OnInit {
+  private loadingService = inject(LoadingService);
+
   pendingRequests: CreditRequest[] = [];
   cardData: CreditCardData[] = [];
-  loading = false;
+  loading$ = this.loadingService.loading$;
   error = '';
   count = 0;
 
@@ -38,15 +41,11 @@ export class CreditPendingRequestsComponent implements OnInit {
   }
 
   loadPendingRequests() {
-    this.loading = true;
     this.error = '';
 
     // Use unified getRequests method with status='pending'
     this.creditService.getRequests({ status: 'pending', page: 1, limit: 100 })
-      .pipe(finalize(() => {
-        this.loading = false;
-        this.cdr.detectChanges();
-      }))
+      .pipe(this.loadingService.wrapLoading())
       .subscribe({
         next: (response) => {
           this.pendingRequests = response.requests || [];
@@ -68,8 +67,7 @@ export class CreditPendingRequestsComponent implements OnInit {
           this.cdr.detectChanges();
         },
         error: (err) => {
-          console.error('Load pending requests error:', err);
-          this.error = err.error?.error || err.message || 'Failed to load pending requests';
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to load pending requests');
           this.cdr.detectChanges();
         }
       });

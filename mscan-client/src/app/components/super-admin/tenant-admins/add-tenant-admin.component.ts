@@ -2,14 +2,16 @@
  * Add Tenant Admin Component
  * Form for creating new Tenant Admin users
  */
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { Observable, Subject } from 'rxjs';
+import { map, takeUntil } from 'rxjs/operators';
 import { TenantAdminService } from '../../../services/tenant-admin.service';
 import { TenantsFacade } from '../../../store/tenants';
 import { Tenant, CreateTenantAdminRequest } from '../../../models/tenant-admin.model';
-import { Observable, map } from 'rxjs';
+import { HttpErrorHandler } from '../../../shared/utils/http-error.handler';
 
 @Component({
   selector: 'app-add-tenant-admin',
@@ -18,11 +20,12 @@ import { Observable, map } from 'rxjs';
   templateUrl: './add-tenant-admin.component.html',
   styleUrls: ['./add-tenant-admin.component.css']
 })
-export class AddTenantAdminComponent implements OnInit {
+export class AddTenantAdminComponent implements OnInit, OnDestroy {
   private tenantAdminService = inject(TenantAdminService);
   private tenantsFacade = inject(TenantsFacade);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private destroy$ = new Subject<void>();
 
   saving = false;
   error = '';
@@ -50,13 +53,20 @@ export class AddTenantAdminComponent implements OnInit {
 
   ngOnInit() {
     // Check for pre-selected tenant from query params
-    this.route.queryParams.subscribe(params => {
-      if (params['tenantId']) {
-        this.selectedTenantId = params['tenantId'];
-        this.selectedTenantName = params['tenantName'] || '';
-        this.tenantSearch = this.selectedTenantName;
-      }
-    });
+    this.route.queryParams
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        if (params['tenantId']) {
+          this.selectedTenantId = params['tenantId'];
+          this.selectedTenantName = params['tenantName'] || '';
+          this.tenantSearch = this.selectedTenantName;
+        }
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   onTenantSearchChange() {
@@ -137,40 +147,39 @@ export class AddTenantAdminComponent implements OnInit {
     const tempPassword = this.generateTempPassword();
     const payload = { ...this.formData, password: tempPassword };
 
-    this.tenantAdminService.createTenantAdmin(this.selectedTenantId!, payload).subscribe({
-      next: (response) => {
-        this.saving = false;
-        this.successMessage = `Tenant Admin created successfully for ${this.selectedTenantName}`;
-        
-        if (response.data.welcome_email_sent) {
-          this.successMessage += '. Welcome email sent.';
-        } else if (response.warnings && response.warnings.length > 0) {
-          this.successMessage += '. However, welcome email could not be sent.';
-        }
+    this.tenantAdminService.createTenantAdmin(this.selectedTenantId!, payload)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.saving = false;
+          this.successMessage = `Tenant Admin created successfully for ${this.selectedTenantName}`;
 
-        // Reload tenants to update admin counts
-        this.tenantsFacade.loadTenants();
+          if (response.data.welcome_email_sent) {
+            this.successMessage += '. Welcome email sent.';
+          } else if (response.warnings && response.warnings.length > 0) {
+            this.successMessage += '. However, welcome email could not be sent.';
+          }
 
-        // Reset form
-        setTimeout(() => {
-          this.router.navigate(['/super-admin/tenant-admins/tenant', this.selectedTenantId]);
-        }, 2000);
-      },
-      error: (err) => {
-        console.error('Failed to create Tenant Admin:', err);
-        this.saving = false;
-        
-        if (err.status === 409) {
-          this.error = 'A user with this email already exists in this tenant';
-        } else if (err.status === 404) {
-          this.error = 'Tenant not found';
-        } else if (err.error && err.error.message) {
-          this.error = err.error.message;
-        } else {
-          this.error = 'Failed to create Tenant Admin. Please try again.';
+          // Reload tenants to update admin counts
+          this.tenantsFacade.loadTenants();
+
+          // Reset form
+          setTimeout(() => {
+            this.router.navigate(['/super-admin/tenant-admins/tenant', this.selectedTenantId]);
+          }, 2000);
+        },
+        error: (err) => {
+          this.saving = false;
+
+          if (err.status === 409) {
+            this.error = 'A user with this email already exists in this tenant';
+          } else if (err.status === 404) {
+            this.error = 'Tenant not found';
+          } else {
+            this.error = HttpErrorHandler.getMessage(err, 'Failed to create Tenant Admin. Please try again.');
+          }
         }
-      }
-    });
+      });
   }
 
   cancel() {

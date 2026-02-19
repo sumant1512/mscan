@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { VerificationApp, Coupon, Scan, ScanAnalytics } from '../models/rewards.model';
 import { SubdomainService } from './subdomain.service';
+import { ApiResponse } from '../models';
 
 @Injectable({
   providedIn: 'root'
@@ -25,8 +26,8 @@ export class RewardsService {
     );
   }
 
-  getVerificationAppById(id: string): Observable<{ app: VerificationApp }> {
-    return this.http.get<{ app: VerificationApp }>(`${this.apiUrl}/verification-apps/${id}`);
+  getVerificationAppById(id: string): Observable<ApiResponse<{ app: VerificationApp }>> {
+    return this.http.get<ApiResponse<{ app: VerificationApp }>>(`${this.apiUrl}/verification-apps/${id}`);
   }
 
   updateVerificationApp(id: string, app: Partial<VerificationApp>): Observable<{ message: string; app: VerificationApp }> {
@@ -51,7 +52,7 @@ export class RewardsService {
     );
   }
 
-  getCoupons(params?: { status?: string; verification_app_id?: string; page?: number; limit?: number; search?: string }): Observable<{ coupons: Coupon[]; pagination?: { page: number; limit: number; total: number; hasMore: boolean } }> {
+  getCoupons(params?: { status?: string; verification_app_id?: string; page?: number; limit?: number; search?: string }): Observable<ApiResponse<{ coupons: Coupon[]; pagination?: { page: number; limit: number; total: number; hasMore: boolean } }>> {
     let httpParams = new HttpParams();
     if (params?.status) httpParams = httpParams.set('status', params.status);
     if (params?.verification_app_id) httpParams = httpParams.set('verification_app_id', params.verification_app_id);
@@ -59,11 +60,11 @@ export class RewardsService {
     if (params?.limit) httpParams = httpParams.set('limit', params.limit.toString());
     if (params?.search) httpParams = httpParams.set('search', params.search);
 
-    return this.http.get<{ coupons: Coupon[]; pagination?: { page: number; limit: number; total: number; hasMore: boolean } }>(`${this.apiUrl}/coupons`, { params: httpParams });
+    return this.http.get<ApiResponse<{ coupons: Coupon[]; pagination?: { page: number; limit: number; total: number; hasMore: boolean } }>>(`${this.apiUrl}/coupons`, { params: httpParams });
   }
 
-  getCouponById(id: string): Observable<{ coupon: Coupon }> {
-    return this.http.get<{ coupon: Coupon }>(`${this.apiUrl}/coupons/${id}`);
+  getCouponById(id: string): Observable<ApiResponse<{ coupon: Coupon }>> {
+    return this.http.get<ApiResponse<{ coupon: Coupon }>>(`${this.apiUrl}/coupons/${id}`);
   }
 
   updateCouponStatus(id: string, status: 'active' | 'inactive'): Observable<{ message: string; coupon: Coupon }> {

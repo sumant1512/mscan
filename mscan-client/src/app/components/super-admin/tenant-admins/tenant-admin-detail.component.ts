@@ -1,8 +1,8 @@
 import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, Subscription, combineLatest, of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { Observable, Subject, of } from 'rxjs';
+import { map, takeUntil } from 'rxjs/operators';
 import { TenantsFacade } from '../../../store/tenants';
 import { TenantAdmin } from '../../../models/tenant-admin.model';
 
@@ -17,6 +17,7 @@ export class TenantAdminDetailComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private tenantsFacade = inject(TenantsFacade);
+  private destroy$ = new Subject<void>();
 
   tenantId: string | null = null;
   tenantName$: Observable<string> = of('');
@@ -24,11 +25,9 @@ export class TenantAdminDetailComponent implements OnInit, OnDestroy {
   admins$: Observable<TenantAdmin[]> = of([]);
   loading$: Observable<boolean> = this.tenantsFacade.loading$;
   error$: Observable<string | null> = this.tenantsFacade.error$;
-  
+
   activeAdminsCount$: Observable<number> = of(0);
   inactiveAdminsCount$: Observable<number> = of(0);
-
-  private subscription?: Subscription;
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('tenantId');
@@ -41,18 +40,21 @@ export class TenantAdminDetailComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadTenantAdmins(): void {
     if (!this.tenantId) return;
 
     // Load tenants if not already loaded
-    this.subscription = this.tenantsFacade.loaded$.subscribe(loaded => {
-      if (!loaded) {
-        this.tenantsFacade.loadTenants();
-      }
-    });
+    this.tenantsFacade.loaded$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(loaded => {
+        if (!loaded) {
+          this.tenantsFacade.loadTenants();
+        }
+      });
 
     const tenantId = this.tenantId;
 
@@ -125,9 +127,8 @@ export class TenantAdminDetailComponent implements OnInit, OnDestroy {
   copyEmail(email: string): void {
     navigator.clipboard.writeText(email).then(() => {
       // Could show a toast notification here
-      console.log('Email copied to clipboard:', email);
     }).catch(err => {
-      console.error('Failed to copy email:', err);
+      // Error copying email
     });
   }
 }

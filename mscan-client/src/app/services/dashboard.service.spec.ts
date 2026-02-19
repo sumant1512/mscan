@@ -56,12 +56,12 @@ describe('DashboardService', () => {
 
     it('should fetch super admin dashboard stats', async () => {
       const mockResponse = {
-        success: true,
+        status: true,
         data: mockSuperAdminDashboard
       };
 
       service.getDashboardStats().subscribe(response => {
-        expect(response.success).toBe(true);
+        expect(response.status).toBe(true);
         expect(response.data).toEqual(mockSuperAdminDashboard);
         const data = response.data as SuperAdminDashboard;
         expect(data.totalTenants).toBe(10);
@@ -76,7 +76,7 @@ describe('DashboardService', () => {
 
     it('should include recent tenants in super admin stats', async () => {
       const mockResponse = {
-        success: true,
+        status: true,
         data: mockSuperAdminDashboard
       };
 
@@ -118,12 +118,12 @@ describe('DashboardService', () => {
 
     it('should fetch tenant dashboard stats', async () => {
       const mockResponse = {
-        success: true,
+        status: true,
         data: mockTenantDashboard
       };
 
       service.getDashboardStats().subscribe(response => {
-        expect(response.success).toBe(true);
+        expect(response.status).toBe(true);
         const data = response.data as TenantDashboard;
         expect(data.tenant.companyName).toBe('Test Company');
         expect(data.totalUsers).toBe(15);
@@ -136,7 +136,7 @@ describe('DashboardService', () => {
 
     it('should include recent activity in tenant stats', async () => {
       const mockResponse = {
-        success: true,
+        status: true,
         data: mockTenantDashboard
       };
 
@@ -202,12 +202,12 @@ describe('DashboardService', () => {
 
     it('should handle API failure response', async () => {
       const mockResponse = {
-        success: false,
+        status: false,
         message: 'Failed to fetch dashboard data'
       };
 
       service.getDashboardStats().subscribe(response => {
-        expect(response.success).toBe(false);
+        expect(response.status).toBe(false);
         expect(response.message).toBe('Failed to fetch dashboard data');
       });
 
@@ -222,7 +222,7 @@ describe('DashboardService', () => {
 
       const req = httpMock.expectOne(`${apiUrl}/dashboard/stats`);
       expect(req.request.url).toBe(`${apiUrl}/dashboard/stats`);
-      req.flush({ success: true });
+      req.flush({ status: true });
     });
 
     it('should use GET method', async () => {
@@ -230,7 +230,7 @@ describe('DashboardService', () => {
 
       const req = httpMock.expectOne(`${apiUrl}/dashboard/stats`);
       expect(req.request.method).toBe('GET');
-      req.flush({ success: true });
+      req.flush({ status: true });
     });
   });
 
@@ -238,7 +238,7 @@ describe('DashboardService', () => {
     it('should handle both dashboard types in response', async () => {
       // This test verifies that the service can handle either SuperAdminDashboard or TenantDashboard
       const mockResponse = {
-        success: true,
+        status: true,
         data: {
           totalTenants: 5,
           totalUsers: 20,
@@ -249,7 +249,7 @@ describe('DashboardService', () => {
       };
 
       service.getDashboardStats().subscribe(response => {
-        expect(response.success).toBe(true);
+        expect(response.status).toBe(true);
         expect(response.data).toBeDefined();
       });
 
@@ -261,7 +261,7 @@ describe('DashboardService', () => {
   describe('Multiple Requests', () => {
     it('should handle multiple concurrent requests', async () => {
       const mockResponse = {
-        success: true,
+        status: true,
         data: {
           totalTenants: 5,
           totalUsers: 20,

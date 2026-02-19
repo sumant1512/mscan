@@ -2,13 +2,17 @@
  * Tenant Users List Component
  * Displays and manages tenant users with permissions
  */
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { TenantUsersService } from '../../services/tenant-users.service';
 import { AuthService } from '../../services/auth.service';
 import { TenantUser } from '../../models';
+import { LoadingService } from '../../shared/services/loading.service';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
 
 @Component({
   selector: 'app-tenant-users-list',
@@ -17,9 +21,13 @@ import { TenantUser } from '../../models';
   templateUrl: './tenant-users-list.component.html',
   styleUrls: ['./tenant-users-list.component.css']
 })
-export class TenantUsersListComponent implements OnInit {
+export class TenantUsersListComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   users: TenantUser[] = [];
-  loading = false;
+  private loadingService = inject(LoadingService);
+
+  loading$ = this.loadingService.loading$;
   error = '';
   successMessage = '';
   searchQuery = '';
@@ -57,15 +65,18 @@ export class TenantUsersListComponent implements OnInit {
     this.loadUsers();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   loadUsers() {
-    this.loading = true;
     this.error = '';
     this.successMessage = '';
 
     const currentUser = this.authService.getCurrentUser();
     if (!currentUser || !currentUser.tenant?.id) {
       this.error = 'No tenant context available';
-      this.loading = false;
       return;
     }
 
@@ -76,24 +87,27 @@ export class TenantUsersListComponent implements OnInit {
       limit: this.itemsPerPage
     };
 
-    this.tenantUsersService.listTenantUsers(currentUser.tenant.id, filters).subscribe({
-      next: (response) => {
-        if (response.success && response.data) {
-          this.users = response.data.users || [];
-          this.totalUsers = response.data.pagination.total;
-          this.totalPages = response.data.pagination.pages;
-          this.currentPage = response.data.pagination.page;
+    this.tenantUsersService.listTenantUsers(currentUser.tenant.id, filters)
+      .pipe(
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (response) => {
+          if (response.status && response.data) {
+            this.users = response.data.users || [];
+            this.totalUsers = response.data.pagination.total;
+            this.totalPages = response.data.pagination.pages;
+            this.currentPage = response.data.pagination.page;
+          }
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to load users');
+          this.users = [];
+          this.cdr.detectChanges();
         }
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        this.error = err.error?.message || 'Failed to load users';
-        this.users = [];
-        this.loading = false;
-        this.cdr.detectChanges();
-      }
-    });
+      });
   }
 
   onSearch() {
@@ -137,22 +151,25 @@ export class TenantUsersListComponent implements OnInit {
       return;
     }
 
-    this.loading = true;
-    this.tenantUsersService.deleteTenantUser(currentUser.tenant.id, this.selectedUser.id).subscribe({
-      next: (response) => {
-        if (response.success) {
-          this.successMessage = `User "${this.selectedUser?.full_name}" deleted successfully`;
+    this.tenantUsersService.deleteTenantUser(currentUser.tenant.id, this.selectedUser.id)
+      .pipe(
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (response) => {
+          if (response.status) {
+            this.successMessage = `User "${this.selectedUser?.full_name}" deleted successfully`;
+            this.closeDeleteModal();
+            this.loadUsers();
+          }
+        },
+        error: (err) => {
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to delete user');
           this.closeDeleteModal();
-          this.loadUsers();
+          this.cdr.detectChanges();
         }
-      },
-      error: (err) => {
-        this.error = err.error?.message || 'Failed to delete user';
-        this.loading = false;
-        this.closeDeleteModal();
-        this.cdr.detectChanges();
-      }
-    });
+      });
   }
 
   // Pagination methods

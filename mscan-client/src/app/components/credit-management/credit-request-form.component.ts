@@ -1,8 +1,11 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { CreditService } from '../../services/credit.service';
-import { finalize } from 'rxjs/operators';
+import { LoadingService } from '../../shared/services/loading.service';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
 
 @Component({
   selector: 'app-credit-request-form',
@@ -11,9 +14,13 @@ import { finalize } from 'rxjs/operators';
   templateUrl: './credit-request-form.component.html',
   styleUrls: ['./credit-request-form.component.css']
 })
-export class CreditRequestFormComponent implements OnInit {
+export class CreditRequestFormComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   requestForm: FormGroup;
-  loading = false;
+  private loadingService = inject(LoadingService);
+
+  loading$ = this.loadingService.loading$;
   error = '';
   success = '';
   currentBalance = 0;
@@ -33,16 +40,24 @@ export class CreditRequestFormComponent implements OnInit {
     this.loadBalance();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   loadBalance() {
-    this.creditService.getBalance().subscribe({
-      next: (balance) => {
-        this.currentBalance = balance.balance;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Failed to load balance:', err);
-      }
-    });
+    this.creditService.getBalance()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (balance) => {
+          this.currentBalance = balance.balance;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to load balance');
+          this.cdr.detectChanges();
+        }
+      });
   }
 
   onSubmit() {
@@ -53,23 +68,26 @@ export class CreditRequestFormComponent implements OnInit {
       return;
     }
 
-    this.loading = true;
     this.error = '';
     this.success = '';
 
     const { amount, justification } = this.requestForm.value;
 
     this.creditService.requestCredits(amount, justification)
-      .pipe(finalize(() => this.loading = false))
+      .pipe(
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           this.success = `Credit request submitted successfully! Request ID: ${response.request.id}`;
           this.requestForm.reset();
           setTimeout(() => this.success = '', 5000);
+          this.cdr.detectChanges();
         },
         error: (err) => {
-          console.error('Request credits error:', err);
-          this.error = err.error?.error || err.message || 'Failed to submit credit request';
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to submit credit request');
+          this.cdr.detectChanges();
         }
       });
   }

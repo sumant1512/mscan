@@ -28,6 +28,13 @@ export interface Tenant {
   admins?: TenantAdmin[];
 }
 
+export interface TenantDetailsResponse {
+  status: boolean;
+  data: {
+    tenant: Tenant;
+  };
+}
+
 export interface TenantAdmin {
   id: string;
   email: string;
@@ -82,8 +89,11 @@ export interface TenantAdminsListResponse {
 }
 
 export interface TenantsListResponse {
-  tenants: Tenant[];
-  total: number;
+  status: boolean;
+  data: {
+    tenants: Tenant[];
+    total: number;
+  };
 }
 
 export interface AdminStats {

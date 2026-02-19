@@ -62,11 +62,11 @@ export class CreditRequestsFacade {
     this.store.dispatch(CreditRequestsActions.loadAllRequests({ tenantId }));
   }
 
-  approveRequest(id: number): void {
+  approveRequest(id: string): void {
     this.store.dispatch(CreditRequestsActions.approveRequest({ id }));
   }
 
-  rejectRequest(id: number, reason: string): void {
+  rejectRequest(id: string, reason: string): void {
     this.store.dispatch(CreditRequestsActions.rejectRequest({ id, reason }));
   }
 

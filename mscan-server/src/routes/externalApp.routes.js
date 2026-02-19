@@ -17,14 +17,14 @@ router.use(authenticateAppApiKey);
  * @desc    Get all products for the authenticated app
  * @access  External App (API Key)
  */
-router.get('/app/:appCode/products', externalAppController.getProducts);
+router.get('/:appCode/products', externalAppController.getProducts);
 
 /**
  * @route   GET /api/app/:appCode/users/:userId/credits
  * @desc    Get user's credit balance
  * @access  External App (API Key)
  */
-router.get('/app/:appCode/users/:userId/credits', externalAppController.getUserCredits);
+router.get('/:appCode/users/:userId/credits', externalAppController.getUserCredits);
 
 /**
  * @route   GET /api/app/:appCode/users/:userId/credit-transactions
@@ -33,7 +33,7 @@ router.get('/app/:appCode/users/:userId/credits', externalAppController.getUserC
  * @query   offset - Pagination offset (default: 0)
  * @access  External App (API Key)
  */
-router.get('/app/:appCode/users/:userId/credit-transactions', externalAppController.getUserCreditTransactions);
+router.get('/:appCode/users/:userId/credit-transactions', externalAppController.getUserCreditTransactions);
 
 /**
  * @route   POST /api/app/:appCode/scans
@@ -41,7 +41,7 @@ router.get('/app/:appCode/users/:userId/credit-transactions', externalAppControl
  * @body    { user_id, coupon_code, points }
  * @access  External App (API Key)
  */
-router.post('/app/:appCode/scans', externalAppController.recordScan);
+router.post('/:appCode/scans', externalAppController.recordScan);
 
 /**
  * @route   POST /api/app/:appCode/redeem
@@ -49,6 +49,6 @@ router.post('/app/:appCode/scans', externalAppController.recordScan);
  * @body    { user_id, product_id }
  * @access  External App (API Key)
  */
-router.post('/app/:appCode/redeem', externalAppController.redeemProduct);
+router.post('/:appCode/redeem', externalAppController.redeemProduct);
 
 module.exports = router;

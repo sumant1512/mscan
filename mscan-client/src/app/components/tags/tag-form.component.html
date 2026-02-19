@@ -4,7 +4,7 @@
   </div>
 
   <!-- Loading State -->
-  <div *ngIf="loading && isEditMode" class="loading">
+  <div *ngIf="(loading$ | async) && isEditMode" class="loading">
     <div class="spinner"></div>
     <p>Loading tag...</p>
   </div>
@@ -15,7 +15,7 @@
   </div>
 
   <!-- Form -->
-  <form *ngIf="!loading || !isEditMode" (ngSubmit)="onSubmit()" class="tag-form">
+  <form *ngIf="!(loading$ | async) || !isEditMode" (ngSubmit)="onSubmit()" class="tag-form">
     <!-- Tag Name -->
     <div class="form-group">
       <label class="required">Tag Name</label>
@@ -97,9 +97,9 @@
     <!-- Form Actions -->
     <div class="form-actions">
       <button type="button" class="btn btn-secondary" (click)="cancel()">Cancel</button>
-      <button type="submit" class="btn btn-primary" [disabled]="loading">
-        <span *ngIf="!loading">{{ isEditMode ? 'Update Tag' : 'Create Tag' }}</span>
-        <span *ngIf="loading">Saving...</span>
+      <button type="submit" class="btn btn-primary" [disabled]="loading$ | async">
+        <span *ngIf="!(loading$ | async)">{{ isEditMode ? 'Update Tag' : 'Create Tag' }}</span>
+        <span *ngIf="loading$ | async">Saving...</span>
       </button>
     </div>
   </form>

@@ -2,19 +2,19 @@
   <!-- Main Content -->
   <div class="content">
     <!-- Loading State -->
-    <div class="loading-container" *ngIf="loading">
+    <div class="loading-container" *ngIf="loading$ | async">
       <div class="spinner"></div>
       <p>Loading dashboard...</p>
     </div>
 
     <!-- Error State -->
-    <div class="error-box" *ngIf="error && !loading">
+    <div class="error-box" *ngIf="error && !(loading$ | async)">
       ⚠️ {{ error }}
       <button class="btn-retry" (click)="loadDashboardStats()">Retry</button>
     </div>
 
     <!-- Dashboard Content -->
-    <div class="dashboard-content" *ngIf="stats && !loading">
+    <div class="dashboard-content" *ngIf="stats && !(loading$ | async)">
       <!-- Company Info Card -->
       <div class="company-card">
         <h2>Company Information</h2>

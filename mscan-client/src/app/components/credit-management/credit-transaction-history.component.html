@@ -13,8 +13,7 @@
     </div>
   </div>
 
-  <div *ngIf="loading" class="loading">Loading transactions...</div>
-  <div *ngIf="error" class="error">{{ error }}</div>
+  <div *ngIf="loading$ | async" class="loading">Loading transactions...</div>
 
   <!-- Transactions Grid -->
   <div class="requests-grid">
@@ -24,7 +23,7 @@
       [showTenantInfo]="isSuperAdmin">
     </app-credit-card>
 
-    <div *ngIf="!loading && cardData.length === 0" class="no-data">
+    <div *ngIf="!(loading$ | async) && cardData.length === 0" class="no-data">
       No transactions or rejected requests found
     </div>
   </div>

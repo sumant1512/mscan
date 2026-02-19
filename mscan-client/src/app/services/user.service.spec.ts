@@ -41,10 +41,10 @@ describe('UserService', () => {
       address: '123 Test St'
     };
 
-    it('should create a customer successfully', async () => {
+    it('should create a customer statusfully', async () => {
       const mockResponse = {
-        success: true,
-        message: 'Customer created successfully'
+        status: true,
+        message: 'Customer created statusfully'
       };
 
       service.createCustomer(mockCustomerRequest).subscribe(response => {
@@ -75,7 +75,7 @@ describe('UserService', () => {
 
       const req = httpMock.expectOne(`${apiUrl}/users/customers`);
       expect(req.request.headers.has('Content-Type')).toBe(false); // Angular sets this automatically
-      req.flush({ success: true });
+      req.flush({ status: true });
     });
   });
 
@@ -101,14 +101,14 @@ describe('UserService', () => {
       }
     ];
 
-    it('should fetch all customers successfully', async () => {
+    it('should fetch all customers statusfully', async () => {
       const mockResponse = {
-        success: true,
+        status: true,
         data: mockCustomers
       };
 
       service.getAllCustomers().subscribe(response => {
-        expect(response.success).toBe(true);
+        expect(response.status).toBe(true);
         expect(response.data).toEqual(mockCustomers);
         expect(response.data?.length).toBe(2);
       });
@@ -120,7 +120,7 @@ describe('UserService', () => {
 
     it('should handle empty customer list', async () => {
       const mockResponse = {
-        success: true,
+        status: true,
         data: []
       };
 
@@ -149,7 +149,7 @@ describe('UserService', () => {
     const mockUser: User = {
       id: 'user-123',
       email: 'user@test.com',
-      fullName: 'Test User',
+      full_name: 'Test User',
       phone: '+1234567890',
       role: UserRole.TENANT_ADMIN,
       permissions: ['view_dashboard'],
@@ -160,14 +160,14 @@ describe('UserService', () => {
       }
     };
 
-    it('should fetch user profile successfully', async () => {
+    it('should fetch user profile statusfully', async () => {
       const mockResponse = {
-        success: true,
+        status: true,
         data: mockUser
       };
 
       service.getUserProfile().subscribe(response => {
-        expect(response.success).toBe(true);
+        expect(response.status).toBe(true);
         expect(response.data).toEqual(mockUser);
         expect(response.data?.email).toBe('user@test.com');
       });
@@ -191,14 +191,14 @@ describe('UserService', () => {
 
   describe('updateUserProfile', () => {
     const updateData = {
-      fullName: 'Updated Name',
+      full_name: 'Updated Name',
       phone: '+9876543210'
     };
 
     const mockUpdatedUser: User = {
       id: 'user-123',
       email: 'user@test.com',
-      fullName: 'Updated Name',
+      full_name: 'Updated Name',
       phone: '+9876543210',
       role: UserRole.TENANT_ADMIN,
       permissions: ['view_dashboard'],
@@ -209,15 +209,15 @@ describe('UserService', () => {
       }
     };
 
-    it('should update user profile successfully', async () => {
+    it('should update user profile statusfully', async () => {
       const mockResponse = {
-        success: true,
+        status: true,
         data: mockUpdatedUser
       };
 
       service.updateUserProfile(updateData).subscribe(response => {
-        expect(response.success).toBe(true);
-        expect(response.data?.fullName).toBe('Updated Name');
+        expect(response.status).toBe(true);
+        expect(response.data?.full_name).toBe('Updated Name');
         expect(response.data?.phone).toBe('+9876543210');
       });
 
@@ -228,15 +228,15 @@ describe('UserService', () => {
     });
 
     it('should handle partial updates', async () => {
-      const partialUpdate = { fullName: 'Just Name' };
+      const partialUpdate = { full_name: 'Just Name' };
 
       service.updateUserProfile(partialUpdate).subscribe(response => {
-        expect(response.success).toBe(true);
+        expect(response.status).toBe(true);
       });
 
       const req = httpMock.expectOne(`${apiUrl}/users/profile`);
       expect(req.request.body).toEqual(partialUpdate);
-      req.flush({ success: true, data: mockUpdatedUser });
+      req.flush({ status: true, data: mockUpdatedUser });
     });
 
     it('should handle update validation errors', async () => {
@@ -286,7 +286,7 @@ describe('UserService', () => {
 
       const req = httpMock.expectOne(`${apiUrl}/users/profile`);
       expect(req.request.url).toBe(`${apiUrl}/users/profile`);
-      req.flush({ success: true });
+      req.flush({ status: true });
     });
   });
 });

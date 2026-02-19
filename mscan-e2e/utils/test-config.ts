@@ -21,7 +21,7 @@ export const TEST_CONFIG = {
     email: 'sumant@mscan.com',  // Using actual tenant admin from database
     baseUrl: 'http://sumant.localhost:4200',   // Use localhost for E2E tests (tenant identified by email)
     apiBaseUrl: 'http://localhost:3000/api',  // API base URL
-    companyName: 'sumant',
+    tenant_name: 'sumant',
     contactName: 'Sumant Mishra'
   },
 
@@ -31,7 +31,7 @@ export const TEST_CONFIG = {
     email: 'test1767426455059@example.com',  // Using actual tenant admin from database
     baseUrl: 'http://test-company-1767426455059.localhost:4200',  // Use localhost for E2E tests (tenant identified by email)
     apiBaseUrl: 'http://localhost:3000/api',  // API base URL
-    companyName: 'Test Company 1767426455059',
+    tenant_name: 'Test Company 1767426455059',
     contactName: 'Test User'
   },
 

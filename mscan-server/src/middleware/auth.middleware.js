@@ -13,7 +13,7 @@ const authenticate = async (req, res, next) => {
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
-        success: false,
+        status: false,
         message: 'No token provided'
       });
     }
@@ -31,7 +31,7 @@ const authenticate = async (req, res, next) => {
 
     if (blacklistCheck.rows.length > 0) {
       return res.status(401).json({
-        success: false,
+        status: false,
         message: 'Token has been revoked'
       });
     }
@@ -60,14 +60,14 @@ const authenticate = async (req, res, next) => {
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({
-        success: false,
+        status: false,
         message: 'Token expired',
         code: 'TOKEN_EXPIRED'
       });
     }
 
     return res.status(401).json({
-      success: false,
+      status: false,
       message: 'Invalid token'
     });
   }
@@ -80,7 +80,7 @@ const authorize = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
-        success: false,
+        status: false,
         message: 'Not authenticated'
       });
     }
@@ -90,7 +90,7 @@ const authorize = (...allowedRoles) => {
     if (!allowedRoles.includes(req.user.role)) {
       console.log(`❌ Authorization DENIED: "${req.user.role}" not in [${allowedRoles.join(', ')}]`);
       return res.status(403).json({
-        success: false,
+        status: false,
         message: 'Insufficient permissions'
       });
     }
@@ -109,14 +109,14 @@ const requirePermission = (permissions, mode = 'any') => {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
-        success: false,
+        status: false,
         message: 'Not authenticated'
       });
     }
 
-    // Only Super Admin bypasses permission checks
-    // TENANT_ADMIN must have proper permissions assigned
-    if (req.user.role === 'SUPER_ADMIN') {
+    // SUPER_ADMIN and TENANT_ADMIN bypass permission checks
+    // SUPER_ADMIN has global access, TENANT_ADMIN has full access within their tenant
+    if (req.user.role === 'SUPER_ADMIN' || req.user.role === 'TENANT_ADMIN') {
       console.log(`✅ Permission check bypassed for ${req.user.role}`);
       return next();
     }
@@ -160,7 +160,7 @@ const requirePermission = (permissions, mode = 'any') => {
       ).catch(err => console.error('Failed to log unauthorized attempt:', err));
 
       return res.status(403).json({
-        success: false,
+        status: false,
         message: 'Insufficient permissions to perform this action',
         code: 'PERMISSION_DENIED',
         details: {

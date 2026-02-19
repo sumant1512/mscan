@@ -11,8 +11,6 @@ const db = require('./config/database');
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
-const tenantRoutes = require('./routes/tenant.routes');
-const creditRoutes = require('./routes/credit.routes');
 const rewardsRoutes = require('./routes/rewards.routes');
 const batchRoutes = require('./routes/batchRoutes');
 const campaignRoutes = require('./routes/campaignRoutes');
@@ -23,7 +21,6 @@ const userCreditsRoutes = require('./routes/userCredits.routes');
 const externalAppRoutes = require('./routes/externalApp.routes');
 const permissionsRoutes = require('./routes/permissions.routes');
 const tenantUsersRoutes = require('./routes/tenantUsers.routes');
-const templateRoutes = require('./routes/template.routes'); // JSONB template system
 const tagRoutes = require('./routes/tag.routes'); // Tag system
 const apiConfigRoutes = require('./routes/apiConfig.routes');
 const inventoryRoutes = require('./routes/inventory.routes');
@@ -33,6 +30,15 @@ const ecommerceApiRoutes = require('./routes/ecommerceApi.routes');
 // Import middleware
 const errorHandler = require('./middleware/error.middleware');
 const { subdomainMiddleware } = require('./middleware/subdomain.middleware');
+
+// Import new common interceptors and error handling
+const { errorHandler: globalErrorHandler } = require('./modules/common/middleware/errorHandler.middleware');
+const { requestLogger, requestValidator, sanitizeBody } = require('./modules/common/interceptors/request.interceptor');
+const { securityHeaders, compressionHints } = require('./modules/common/interceptors/response.interceptor');
+
+// Import new modular routes
+const superAdminRoutes = require('./modules/super-admin/routes/index');
+const tenantAdminRoutes = require('./modules/tenant-admin/routes/index');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -76,6 +82,12 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Apply common interceptors
+app.use(securityHeaders);
+app.use(compressionHints);
+app.use(requestLogger);
+app.use(sanitizeBody);
+
 // Subdomain detection middleware (must be before routes)
 app.use(subdomainMiddleware);
 
@@ -116,11 +128,23 @@ app.get('/health', async (req, res) => {
 // ============================================
 // API Routes
 // ============================================
+
+// Core routes (refactored with modular structure)
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/tenants', tenantRoutes);
-app.use('/api/credits', creditRoutes);
+
+// Super Admin routes (from modules/super-admin but same URLs)
+const superAdminTenantRoutes = require('./modules/super-admin/routes/tenant.routes');
+const creditsRoutes = require('./routes/credits.routes'); // Unified credits router (routes by role)
+app.use('/api/tenants', superAdminTenantRoutes);
+app.use('/api/credits', creditsRoutes);
+
+// Tenant Admin routes (from modules/tenant-admin but same URLs)
+const tenantAdminTemplateRoutes = require('./modules/tenant-admin/routes/template.routes');
+app.use('/api/templates', tenantAdminTemplateRoutes);
+
+// Other routes
 app.use('/api/rewards', rewardsRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/tenant/batches', batchRoutes);
@@ -132,17 +156,19 @@ app.use('/api/mobile/v2', mobileApiV2Routes);
 app.use('/api/ecommerce/v1', ecommerceApiRoutes);
 app.use('/api/v1/permissions', permissionsRoutes);
 app.use('/api/v1/tenants', tenantUsersRoutes);
-app.use('/api/templates', templateRoutes); // JSONB-based template system
-app.use('/api/tags', tagRoutes); // Tag system routes
+app.use('/api/tags', tagRoutes);
 app.use('/api/verification-apps', apiConfigRoutes);
 app.use('/api', inventoryRoutes);
 app.use('/api', webhooksRoutes);
 app.use('/api', userCreditsRoutes);
-app.use('/api', externalAppRoutes); // Keep this LAST to avoid intercepting other routes
+app.use('/api/app', externalAppRoutes); // External app routes - scoped to /api/app/* to prevent intercepting other routes
 
 // ============================================
 // Error Handling
 // ============================================
+// Use new global error handler (handles AppError instances)
+app.use(globalErrorHandler);
+// Fallback to legacy error handler for backward compatibility
 app.use(errorHandler);
 
 // ============================================
@@ -182,14 +208,14 @@ app.get('/scan/:coupon_code', async (req, res) => {
     });
   } catch (err) {
     console.error('Landing route error:', err);
-    return res.status(500).json({ success: false, error: 'server_error' });
+    return res.status(500).json({ status: false, error: 'server_error' });
   }
 });
 
 // 404 Handler (must be after all routes)
 app.use('*', (req, res) => {
   res.status(404).json({
-    success: false,
+    status: false,
     message: 'Route not found'
   });
 });
@@ -231,7 +257,7 @@ app.get('/scan/:coupon_code', async (req, res) => {
     });
   } catch (err) {
     console.error('Landing route error:', err);
-    return res.status(500).json({ success: false, error: 'server_error' });
+    return res.status(500).json({ status: false, error: 'server_error' });
   }
 });
 

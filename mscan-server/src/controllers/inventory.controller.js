@@ -1,26 +1,35 @@
+/**
+ * Inventory Controller
+ * Refactored to use modern error handling and validators
+ */
+
 const db = require('../config/database');
+const { asyncHandler } = require('../modules/common/middleware/errorHandler.middleware');
+const {
+  ValidationError,
+  NotFoundError
+} = require('../modules/common/errors/AppError');
+const {
+  sendSuccess
+} = require('../modules/common/utils/response.util');
+const {
+  executeTransaction
+} = require('../modules/common/utils/database.util');
 
 /**
  * Update product stock quantity
  * POST /api/products/:id/stock
  */
-exports.updateStock = async (req, res) => {
-  const client = await db.connect();
+exports.updateStock = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { quantity, movement_type, notes } = req.body;
+  const { userId, tenantId } = req.user;
 
-  try {
-    const { id } = req.params;
-    const { quantity, movement_type, notes } = req.body;
-    const { userId, tenantId } = req.user;
+  if (typeof quantity !== 'number') {
+    throw new ValidationError('Quantity must be a number');
+  }
 
-    if (typeof quantity !== 'number') {
-      return res.status(400).json({
-        error: 'validation_error',
-        message: 'Quantity must be a number'
-      });
-    }
-
-    await client.query('BEGIN');
-
+  const result = await executeTransaction(db, async (client) => {
     // Get current product
     const productResult = await client.query(
       'SELECT * FROM products WHERE id = $1 AND tenant_id = $2',
@@ -28,32 +37,20 @@ exports.updateStock = async (req, res) => {
     );
 
     if (productResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({
-        error: 'not_found',
-        message: 'Product not found'
-      });
+      throw new NotFoundError('Product');
     }
 
     const product = productResult.rows[0];
 
     if (!product.track_inventory) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({
-        error: 'inventory_not_tracked',
-        message: 'Inventory tracking is not enabled for this product'
-      });
+      throw new ValidationError('Inventory tracking is not enabled for this product');
     }
 
     const previousQuantity = product.stock_quantity || 0;
     const newQuantity = previousQuantity + quantity;
 
     if (newQuantity < 0) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({
-        error: 'insufficient_stock',
-        message: 'Insufficient stock quantity'
-      });
+      throw new ValidationError('Insufficient stock quantity');
     }
 
     // Update stock quantity (triggers will handle stock_status and logging)
@@ -81,162 +78,116 @@ exports.updateStock = async (req, res) => {
         product_name: product.product_name,
         stock_quantity: newQuantity,
         low_stock_threshold: product.low_stock_threshold
-      }).catch(err => console.error('Webhook error:', err));
+      }).catch(() => {}); // Silently fail webhook triggers
     }
 
-    await client.query('COMMIT');
+    return {
+      previous_quantity: previousQuantity,
+      new_quantity: newQuantity,
+      movement: quantity
+    };
+  });
 
-    res.json({
-      success: true,
-      message: 'Stock updated successfully',
-      data: {
-        previous_quantity: previousQuantity,
-        new_quantity: newQuantity,
-        movement: quantity
-      }
-    });
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Update stock error:', error);
-    res.status(500).json({
-      error: 'server_error',
-      message: 'Failed to update stock'
-    });
-  } finally {
-    client.release();
-  }
-};
+  return sendSuccess(res, result, 'Stock updated successfully');
+});
 
 /**
  * Get stock movements for a product
  * GET /api/products/:id/stock/movements
  */
-exports.getStockMovements = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { tenantId } = req.user;
-    const { page = 1, limit = 20 } = req.query;
-    const offset = (page - 1) * limit;
+exports.getStockMovements = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { tenantId } = req.user;
+  const { page = 1, limit = 20 } = req.query;
+  const offset = (page - 1) * limit;
 
-    const result = await db.query(
-      `SELECT * FROM stock_movements
-       WHERE product_id = $1 AND tenant_id = $2
-       ORDER BY created_at DESC
-       LIMIT $3 OFFSET $4`,
-      [id, tenantId, limit, offset]
-    );
+  const result = await db.query(
+    `SELECT * FROM stock_movements
+     WHERE product_id = $1 AND tenant_id = $2
+     ORDER BY created_at DESC
+     LIMIT $3 OFFSET $4`,
+    [id, tenantId, limit, offset]
+  );
 
-    const countResult = await db.query(
-      'SELECT COUNT(*) FROM stock_movements WHERE product_id = $1 AND tenant_id = $2',
-      [id, tenantId]
-    );
+  const countResult = await db.query(
+    'SELECT COUNT(*) FROM stock_movements WHERE product_id = $1 AND tenant_id = $2',
+    [id, tenantId]
+  );
 
-    res.json({
-      success: true,
-      data: {
-        movements: result.rows,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total: parseInt(countResult.rows[0].count),
-          totalPages: Math.ceil(countResult.rows[0].count / limit)
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Get stock movements error:', error);
-    res.status(500).json({
-      error: 'server_error',
-      message: 'Failed to get stock movements'
-    });
-  }
-};
+  return sendSuccess(res, {
+    movements: result.rows,
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: parseInt(countResult.rows[0].count),
+      totalPages: Math.ceil(countResult.rows[0].count / limit)
+    }
+  });
+});
 
 /**
  * Get low stock products
  * GET /api/inventory/low-stock
  */
-exports.getLowStockProducts = async (req, res) => {
-  try {
-    const { tenantId } = req.user;
-    const { verification_app_id } = req.query;
+exports.getLowStockProducts = asyncHandler(async (req, res) => {
+  const { tenantId } = req.user;
+  const { verification_app_id } = req.query;
 
-    let query = `
-      SELECT p.*
-      FROM products p
-      WHERE p.tenant_id = $1
-        AND p.track_inventory = true
-        AND p.stock_status = 'low_stock'
-    `;
-    const params = [tenantId];
+  let query = `
+    SELECT p.*
+    FROM products p
+    WHERE p.tenant_id = $1
+      AND p.track_inventory = true
+      AND p.stock_status = 'low_stock'
+  `;
+  const params = [tenantId];
 
-    if (verification_app_id) {
-      query += ' AND p.verification_app_id = $2';
-      params.push(verification_app_id);
-    }
-
-    query += ' ORDER BY p.stock_quantity ASC';
-
-    const result = await db.query(query, params);
-
-    res.json({
-      success: true,
-      data: {
-        products: result.rows,
-        count: result.rows.length
-      }
-    });
-  } catch (error) {
-    console.error('Get low stock products error:', error);
-    res.status(500).json({
-      error: 'server_error',
-      message: 'Failed to get low stock products'
-    });
+  if (verification_app_id) {
+    query += ' AND p.verification_app_id = $2';
+    params.push(verification_app_id);
   }
-};
+
+  query += ' ORDER BY p.stock_quantity ASC';
+
+  const result = await db.query(query, params);
+
+  return sendSuccess(res, {
+    products: result.rows,
+    count: result.rows.length
+  });
+});
 
 /**
  * Get out of stock products
  * GET /api/inventory/out-of-stock
  */
-exports.getOutOfStockProducts = async (req, res) => {
-  try {
-    const { tenantId } = req.user;
-    const { verification_app_id } = req.query;
+exports.getOutOfStockProducts = asyncHandler(async (req, res) => {
+  const { tenantId } = req.user;
+  const { verification_app_id } = req.query;
 
-    let query = `
-      SELECT p.*
-      FROM products p
-      WHERE p.tenant_id = $1
-        AND p.track_inventory = true
-        AND p.stock_status = 'out_of_stock'
-    `;
-    const params = [tenantId];
+  let query = `
+    SELECT p.*
+    FROM products p
+    WHERE p.tenant_id = $1
+      AND p.track_inventory = true
+      AND p.stock_status = 'out_of_stock'
+  `;
+  const params = [tenantId];
 
-    if (verification_app_id) {
-      query += ' AND p.verification_app_id = $2';
-      params.push(verification_app_id);
-    }
-
-    query += ' ORDER BY p.updated_at DESC';
-
-    const result = await db.query(query, params);
-
-    res.json({
-      success: true,
-      data: {
-        products: result.rows,
-        count: result.rows.length
-      }
-    });
-  } catch (error) {
-    console.error('Get out of stock products error:', error);
-    res.status(500).json({
-      error: 'server_error',
-      message: 'Failed to get out of stock products'
-    });
+  if (verification_app_id) {
+    query += ' AND p.verification_app_id = $2';
+    params.push(verification_app_id);
   }
-};
+
+  query += ' ORDER BY p.updated_at DESC';
+
+  const result = await db.query(query, params);
+
+  return sendSuccess(res, {
+    products: result.rows,
+    count: result.rows.length
+  });
+});
 
 /**
  * Helper function to trigger webhooks
@@ -306,7 +257,7 @@ async function triggerWebhook(tenantId, verificationAppId, eventType, payload) {
         });
     }
   } catch (error) {
-    console.error('Trigger webhook error:', error);
+    // Silently fail webhook triggers
   }
 }
 

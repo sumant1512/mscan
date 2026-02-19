@@ -1,6 +1,8 @@
-import { Component, OnInit, ChangeDetectorRef, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { SubdomainService } from '../../services/subdomain.service';
 
@@ -19,7 +21,9 @@ interface MenuItem {
   templateUrl: './side-nav.component.html',
   styleUrls: ['./side-nav.component.css']
 })
-export class SideNavComponent implements OnInit {
+export class SideNavComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   @Output() collapseChange = new EventEmitter<boolean>();
   isCollapsed = false;
   userType: string = '';
@@ -132,27 +136,33 @@ export class SideNavComponent implements OnInit {
   ngOnInit(): void {
     // Get current subdomain
     this.currentSubdomain = this.subdomainService.getCurrentSubdomain();
-    
-    this.authService.currentUser$.subscribe({
-      next: (user) => {
-        if (user) {
-          this.userType = user.role;
-          this.menuItems = user.role === 'SUPER_ADMIN' 
-            ? this.superAdminMenu 
-            : this.tenantMenu;
-          
-          // Set tenant name for display
-          if (user.tenant) {
-            this.currentTenantName = user.tenant.tenant_name || '';
+
+    this.authService.currentUser$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (user) => {
+          if (user) {
+            this.userType = user.role;
+            this.menuItems = user.role === 'SUPER_ADMIN'
+              ? this.superAdminMenu
+              : this.tenantMenu;
+
+            // Set tenant name for display
+            if (user.tenant) {
+              this.currentTenantName = user.tenant.tenant_name || '';
+            }
+            this.cdr.detectChanges();
           }
-          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.router.navigate(['/login']);
         }
-      },
-      error: (error: any) => {
-        console.error('Failed to load user context', error);
-        this.router.navigate(['/login']);
-      }
-    });
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   toggleCollapse(): void {

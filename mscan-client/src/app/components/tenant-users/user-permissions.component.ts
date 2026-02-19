@@ -2,14 +2,18 @@
  * User Permissions Component
  * View and manage permissions for a specific user
  */
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { TenantUsersService } from '../../services/tenant-users.service';
 import { PermissionsService } from '../../services/permissions.service';
 import { AuthService } from '../../services/auth.service';
-import { TenantUser, Permission } from '../../models';
+import { TenantUser, Permission, UserPermissionsResponse } from '../../models';
+import { LoadingService } from '../../shared/services/loading.service';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
 
 @Component({
   selector: 'app-user-permissions',
@@ -18,10 +22,14 @@ import { TenantUser, Permission } from '../../models';
   templateUrl: './user-permissions.component.html',
   styleUrls: ['./user-permissions.component.css']
 })
-export class UserPermissionsComponent implements OnInit {
+export class UserPermissionsComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   userId: string | null = null;
   user: TenantUser | null = null;
-  loading = false;
+  private loadingService = inject(LoadingService);
+
+  loading$ = this.loadingService.loading$;
   error = '';
   successMessage = '';
 
@@ -59,13 +67,20 @@ export class UserPermissionsComponent implements OnInit {
       return;
     }
 
-    this.route.params.subscribe(params => {
-      if (params['id']) {
-        this.userId = params['id'];
-        this.loadUser();
-        this.loadUserPermissions();
-      }
-    });
+    this.route.params
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        if (params['id']) {
+          this.userId = params['id'];
+          this.loadUser();
+          this.loadUserPermissions();
+        }
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadUser() {
@@ -77,21 +92,23 @@ export class UserPermissionsComponent implements OnInit {
       return;
     }
 
-    this.loading = true;
-    this.tenantUsersService.getTenantUser(currentUser.tenant.id, this.userId).subscribe({
-      next: (response) => {
-        if (response.success && response.data) {
-          this.user = response.data.user;
+    this.tenantUsersService.getTenantUser(currentUser.tenant.id, this.userId)
+      .pipe(
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (response) => {
+          if (response.status && response.data) {
+            this.user = response.data.user;
+          }
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to load user');
+          this.cdr.detectChanges();
         }
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        this.error = err.error?.message || 'Failed to load user';
-        this.loading = false;
-        this.cdr.detectChanges();
-      }
-    });
+      });
   }
 
   loadUserPermissions() {
@@ -101,43 +118,47 @@ export class UserPermissionsComponent implements OnInit {
     if (!currentUser || !currentUser.tenant?.id) return;
 
     this.loadingCurrentPermissions = true;
-    this.tenantUsersService.getUserPermissions(currentUser.tenant.id, this.userId).subscribe({
-      next: (response) => {
-        if (response.success && response.data) {
-          this.currentPermissions = response.data.permissions;
+    this.tenantUsersService.getUserPermissions(currentUser.tenant.id, this.userId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          if (response.status && response.data) {
+            this.currentPermissions = response.data.permissions;
+          }
+          this.loadingCurrentPermissions = false;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to load permissions');
+          this.loadingCurrentPermissions = false;
+          this.cdr.detectChanges();
         }
-        this.loadingCurrentPermissions = false;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        this.error = err.error?.message || 'Failed to load permissions';
-        this.loadingCurrentPermissions = false;
-        this.cdr.detectChanges();
-      }
-    });
+      });
   }
 
   loadAvailablePermissions() {
     this.loadingAvailablePermissions = true;
 
-    this.permissionsService.listPermissions({ limit: 100 }).subscribe({
-      next: (response) => {
-        if (response.success && response.data) {
-          // Filter out already assigned permissions
-          const currentPermissionIds = this.currentPermissions.map(p => p.id);
-          this.availablePermissions = response.data.permissions.filter(
-            p => !currentPermissionIds.includes(p.id)
-          );
+    this.permissionsService.listPermissions({ limit: 100 })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          if (response.status && response.data) {
+            // Filter out already assigned permissions
+            const currentPermissionIds = this.currentPermissions.map(p => p.id);
+            this.availablePermissions = response.data.permissions.filter(
+              p => !currentPermissionIds.includes(p.id)
+            );
+          }
+          this.loadingAvailablePermissions = false;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.error = 'Failed to load available permissions';
+          this.loadingAvailablePermissions = false;
+          this.cdr.detectChanges();
         }
-        this.loadingAvailablePermissions = false;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Failed to load available permissions:', err);
-        this.loadingAvailablePermissions = false;
-        this.cdr.detectChanges();
-      }
-    });
+      });
   }
 
   openAssignModal() {
@@ -170,25 +191,27 @@ export class UserPermissionsComponent implements OnInit {
     const currentUser = this.authService.getCurrentUser();
     if (!currentUser || !currentUser.tenant?.id) return;
 
-    this.loading = true;
     this.tenantUsersService.assignUserPermissions(currentUser.tenant.id, this.userId, {
       permission_ids: this.selectedPermissionIds
-    }).subscribe({
-      next: (response) => {
-        if (response.success) {
-          this.successMessage = `${this.selectedPermissionIds.length} permission(s) assigned successfully`;
-          this.closeAssignModal();
-          this.loadUserPermissions(); // Reload to show new permissions
+    })
+      .pipe(
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (response) => {
+          if (response.status) {
+            this.successMessage = `${this.selectedPermissionIds.length} permission(s) assigned successfully`;
+            this.closeAssignModal();
+            this.loadUserPermissions(); // Reload to show new permissions
+          }
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to assign permissions');
+          this.cdr.detectChanges();
         }
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        this.error = err.error?.message || 'Failed to assign permissions';
-        this.loading = false;
-        this.cdr.detectChanges();
-      }
-    });
+      });
   }
 
   goBack() {

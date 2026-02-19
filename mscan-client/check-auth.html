@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Check</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Products API Authentication Debug</h1>
+
+    <div id="output"></div>
+
+    <div>
+        <button onclick="checkToken()">1. Check Token</button>
+        <button onclick="testProductsAPI()">2. Test Products API</button>
+        <button onclick="checkRole()">3. Check User Role</button>
+        <button onclick="checkNetworkTab()">4. Open Network Tab</button>
+    </div>
+
+    <script>
+        const output = document.getElementById('output');
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.innerHTML = message;
+            output.appendChild(div);
+        }
+
+        function clear() {
+            output.innerHTML = '';
+        }
+
+        function checkToken() {
+            clear();
+            const token = localStorage.getItem('tms_access_token');
+
+            log('<h3>Token Check</h3>');
+            if (token) {
+                log('✅ Token EXISTS', 'success');
+                log(`Preview: ${token.substring(0, 60)}...`);
+
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    log('<h4>Token Payload:</h4>');
+                    log(`<pre>${JSON.stringify(payload, null, 2)}</pre>`);
+
+                    const exp = new Date(payload.exp * 1000);
+                    const isExpired = Date.now() >= exp.getTime();
+
+                    if (isExpired) {
+                        log(`❌ Token EXPIRED at ${exp}`, 'error');
+                    } else {
+                        log(`✅ Token valid until ${exp}`, 'success');
+                    }
+                } catch (e) {
+                    log('❌ Failed to decode token', 'error');
+                }
+            } else {
+                log('❌ NO TOKEN FOUND', 'error');
+                log('You need to log in first!', 'warning');
+            }
+        }
+
+        function testProductsAPI() {
+            clear();
+            log('<h3>Testing Products API</h3>');
+
+            const token = localStorage.getItem('tms_access_token');
+            if (!token) {
+                log('❌ No token - please log in first!', 'error');
+                return;
+            }
+
+            const url = 'http://sumant.localhost:3000/api/products?search=&app_id=b3fe1206-da13-40b6-9259-8082ca15430f';
+
+            log(`Making request to: ${url}`);
+            log('With Authorization header: Bearer <token>');
+
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === false) {
+                    log('❌ API returned error:', 'error');
+                    log(`<pre>${JSON.stringify(data, null, 2)}</pre>`);
+
+                    if (data.message === 'No token provided') {
+                        log('<h4>⚠️ Diagnosis:</h4>', 'warning');
+                        log('The server says "No token provided" even though we sent it!', 'warning');
+                        log('Possible causes:', 'warning');
+                        log('1. CORS issue - check server CORS configuration');
+                        log('2. Server not reading Authorization header');
+                        log('3. Different server instance running');
+                    }
+                } else {
+                    log('✅ API call successful!', 'success');
+                    log(`<pre>${JSON.stringify(data, null, 2)}</pre>`);
+                }
+            })
+            .catch(err => {
+                log('❌ Network error:', 'error');
+                log(`<pre>${err.message}</pre>`);
+            });
+        }
+
+        function checkRole() {
+            clear();
+            log('<h3>Checking User Role</h3>');
+
+            const token = localStorage.getItem('tms_access_token');
+            if (!token) {
+                log('❌ No token found', 'error');
+                return;
+            }
+
+            fetch('http://sumant.localhost:3000/api/auth/context', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status) {
+                    const role = data.data.role;
+                    log(`User Role: <strong>${role}</strong>`);
+
+                    if (role === 'SUPER_ADMIN') {
+                        log('❌ CRITICAL: Products API blocks SUPER_ADMIN!', 'error');
+                        log('⚠️ You must log in as TENANT_ADMIN or TENANT_USER', 'warning');
+                    } else {
+                        log('✅ Role is OK for products API', 'success');
+                    }
+
+                    log(`<pre>${JSON.stringify(data.data, null, 2)}</pre>`);
+                } else {
+                    log('❌ Failed to get user context', 'error');
+                    log(`<pre>${JSON.stringify(data, null, 2)}</pre>`);
+                }
+            })
+            .catch(err => {
+                log('❌ Error:', 'error');
+                log(err.message);
+            });
+        }
+
+        function checkNetworkTab() {
+            alert('Open DevTools (F12) → Network tab, then click "Test Products API" button and check if Authorization header is present in the request');
+        }
+
+        // Auto-run token check on load
+        window.onload = () => checkToken();
+    </script>
+</body>
+</html>

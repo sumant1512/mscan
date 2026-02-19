@@ -3,19 +3,19 @@
   <!-- Main Content -->
   <div class="content">
     <!-- Loading State -->
-    <div class="loading-container" *ngIf="loading">
+    <div class="loading-container" *ngIf="loading$ | async">
       <div class="spinner"></div>
       <p>Loading dashboard...</p>
     </div>
 
     <!-- Error State -->
-    <div class="error-box" *ngIf="error && !loading">
+    <div class="error-box" *ngIf="error && !(loading$ | async)">
       ⚠️ {{ error }}
       <button class="btn-retry" (click)="loadDashboardStats()">Retry</button>
     </div>
 
     <!-- Quick Actions (visible when not loading) -->
-    <div class="quick-actions" *ngIf="!loading">
+    <div class="quick-actions" *ngIf="!(loading$ | async)">
       <h2>Quick Actions</h2>
       <button class="btn-action" (click)="navigateToCustomers()">
         <span class="action-icon">➕</span>
@@ -24,7 +24,7 @@
     </div>
 
     <!-- Dashboard Content -->
-    <div class="dashboard-content" *ngIf="stats && !loading">
+    <div class="dashboard-content" *ngIf="stats && !(loading$ | async)">
       <!-- Stats Cards -->
       <div class="stats-grid">
         <div class="stat-card">
@@ -66,9 +66,9 @@
             </thead>
             <tbody>
               <tr *ngFor="let tenant of stats.recentTenants">
-                <td>{{ tenant.companyName }}</td>
-                <td>{{ tenant.contactEmail }}</td>
-                <td>{{ tenant.createdAt | date : 'short' }}</td>
+                <td>{{ tenant.tenant_name }}</td>
+                <td>{{ tenant.email }}</td>
+                <td>{{ tenant.created_at | date : 'short' }}</td>
               </tr>
               <tr *ngIf="stats.recentTenants.length === 0">
                 <td colspan="3" class="no-data">No customers registered yet</td>

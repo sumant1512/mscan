@@ -20,7 +20,7 @@ describe('SuperAdminDashboardComponent', () => {
   const mockSuperAdmin: User = {
     id: 'super-id',
     email: 'admin@mscan.com',
-    fullName: 'Super Admin',
+    full_name: 'Super Admin',
     role: UserRole.SUPER_ADMIN,
     permissions: ['all'],
     tenant: undefined,
@@ -118,7 +118,7 @@ describe('SuperAdminDashboardComponent', () => {
     it('should update user name when stream emits', () => {
       component.loadUserInfo();
 
-      const newUser = { ...mockSuperAdmin, fullName: 'Updated Admin' };
+      const newUser = { ...mockSuperAdmin, full_name: 'Updated Admin' };
       currentUserSubject.next(newUser);
 
       expect(component.userName).toBe('Updated Admin');

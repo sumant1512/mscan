@@ -1,9 +1,16 @@
+/**
+ * Credit Service
+ * NO ERROR HANDLING NEEDED - ErrorInterceptor handles everything!
+ * NO SUCCESS MESSAGES NEEDED - SuccessInterceptor handles everything!
+ */
+
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { map } from 'rxjs/operators';
 import { CreditRequest, CreditBalance, CreditTransaction } from '../models/rewards.model';
 import { SubdomainService } from './subdomain.service';
+import { buildQueryString, extractResponseData } from '../core/utils/api.utils';
 
 @Injectable({
   providedIn: 'root'
@@ -18,42 +25,45 @@ export class CreditService {
     private subdomainService: SubdomainService
   ) { }
 
-  // Tenant operations
-  requestCredits(amount: number, justification?: string): Observable<{ message: string; request: CreditRequest }> {
-    return this.http.post<{ message: string; request: CreditRequest }>(
+  /**
+   * Request credits (Tenant Admin)
+   */
+  requestCredits(amount: number, justification?: string): Observable<CreditRequest> {
+    return this.http.post<any>(
       `${this.apiUrl}/request`,
       { requested_amount: amount, justification }
+    ).pipe(
+      map(response => response.data?.request || response.request)
     );
   }
 
+  /**
+   * Get credit balance
+   */
   getBalance(): Observable<CreditBalance> {
-    return this.http.get<CreditBalance>(`${this.apiUrl}/balance`);
+    return this.http.get<any>(`${this.apiUrl}/balance`).pipe(
+      extractResponseData<CreditBalance>()
+    );
   }
 
-  // Unified method for getting requests with status filtering
-  // Works for both Super Admin and Tenant Admin with automatic tenant isolation
-  // Status: pending|approved|rejected|history|all
+  /**
+   * Get credit requests with filtering
+   */
   getRequests(params?: {
     status?: string;
     page?: number;
     limit?: number;
     tenant_id?: string;
   }): Observable<{ requests: CreditRequest[]; pagination: any }> {
-    let httpParams = new HttpParams();
-    if (params?.status) httpParams = httpParams.set('status', params.status);
-    if (params?.page) httpParams = httpParams.set('page', params.page.toString());
-    if (params?.limit) httpParams = httpParams.set('limit', params.limit.toString());
-    if (params?.tenant_id) httpParams = httpParams.set('tenant_id', params.tenant_id);
-
-    return this.http.get<{ requests: CreditRequest[]; pagination: any }>(
-      `${this.apiUrl}/requests`,
-      { params: httpParams }
+    const queryString = buildQueryString(params || {});
+    return this.http.get<any>(`${this.apiUrl}/requests${queryString}`).pipe(
+      extractResponseData()
     );
   }
 
-  // Unified method for getting transactions with type filtering
-  // Works for both Super Admin and Tenant Admin with automatic tenant isolation
-  // Type: CREDIT|DEBIT|REFUND|all
+  /**
+   * Get credit transactions with filtering
+   */
   getTransactions(params?: {
     page?: number;
     limit?: number;
@@ -61,30 +71,30 @@ export class CreditService {
     tenant_id?: string;
     app_id?: string;
   }): Observable<{ transactions: CreditTransaction[]; pagination: any }> {
-    let httpParams = new HttpParams();
-    if (params?.page) httpParams = httpParams.set('page', params.page.toString());
-    if (params?.limit) httpParams = httpParams.set('limit', params.limit.toString());
-    if (params?.type) httpParams = httpParams.set('type', params.type);
-    if (params?.tenant_id) httpParams = httpParams.set('tenant_id', params.tenant_id);
-    if (params?.app_id) httpParams = httpParams.set('app_id', params.app_id);
-
-    return this.http.get<{ transactions: CreditTransaction[]; pagination: any }>(
-      `${this.apiUrl}/transactions`,
-      { params: httpParams }
+    const queryString = buildQueryString(params || {});
+    return this.http.get<any>(`${this.apiUrl}/transactions${queryString}`).pipe(
+      extractResponseData()
     );
   }
 
-  approveRequest(id: number): Observable<{ message: string; credits_added: number; new_balance: number }> {
-    return this.http.post<{ message: string; credits_added: number; new_balance: number }>(
-      `${this.apiUrl}/approve/${id}`,
-      {}
+  /**
+   * Approve credit request (Super Admin)
+   */
+  approveRequest(id: string): Observable<{ credits_added: number; new_balance: number }> {
+    return this.http.post<any>(`${this.apiUrl}/approve/${id}`, {}).pipe(
+      extractResponseData()
     );
   }
 
-  rejectRequest(id: number, reason: string): Observable<{ message: string; request: CreditRequest }> {
-    return this.http.post<{ message: string; request: CreditRequest }>(
+  /**
+   * Reject credit request (Super Admin)
+   */
+  rejectRequest(id: string, reason: string): Observable<CreditRequest> {
+    return this.http.post<any>(
       `${this.apiUrl}/reject/${id}`,
       { rejection_reason: reason }
+    ).pipe(
+      map(response => response.data?.request || response.request)
     );
   }
 }

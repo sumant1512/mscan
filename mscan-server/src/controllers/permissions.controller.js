@@ -1,145 +1,120 @@
 /**
  * Permissions Controller
- * Handles HTTP requests for permission management
+ * Refactored to use modern error handling and validators
  */
 
 const permissionService = require('../services/permission.service');
+const { asyncHandler } = require('../modules/common/middleware/errorHandler.middleware');
+const {
+  ConflictError,
+  ValidationError,
+  NotFoundError
+} = require('../modules/common/errors/AppError');
+const {
+  validateRequiredFields
+} = require('../modules/common/validators/common.validator');
+const {
+  sendSuccess,
+  sendCreated
+} = require('../modules/common/utils/response.util');
 
 /**
  * Create a new permission definition
  * POST /api/v1/permissions
  * Requires: SUPER_ADMIN role
  */
-const createPermission = async (req, res, next) => {
+const createPermission = asyncHandler(async (req, res) => {
+  const { code, name, description, scope, allowed_assigners } = req.body;
+
+  // Validation
+  validateRequiredFields(req.body, ['code', 'name', 'scope']);
+
   try {
-    const { code, name, description, scope, allowed_assigners } = req.body;
-
-    // Validate required fields
-    if (!code || !name || !scope) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields: code, name, scope'
-      });
-    }
-
     const permission = await permissionService.createPermission(
       { code, name, description, scope, allowed_assigners },
       req.user.id,
       req
     );
 
-    res.status(201).json({
-      success: true,
-      message: 'Permission created successfully',
-      data: {
-        permission
-      }
-    });
+    return sendCreated(res, { permission }, 'Permission created successfully');
+
   } catch (error) {
-    // Handle specific errors
+    // Handle specific service errors
     if (error.message.includes('already exists')) {
-      return res.status(409).json({
-        success: false,
-        message: error.message,
-        code: 'PERMISSION_EXISTS',
-        field: 'code'
-      });
+      throw new ConflictError(error.message, 'PERMISSION_EXISTS', { field: 'code' });
     }
 
     if (error.message.includes('format') || error.message.includes('length') || error.message.includes('Scope')) {
-      return res.status(422).json({
-        success: false,
-        message: error.message,
-        code: 'INVALID_PERMISSION_DATA'
-      });
+      throw new ValidationError(error.message, 'INVALID_PERMISSION_DATA');
     }
 
-    next(error);
+    throw error;
   }
-};
+});
 
 /**
  * List permissions with filtering
  * GET /api/v1/permissions
  */
-const listPermissions = async (req, res, next) => {
-  try {
-    const {
-      scope,
-      search,
-      page = 1,
-      limit = 50
-    } = req.query;
+const listPermissions = asyncHandler(async (req, res) => {
+  const {
+    scope,
+    search,
+    page = 1,
+    limit = 50
+  } = req.query;
 
-    // For TENANT_ADMIN, only show permissions they can assign
-    const filters = {
-      scope,
-      search,
-      page: parseInt(page),
-      limit: Math.min(parseInt(limit), 100) // Max 100 per page
-    };
+  // For TENANT_ADMIN, only show permissions they can assign
+  const filters = {
+    scope,
+    search,
+    page: parseInt(page),
+    limit: Math.min(parseInt(limit), 100) // Max 100 per page
+  };
 
-    if (req.user.role === 'TENANT_ADMIN') {
-      filters.assignable_by = 'TENANT_ADMIN';
-    }
-
-    const result = await permissionService.listPermissions(filters);
-
-    res.json({
-      success: true,
-      data: {
-        permissions: result.permissions,
-        pagination: result.pagination
-      }
-    });
-  } catch (error) {
-    next(error);
+  if (req.user.role === 'TENANT_ADMIN') {
+    filters.assignable_by = 'TENANT_ADMIN';
   }
-};
+
+  const result = await permissionService.listPermissions(filters);
+
+  return sendSuccess(res, {
+    permissions: result.permissions,
+    pagination: result.pagination
+  });
+});
 
 /**
  * Get permission by code
  * GET /api/v1/permissions/:code
  */
-const getPermission = async (req, res, next) => {
-  try {
-    const { code } = req.params;
+const getPermission = asyncHandler(async (req, res) => {
+  const { code } = req.params;
 
-    const permission = await permissionService.getPermissionByCode(code);
+  const permission = await permissionService.getPermissionByCode(code);
 
-    if (!permission) {
-      return res.status(404).json({
-        success: false,
-        message: 'Permission not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: {
-        permission
-      }
-    });
-  } catch (error) {
-    next(error);
+  if (!permission) {
+    throw new NotFoundError('Permission');
   }
-};
+
+  return sendSuccess(res, { permission });
+});
 
 /**
  * Update permission metadata
  * PUT /api/v1/permissions/:id
  * Requires: SUPER_ADMIN role
  */
-const updatePermission = async (req, res, next) => {
+const updatePermission = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { name, description, allowed_assigners } = req.body;
+
+  const updates = {};
+  if (name !== undefined) updates.name = name;
+  if (description !== undefined) updates.description = description;
+  if (allowed_assigners !== undefined) updates.allowed_assigners = allowed_assigners;
+
   try {
-    const { id } = req.params;
-    const { name, description, allowed_assigners } = req.body;
-
-    const updates = {};
-    if (name !== undefined) updates.name = name;
-    if (description !== undefined) updates.description = description;
-    if (allowed_assigners !== undefined) updates.allowed_assigners = allowed_assigners;
-
     const permission = await permissionService.updatePermission(
       id,
       updates,
@@ -147,32 +122,20 @@ const updatePermission = async (req, res, next) => {
       req
     );
 
-    res.json({
-      success: true,
-      message: 'Permission updated successfully',
-      data: {
-        permission
-      }
-    });
+    return sendSuccess(res, { permission }, 'Permission updated successfully');
+
   } catch (error) {
     if (error.message === 'Permission not found') {
-      return res.status(404).json({
-        success: false,
-        message: error.message
-      });
+      throw new NotFoundError('Permission');
     }
 
     if (error.message.includes('cannot be modified')) {
-      return res.status(422).json({
-        success: false,
-        message: error.message,
-        code: 'IMMUTABLE_FIELD'
-      });
+      throw new ValidationError(error.message, 'IMMUTABLE_FIELD');
     }
 
-    next(error);
+    throw error;
   }
-};
+});
 
 module.exports = {
   createPermission,

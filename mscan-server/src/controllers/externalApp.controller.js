@@ -1,181 +1,151 @@
-const db = require('../config/database');
-
 /**
  * External App API Controller
+ * Refactored to use modern error handling and validators
+ *
  * Provides API endpoints for external mobile/web apps using API key authentication
  */
+
+const db = require('../config/database');
+const { asyncHandler } = require('../modules/common/middleware/errorHandler.middleware');
+const {
+  ValidationError,
+  NotFoundError,
+  ForbiddenError
+} = require('../modules/common/errors/AppError');
+const {
+  validateRequiredFields
+} = require('../modules/common/validators/common.validator');
+const {
+  sendSuccess
+} = require('../modules/common/utils/response.util');
+const {
+  executeTransaction
+} = require('../modules/common/utils/database.util');
 
 /**
  * Get products for the authenticated app
  * GET /api/app/:appCode/products
  */
-const getProducts = async (req, res) => {
-  try {
-    const { verificationAppId, tenantId } = req.appContext;
+exports.getProducts = asyncHandler(async (req, res) => {
+  const { verificationAppId, tenantId } = req.appContext;
 
-    const query = `
-      SELECT
-        p.product_id,
-        p.product_name,
-        p.points,
-        p.stock_quantity,
-        p.created_at,
-        p.updated_at
-      FROM products p
-      WHERE p.tenant_id = $1 AND p.verification_app_id = $2
-      ORDER BY p.product_name ASC
-    `;
+  const result = await db.query(`
+    SELECT
+      p.product_id,
+      p.product_name,
+      p.points,
+      p.stock_quantity,
+      p.created_at,
+      p.updated_at
+    FROM products p
+    WHERE p.tenant_id = $1 AND p.verification_app_id = $2
+    ORDER BY p.product_name ASC
+  `, [tenantId, verificationAppId]);
 
-    const params = [tenantId, verificationAppId];
-
-    const result = await db.query(query, params);
-
-    res.json({
-      success: true,
-      data: result.rows,
-      count: result.rows.length
-    });
-  } catch (error) {
-    console.error('Error fetching products for external app:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch products',
-      error: error.message
-    });
-  }
-};
+  return sendSuccess(res, {
+    data: result.rows,
+    count: result.rows.length
+  });
+});
 
 /**
  * Get user's credit balance
  * GET /api/app/:appCode/users/:userId/credits
  */
-const getUserCredits = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { tenantId } = req.appContext;
+exports.getUserCredits = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const { tenantId } = req.appContext;
 
-    // Get or create user credit account
-    let result = await db.query(
-      `SELECT balance, created_at, updated_at
-       FROM user_credits
-       WHERE user_id = $1 AND tenant_id = $2`,
+  // Get or create user credit account
+  let result = await db.query(
+    `SELECT balance, created_at, updated_at
+     FROM user_credits
+     WHERE user_id = $1 AND tenant_id = $2`,
+    [userId, tenantId]
+  );
+
+  if (result.rows.length === 0) {
+    // Create initial credit account
+    result = await db.query(
+      `INSERT INTO user_credits (user_id, tenant_id, balance)
+       VALUES ($1, $2, 0)
+       RETURNING balance, created_at, updated_at`,
       [userId, tenantId]
     );
-
-    if (result.rows.length === 0) {
-      // Create initial credit account
-      result = await db.query(
-        `INSERT INTO user_credits (user_id, tenant_id, balance)
-         VALUES ($1, $2, 0)
-         RETURNING balance, created_at, updated_at`,
-        [userId, tenantId]
-      );
-    }
-
-    res.json({
-      success: true,
-      data: {
-        user_id: parseInt(userId),
-        balance: result.rows[0].balance,
-        created_at: result.rows[0].created_at,
-        updated_at: result.rows[0].updated_at
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching user credits for external app:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch user credits',
-      error: error.message
-    });
   }
-};
+
+  return sendSuccess(res, {
+    data: {
+      user_id: parseInt(userId),
+      balance: result.rows[0].balance,
+      created_at: result.rows[0].created_at,
+      updated_at: result.rows[0].updated_at
+    }
+  });
+});
 
 /**
  * Get user's credit transaction history
  * GET /api/app/:appCode/users/:userId/credit-transactions?limit=50&offset=0
  */
-const getUserCreditTransactions = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { tenantId, verificationAppId } = req.appContext;
-    const limit = parseInt(req.query.limit) || 50;
-    const offset = parseInt(req.query.offset) || 0;
+exports.getUserCreditTransactions = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const { tenantId, verificationAppId } = req.appContext;
+  const limit = parseInt(req.query.limit) || 50;
+  const offset = parseInt(req.query.offset) || 0;
 
-    // Only show transactions for this app
-    const result = await db.query(
-      `SELECT 
-        transaction_id,
-        transaction_type,
-        amount,
-        balance_after,
-        description,
-        verification_app_id,
-        created_at
-      FROM user_credit_transactions
-      WHERE user_id = $1 AND tenant_id = $2 AND verification_app_id = $3
-      ORDER BY created_at DESC
-      LIMIT $4 OFFSET $5`,
-      [userId, tenantId, verificationAppId, limit, offset]
-    );
+  // Only show transactions for this app
+  const result = await db.query(
+    `SELECT
+      transaction_id,
+      transaction_type,
+      amount,
+      balance_after,
+      description,
+      verification_app_id,
+      created_at
+    FROM user_credit_transactions
+    WHERE user_id = $1 AND tenant_id = $2 AND verification_app_id = $3
+    ORDER BY created_at DESC
+    LIMIT $4 OFFSET $5`,
+    [userId, tenantId, verificationAppId, limit, offset]
+  );
 
-    // Get total count for pagination
-    const countResult = await db.query(
-      `SELECT COUNT(*) as total
-       FROM user_credit_transactions
-       WHERE user_id = $1 AND tenant_id = $2 AND verification_app_id = $3`,
-      [userId, tenantId, verificationAppId]
-    );
+  // Get total count for pagination
+  const countResult = await db.query(
+    `SELECT COUNT(*) as total
+     FROM user_credit_transactions
+     WHERE user_id = $1 AND tenant_id = $2 AND verification_app_id = $3`,
+    [userId, tenantId, verificationAppId]
+  );
 
-    res.json({
-      success: true,
-      data: result.rows,
-      pagination: {
-        total: parseInt(countResult.rows[0].total),
-        limit,
-        offset,
-        hasMore: offset + limit < parseInt(countResult.rows[0].total)
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching credit transactions for external app:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch credit transactions',
-      error: error.message
-    });
-  }
-};
+  return sendSuccess(res, {
+    data: result.rows,
+    pagination: {
+      total: parseInt(countResult.rows[0].total),
+      limit,
+      offset,
+      hasMore: offset + limit < parseInt(countResult.rows[0].total)
+    }
+  });
+});
 
 /**
  * Record a coupon scan and add credits to user
  * POST /api/app/:appCode/scans
  * Body: { user_id, coupon_code, points }
  */
-const recordScan = async (req, res) => {
-  const client = await db.pool.connect();
-  
-  try {
-    const { user_id, coupon_code, points } = req.body;
-    const { verificationAppId, tenantId } = req.appContext;
+exports.recordScan = asyncHandler(async (req, res) => {
+  const { user_id, coupon_code, points } = req.body;
+  const { verificationAppId, tenantId } = req.appContext;
 
-    // Validation
-    if (!user_id || !coupon_code || points === undefined) {
-      return res.status(400).json({
-        success: false,
-        message: 'user_id, coupon_code, and points are required'
-      });
-    }
+  validateRequiredFields(req.body, ['user_id', 'coupon_code', 'points']);
 
-    if (points <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Points must be greater than 0'
-      });
-    }
+  if (points <= 0) {
+    throw new ValidationError('Points must be greater than 0');
+  }
 
-    await client.query('BEGIN');
-
+  const result = await executeTransaction(db, async (client) => {
     // Verify coupon exists and belongs to this app
     const couponResult = await client.query(
       `SELECT coupon_id, is_scanned, verification_app_id
@@ -185,37 +155,25 @@ const recordScan = async (req, res) => {
     );
 
     if (couponResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({
-        success: false,
-        message: 'Coupon not found'
-      });
+      throw new NotFoundError('Coupon');
     }
 
     const coupon = couponResult.rows[0];
 
     // Verify coupon belongs to this app
     if (coupon.verification_app_id !== verificationAppId) {
-      await client.query('ROLLBACK');
-      return res.status(403).json({
-        success: false,
-        message: 'This coupon belongs to a different application'
-      });
+      throw new ForbiddenError('This coupon belongs to a different application');
     }
 
     // Check if already scanned
     if (coupon.is_scanned) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({
-        success: false,
-        message: 'This coupon has already been scanned'
-      });
+      throw new ValidationError('This coupon has already been scanned', 'already_scanned');
     }
 
     // Mark coupon as scanned
     await client.query(
       `UPDATE coupons
-       SET is_scanned = true, 
+       SET is_scanned = true,
            scanned_at = NOW(),
            scanned_by = $1
        WHERE coupon_id = $2`,
@@ -254,69 +212,45 @@ const recordScan = async (req, res) => {
 
     // Record transaction
     const transactionResult = await client.query(
-      `INSERT INTO user_credit_transactions 
+      `INSERT INTO user_credit_transactions
         (user_id, tenant_id, verification_app_id, transaction_type, amount, balance_after, description)
        VALUES ($1, $2, $3, 'earn', $4, $5, $6)
        RETURNING transaction_id, created_at`,
       [
-        user_id, 
-        tenantId, 
-        verificationAppId, 
-        points, 
-        newBalance, 
+        user_id,
+        tenantId,
+        verificationAppId,
+        points,
+        newBalance,
         `Earned ${points} points from scanning coupon ${coupon_code}`
       ]
     );
 
-    await client.query('COMMIT');
+    return {
+      transaction_id: transactionResult.rows[0].transaction_id,
+      user_id: parseInt(user_id),
+      points_earned: points,
+      new_balance: newBalance,
+      coupon_code,
+      scanned_at: transactionResult.rows[0].created_at
+    };
+  });
 
-    res.json({
-      success: true,
-      message: 'Scan recorded successfully',
-      data: {
-        transaction_id: transactionResult.rows[0].transaction_id,
-        user_id: parseInt(user_id),
-        points_earned: points,
-        new_balance: newBalance,
-        coupon_code,
-        scanned_at: transactionResult.rows[0].created_at
-      }
-    });
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Error recording scan for external app:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to record scan',
-      error: error.message
-    });
-  } finally {
-    client.release();
-  }
-};
+  return sendSuccess(res, { data: result }, 'Scan recorded successfully');
+});
 
 /**
  * Redeem credits for a product
  * POST /api/app/:appCode/redeem
  * Body: { user_id, product_id }
  */
-const redeemProduct = async (req, res) => {
-  const client = await db.pool.connect();
-  
-  try {
-    const { user_id, product_id } = req.body;
-    const { verificationAppId, tenantId } = req.appContext;
+exports.redeemProduct = asyncHandler(async (req, res) => {
+  const { user_id, product_id } = req.body;
+  const { verificationAppId, tenantId } = req.appContext;
 
-    // Validation
-    if (!user_id || !product_id) {
-      return res.status(400).json({
-        success: false,
-        message: 'user_id and product_id are required'
-      });
-    }
+  validateRequiredFields(req.body, ['user_id', 'product_id']);
 
-    await client.query('BEGIN');
-
+  const result = await executeTransaction(db, async (client) => {
     // Get product details and verify it belongs to this app
     const productResult = await client.query(
       `SELECT product_id, product_name, points, stock_quantity, verification_app_id
@@ -326,31 +260,19 @@ const redeemProduct = async (req, res) => {
     );
 
     if (productResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
+      throw new NotFoundError('Product');
     }
 
     const product = productResult.rows[0];
 
     // Verify product belongs to this app
     if (product.verification_app_id !== verificationAppId) {
-      await client.query('ROLLBACK');
-      return res.status(403).json({
-        success: false,
-        message: 'This product belongs to a different application'
-      });
+      throw new ForbiddenError('This product belongs to a different application');
     }
 
     // Check stock
     if (product.stock_quantity <= 0) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({
-        success: false,
-        message: 'Product is out of stock'
-      });
+      throw new ValidationError('Product is out of stock', 'out_of_stock');
     }
 
     // Get user's credit balance
@@ -361,26 +283,17 @@ const redeemProduct = async (req, res) => {
     );
 
     if (creditResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({
-        success: false,
-        message: 'User has no credit account'
-      });
+      throw new ValidationError('User has no credit account', 'no_credit_account');
     }
 
     const currentBalance = creditResult.rows[0].balance;
 
     // Check if user has enough credits
     if (currentBalance < product.points) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({
-        success: false,
-        message: 'Insufficient credits',
-        data: {
-          required: product.points,
-          available: currentBalance,
-          shortfall: product.points - currentBalance
-        }
+      throw new ValidationError('Insufficient credits', 'insufficient_credits', {
+        required: product.points,
+        available: currentBalance,
+        shortfall: product.points - currentBalance
       });
     }
 
@@ -395,7 +308,7 @@ const redeemProduct = async (req, res) => {
 
     // Record transaction
     const transactionResult = await client.query(
-      `INSERT INTO user_credit_transactions 
+      `INSERT INTO user_credit_transactions
         (user_id, tenant_id, verification_app_id, transaction_type, amount, balance_after, description)
        VALUES ($1, $2, $3, 'spend', $4, $5, $6)
        RETURNING transaction_id, created_at`,
@@ -417,38 +330,16 @@ const redeemProduct = async (req, res) => {
       [product_id]
     );
 
-    await client.query('COMMIT');
+    return {
+      transaction_id: transactionResult.rows[0].transaction_id,
+      user_id: parseInt(user_id),
+      product_id: parseInt(product_id),
+      product_name: product.product_name,
+      points_spent: product.points,
+      new_balance: newBalance,
+      redeemed_at: transactionResult.rows[0].created_at
+    };
+  });
 
-    res.json({
-      success: true,
-      message: 'Product redeemed successfully',
-      data: {
-        transaction_id: transactionResult.rows[0].transaction_id,
-        user_id: parseInt(user_id),
-        product_id: parseInt(product_id),
-        product_name: product.product_name,
-        points_spent: product.points,
-        new_balance: newBalance,
-        redeemed_at: transactionResult.rows[0].created_at
-      }
-    });
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Error redeeming product for external app:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to redeem product',
-      error: error.message
-    });
-  } finally {
-    client.release();
-  }
-};
-
-module.exports = {
-  getProducts,
-  getUserCredits,
-  getUserCreditTransactions,
-  recordScan,
-  redeemProduct
-};
+  return sendSuccess(res, { data: result }, 'Product redeemed successfully');
+});

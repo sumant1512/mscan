@@ -27,6 +27,7 @@ import { CouponPrintPageComponent } from './components/rewards/coupon-print-page
 
 // Products
 import { ProductListComponent } from './components/products/product-list.component';
+import { ProductDetailComponent } from './components/products/product-detail.component';
 import { TemplateProductFormComponent } from './components/products/template-product-form.component';
 
 // Templates
@@ -49,6 +50,11 @@ import { ScanHistoryComponent } from './components/scans/scan-history.component'
 // Profile
 import { ProfileComponent } from './components/profile/profile.component';
 
+// Debug
+import { DebugAuthComponent } from './components/debug-auth.component';
+import { TestProductsApiComponent } from './components/test-products-api.component';
+import { DebugNetworkComponent } from './components/debug-network.component';
+
 // Settings
 import { SettingsComponent } from './components/settings/settings.component';
 
@@ -68,6 +74,9 @@ import { TenantAdminDetailComponent } from './components/super-admin/tenant-admi
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
+  { path: 'debug-auth', component: DebugAuthComponent }, // Debug tool
+  { path: 'test-api', component: TestProductsApiComponent }, // API test tool
+  { path: 'debug-network', component: DebugNetworkComponent }, // Network debugging
   
   // Super Admin Routes
   {
@@ -142,6 +151,7 @@ export const routes: Routes = [
         canActivate: [PermissionGuard],
         data: { requiredPermission: 'create_product' }
       },
+      { path: 'products/:id', component: ProductDetailComponent },
       {
         path: 'products/edit/:id',
         component: TemplateProductFormComponent,

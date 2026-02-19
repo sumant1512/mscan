@@ -15,7 +15,7 @@ describe('AuthService', () => {
   const mockUser = {
     id: '123e4567-e89b-12d3-a456-426614174000',
     email: 'test@example.com',
-    fullName: 'Test User',
+    full_name: 'Test User',
     role: 'TENANT_ADMIN',
     tenantId: '223e4567-e89b-12d3-a456-426614174000'
   };
@@ -83,7 +83,7 @@ describe('AuthService', () => {
         data: {
           id: 1,
           email: 'test@example.com',
-          fullName: 'Test User',
+          full_name: 'Test User',
           role: UserRole.TENANT_ADMIN,
           isActive: true
         }

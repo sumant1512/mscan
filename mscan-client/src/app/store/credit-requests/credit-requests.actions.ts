@@ -51,12 +51,12 @@ export const loadRequestsFailure = createAction(
 // Approve Request
 export const approveRequest = createAction(
   '[Credit Requests] Approve Request',
-  props<{ id: number }>()
+  props<{ id: string }>()
 );
 
 export const approveRequestSuccess = createAction(
   '[Credit Requests] Approve Request Success',
-  props<{ id: number }>()
+  props<{ id: string }>()
 );
 
 export const approveRequestFailure = createAction(
@@ -67,12 +67,12 @@ export const approveRequestFailure = createAction(
 // Reject Request
 export const rejectRequest = createAction(
   '[Credit Requests] Reject Request',
-  props<{ id: number; reason: string }>()
+  props<{ id: string; reason: string }>()
 );
 
 export const rejectRequestSuccess = createAction(
   '[Credit Requests] Reject Request Success',
-  props<{ id: number }>()
+  props<{ id: string }>()
 );
 
 export const rejectRequestFailure = createAction(

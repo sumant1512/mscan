@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { User, UserRole } from '../../models';
 import { AppSelectorComponent } from '../app-selector/app-selector.component';
-import { Observable, map, Subscription } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
+import { map, takeUntil } from 'rxjs/operators';
 import { VerificationAppsFacade } from '../../store/verification-apps';
 import { TenantsFacade } from '../../store/tenants';
 
@@ -15,12 +16,13 @@ import { TenantsFacade } from '../../store/tenants';
   styleUrls: ['./shared-header.component.css'],
 })
 export class SharedHeaderComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   currentUser$: Observable<User | null>;
   currentTenantName$: Observable<string>;
   isSuperAdmin$: Observable<boolean>;
   isTenantRole$: Observable<boolean>;
   readonly UserRole = UserRole;
-  private subscription?: Subscription;
 
   constructor(
     private authService: AuthService,
@@ -29,7 +31,8 @@ export class SharedHeaderComponent implements OnInit, OnDestroy {
   ) {
     this.currentUser$ = this.authService.currentUser$;
     this.currentTenantName$ = this.authService.currentUser$.pipe(
-      map((user) => user?.tenant?.tenant_name || 'Dashboard'),
+      map((user) => {
+        return user?.tenant?.tenant_name || 'Dashboard'}),
     );
     this.isSuperAdmin$ = this.authService.currentUser$.pipe(
       map((user) => user?.role === UserRole.SUPER_ADMIN),
@@ -41,17 +44,20 @@ export class SharedHeaderComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // Only load verification apps for tenant roles, not for Super Admin
-    this.subscription = this.currentUser$.subscribe((user) => {
-      if (user?.role === UserRole.TENANT_ADMIN || user?.role === UserRole.TENANT_USER) {
-        this.verificationAppsFacade.loadApps();
-      }
-      if (user?.role === UserRole.SUPER_ADMIN) {
-        this.tenantsFacade.loadTenants();
-      }
-    });
+    this.currentUser$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((user) => {
+        if (user?.role === UserRole.TENANT_ADMIN || user?.role === UserRole.TENANT_USER) {
+          this.verificationAppsFacade.loadApps();
+        }
+        if (user?.role === UserRole.SUPER_ADMIN) {
+          this.tenantsFacade.loadTenants();
+        }
+      });
   }
 
   ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

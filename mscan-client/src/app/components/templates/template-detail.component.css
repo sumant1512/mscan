@@ -377,6 +377,11 @@ code {
   font-weight: 600;
 }
 
+.text-warning {
+  color: #d97706;
+  font-weight: 600;
+}
+
 /* Buttons */
 .btn {
   padding: 0.75rem 1.5rem;
@@ -400,8 +405,14 @@ code {
   color: white;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: #1d4ed8;
+}
+
+.btn-primary:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .btn-outline {

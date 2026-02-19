@@ -18,6 +18,11 @@ export const selectSelectedApp = createSelector(
   (state) => state.selectedApp
 );
 
+export const selectSelectedAppId = createSelector(
+  selectVerificationAppsState,
+  (state) => state.selectedAppId
+);
+
 export const selectVerificationAppsLoading = createSelector(
   selectVerificationAppsState,
   (state) => state.loading
@@ -41,4 +46,24 @@ export const selectVerificationAppById = (id: string) => createSelector(
 export const selectVerificationAppByCode = (code: string) => createSelector(
   selectAllVerificationApps,
   (apps) => apps.find(app => app.code === code)
+);
+
+export const selectSuccessMessage = createSelector(
+  selectVerificationAppsState,
+  (state) => state.successMessage
+);
+
+export const selectLastCreatedAppId = createSelector(
+  selectVerificationAppsState,
+  (state) => state.lastCreatedAppId
+);
+
+export const selectLastUpdatedAppId = createSelector(
+  selectVerificationAppsState,
+  (state) => state.lastUpdatedAppId
+);
+
+export const selectLastDeletedAppId = createSelector(
+  selectVerificationAppsState,
+  (state) => state.lastDeletedAppId
 );

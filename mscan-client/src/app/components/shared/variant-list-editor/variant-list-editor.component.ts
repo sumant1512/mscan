@@ -1,6 +1,8 @@
-import { Component, Input, forwardRef, OnInit } from '@angular/core';
+import { Component, Input, forwardRef, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormArray, FormBuilder, FormGroup, Validators, ReactiveFormsModule, NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { TemplateAttribute, ProductVariant, VariantFieldDefinition } from '../../../models/templates.model';
 
 @Component({
@@ -17,7 +19,9 @@ import { TemplateAttribute, ProductVariant, VariantFieldDefinition } from '../..
     }
   ]
 })
-export class VariantListEditorComponent implements ControlValueAccessor, OnInit {
+export class VariantListEditorComponent implements ControlValueAccessor, OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   @Input() attribute!: TemplateAttribute;
 
   variantsForm: FormArray;
@@ -31,9 +35,16 @@ export class VariantListEditorComponent implements ControlValueAccessor, OnInit 
 
   ngOnInit() {
     // Subscribe to form changes to propagate values
-    this.variantsForm.valueChanges.subscribe(value => {
-      this.onChange(value);
-    });
+    this.variantsForm.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(value => {
+        this.onChange(value);
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   get variants(): FormArray {

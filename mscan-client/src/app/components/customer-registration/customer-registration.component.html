@@ -105,12 +105,12 @@
 
         <!-- Form Actions -->
         <div class="form-actions">
-          <button type="button" class="btn-cancel" (click)="cancel()" [disabled]="loading">
+          <button type="button" class="btn-cancel" (click)="cancel()" [disabled]="loading$ | async">
             Cancel
           </button>
-          <button type="submit" class="btn-submit" [disabled]="loading || registrationForm.invalid">
-            <span *ngIf="!loading">Register Customer</span>
-            <span *ngIf="loading">Registering...</span>
+          <button type="submit" class="btn-submit" [disabled]="(loading$ | async) || registrationForm.invalid">
+            <span *ngIf="!(loading$ | async)">Register Customer</span>
+            <span *ngIf="loading$ | async">Registering...</span>
           </button>
         </div>
       </form>

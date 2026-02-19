@@ -1,0 +1,142 @@
+<div class="product-detail-container">
+  <!-- Loading State -->
+  <div *ngIf="loading$ | async" class="loading">
+    <div class="spinner"></div>
+    <p>Loading product...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error$ | async as error" class="error-message">
+    {{ error }}
+  </div>
+
+  <!-- Product Details -->
+  <div *ngIf="product && !(loading$ | async)" class="product-detail">
+    <!-- Header -->
+    <div class="detail-header">
+      <button (click)="goBack()" class="btn-back">
+        <span class="material-icons">arrow_back</span>
+        Back to Products
+      </button>
+      <div class="header-actions">
+        <button *ngIf="canEditProduct" (click)="editProduct()" class="btn-primary">
+          <span class="material-icons">edit</span>
+          Edit Product
+        </button>
+      </div>
+    </div>
+
+    <!-- Basic Information -->
+    <div class="detail-section">
+      <h2>{{ product.product_name }}</h2>
+      <div class="status-badge" [class.active]="product.is_active" [class.inactive]="!product.is_active">
+        {{ product.is_active ? 'Active' : 'Inactive' }}
+      </div>
+    </div>
+
+    <!-- Product Images -->
+    <div class="detail-section" *ngIf="product.thumbnail_url || (product.product_images && product.product_images.length > 0)">
+      <h3>Product Images</h3>
+
+      <div class="thumbnail-section" *ngIf="product.thumbnail_url">
+        <h4>Thumbnail</h4>
+        <div class="image-preview">
+          <img [src]="product.thumbnail_url" alt="{{ product.product_name }}" />
+        </div>
+      </div>
+
+      <div class="gallery-section" *ngIf="product.product_images && product.product_images.length > 0">
+        <h4>Gallery Images</h4>
+        <div class="images-grid">
+          <div *ngFor="let img of product.product_images; let i = index" class="image-item">
+            <div class="image-preview">
+              <img [src]="img.url" alt="Product image {{ i + 1 }}" />
+              <span *ngIf="img.is_first" class="first-badge">First</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Application & Template Info -->
+    <div class="detail-section">
+      <h3>Configuration</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <label>Verification App</label>
+          <p>{{ product.app_name || product.verification_app_id }}</p>
+        </div>
+        <div class="info-item" *ngIf="product.template_name || product.template_id">
+          <label>Product Template</label>
+          <p>{{ product.template_name || product.template_id }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tags -->
+    <div class="detail-section" *ngIf="product.tags && product.tags.length > 0">
+      <h3>Tags</h3>
+      <div class="tags-display">
+        <span *ngFor="let tag of product.tags" class="tag-chip">
+          <span class="material-icons">{{ tag.icon || 'label' }}</span>
+          {{ tag.name }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Variants -->
+    <div class="detail-section" *ngIf="product.attributes?.variants && (product.attributes?.variants?.length ?? 0) > 0">
+      <h3>Product Variants</h3>
+      <div class="variants-list">
+        <div *ngFor="let variant of product.attributes?.variants; let i = index" class="variant-card">
+          <h4>Variant {{ i + 1 }}</h4>
+          <div class="variant-details">
+            <div *ngFor="let entry of variant | keyvalue" class="detail-row">
+              <span class="label">{{ formatKey(entry.key) }}:</span>
+              <span class="value">{{ entry.value }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Fields -->
+    <div class="detail-section" *ngIf="product.attributes?.custom_fields && ((product.attributes?.custom_fields | keyvalue)?.length ?? 0) > 0">
+      <h3>Product Specifications</h3>
+      <div class="specifications-grid">
+        <div *ngFor="let field of product.attributes?.custom_fields | keyvalue" class="spec-item">
+          <label>{{ formatKey(field.key) }}</label>
+          <p>{{ getCustomFieldValue(field.value) }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Description Sections -->
+    <div class="detail-section" *ngIf="product.attributes?.description_sections && (product.attributes?.description_sections?.length ?? 0) > 0">
+      <h3>Product Description</h3>
+      <div class="description-sections">
+        <div *ngFor="let section of product.attributes?.description_sections" class="description-section">
+          <h4>{{ section.heading }}</h4>
+          <ul class="description-list">
+            <li *ngFor="let desc of section.descriptions">{{ desc }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Metadata -->
+    <div class="detail-section metadata-section">
+      <h3>Metadata</h3>
+      <div class="info-grid">
+        <div class="info-item" *ngIf="product.created_at">
+          <label>Created</label>
+          <p>{{ product.created_at | date:'medium' }}</p>
+        </div>
+        <div class="info-item" *ngIf="product.updated_at">
+          <label>Last Updated</label>
+          <p>{{ product.updated_at | date:'medium' }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

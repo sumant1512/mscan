@@ -9,10 +9,10 @@
     </div>
   </div>
 
-  <div *ngIf="loading" class="loading">Loading tenant details...</div>
+  <div *ngIf="loading$ | async" class="loading">Loading tenant details...</div>
   <div *ngIf="error" class="error">{{ error }}</div>
 
-  <div *ngIf="!loading && !error && tenant" class="content">
+  <div *ngIf="!(loading$ | async) && !error && tenant" class="content">
     <div class="info-card">
       <h2>{{ tenant.tenant_name }}</h2>
       <span [class]="getStatusClass(tenant.status)" class="status-badge">

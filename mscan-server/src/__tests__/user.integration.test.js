@@ -78,8 +78,8 @@ describe('User Management API Integration Tests', () => {
     };
 
     const validCustomerData = {
-      companyName: 'Test Company',
-      adminEmail: 'admin@testcompany.com',
+      tenant_name: 'Test Company',
+      email: 'admin@testcompany.com',
       adminName: 'John Doe',
       contactPhone: '+1234567890',
       address: '123 Test St'
@@ -492,7 +492,7 @@ describe('User Management API Integration Tests', () => {
 
       const response = await request(app)
         .put('/users/profile')
-        .send({ fullName: 'Test' })
+        .send({ full_name: 'Test' })
         .expect(500);
 
       expect(response.body).toHaveProperty('error');

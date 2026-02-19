@@ -11,7 +11,7 @@
           <span class="material-icons">account_circle</span>
         </div>
         <div class="user-details" *ngIf="currentUser">
-          <h2>{{ currentUser.fullName }}</h2>
+          <h2>{{ currentUser.full_name }}</h2>
           <p class="role-badge">{{ currentUser.role }}</p>
           <div class="tenant-info" *ngIf="currentUser.tenant">
             <span class="material-icons">business</span>

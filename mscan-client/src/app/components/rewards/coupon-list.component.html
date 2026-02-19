@@ -44,11 +44,11 @@
     </select>
   </div>
 
-  <div *ngIf="loading" class="loading">Loading coupons...</div>
+  <div *ngIf="loading$ | async" class="loading">Loading coupons...</div>
   <div *ngIf="error" class="error">{{ error }}</div>
 
   <!-- Selection Controls -->
-  <div *ngIf="!loading && !error && coupons.length > 0 && canEditCoupon" class="selection-controls">
+  <div *ngIf="!(loading$ | async) && !error && coupons.length > 0 && canEditCoupon" class="selection-controls">
     <label class="checkbox-label">
       <input type="checkbox" [checked]="selectAll" (change)="toggleSelectAll()" />
       <span>Select All</span>
@@ -56,7 +56,7 @@
     <span class="hint-text">Select coupons to perform bulk operations</span>
   </div>
 
-  <div *ngIf="!loading && !error" class="coupons-list" (scroll)="onScroll($event)">
+  <div *ngIf="!(loading$ | async) && !error" class="coupons-list" (scroll)="onScroll($event)">
     <div
       *ngFor="let coupon of coupons"
       class="coupon-card"

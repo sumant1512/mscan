@@ -46,8 +46,8 @@
         </span>
       </div>
 
-      <button type="submit" class="btn-submit" [disabled]="loading || requestForm.invalid">
-        {{ loading ? 'Submitting...' : 'Request Credits' }}
+      <button type="submit" class="btn-submit" [disabled]="(loading$ | async) || requestForm.invalid">
+        {{ (loading$ | async) ? 'Submitting...' : 'Request Credits' }}
       </button>
     </form>
   </div>

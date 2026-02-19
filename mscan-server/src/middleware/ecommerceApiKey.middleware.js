@@ -18,7 +18,7 @@ const authenticateEcommerceApiKey = async (req, res, next) => {
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
-        success: false,
+        status: false,
         error: 'unauthorized',
         message: 'Missing or invalid Authorization header. Expected: Bearer ecommerce_xxxxx'
       });
@@ -28,7 +28,7 @@ const authenticateEcommerceApiKey = async (req, res, next) => {
 
     if (!apiKey || !apiKey.startsWith('ecommerce_')) {
       return res.status(401).json({
-        success: false,
+        status: false,
         error: 'unauthorized',
         message: 'Invalid E-commerce API key format'
       });
@@ -52,7 +52,7 @@ const authenticateEcommerceApiKey = async (req, res, next) => {
 
     if (result.rows.length === 0) {
       return res.status(401).json({
-        success: false,
+        status: false,
         error: 'unauthorized',
         message: 'Invalid E-commerce API key'
       });
@@ -63,7 +63,7 @@ const authenticateEcommerceApiKey = async (req, res, next) => {
     // Check if E-commerce API is enabled
     if (!app.ecommerce_api_enabled) {
       return res.status(403).json({
-        success: false,
+        status: false,
         error: 'forbidden',
         message: 'E-commerce API is not enabled for this verification app'
       });
@@ -81,7 +81,7 @@ const authenticateEcommerceApiKey = async (req, res, next) => {
 
     if (!rateLimitCheck.allowed) {
       return res.status(429).json({
-        success: false,
+        status: false,
         error: 'rate_limit_exceeded',
         message: 'Too many requests. Please try again later.',
         retry_after: rateLimitCheck.retryAfter
@@ -107,7 +107,7 @@ const authenticateEcommerceApiKey = async (req, res, next) => {
   } catch (error) {
     console.error('E-commerce API key authentication error:', error);
     res.status(500).json({
-      success: false,
+      status: false,
       error: 'internal_error',
       message: 'Authentication failed'
     });

@@ -39,11 +39,11 @@
 
   <div *ngIf="error" class="alert alert-error">{{ error }}</div>
 
-  <div *ngIf="loading" class="loading">
+  <div *ngIf="loading$ | async" class="loading">
     <p>Loading users...</p>
   </div>
 
-  <div *ngIf="!loading && !error && users.length === 0" class="empty-state">
+  <div *ngIf="!(loading$ | async) && !error && users.length === 0" class="empty-state">
     <span class="material-icons">people</span>
     <h3>No users found</h3>
     <p>Add your first user to get started</p>
@@ -53,7 +53,7 @@
     </button>
   </div>
 
-  <div *ngIf="!loading && users.length > 0" class="users-table-container">
+  <div *ngIf="!(loading$ | async) && users.length > 0" class="users-table-container">
     <table class="users-table">
       <thead>
         <tr>

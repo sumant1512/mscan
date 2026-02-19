@@ -1,14 +1,17 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, OnDestroy } from '@angular/core'
+import { inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subject, Observable } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { TagService } from '../../services/tag.service';
 import { CreateTagRequest } from '../../models/templates.model';
 import { VerificationApp, VerificationAppsFacade } from '../../store/verification-apps';
-import { map } from 'rxjs/internal/operators/map';
-import { Observable } from 'rxjs/internal/Observable';
 import { tagsMaterialIcons } from './tags-icons';
 import { AppContextService } from '../../services/app-context.service';
+import { LoadingService } from '../../shared/services/loading.service';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
 
 @Component({
   selector: 'app-tag-form',
@@ -17,11 +20,16 @@ import { AppContextService } from '../../services/app-context.service';
   templateUrl: './tag-form.component.html',
   styleUrls: ['./tag-form.component.css'],
 })
-export class TagFormComponent implements OnInit {
+export class TagFormComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   isEditMode = false;
   tagId: string | null = null;
-  loading = false;
+  private loadingService = inject(LoadingService);
+
+  loading$ = this.loadingService.loading$;
   error: string | null = null;
+  successMessage = '';
   availableApps$: Observable<VerificationApp[]>;
 
   // Form model
@@ -50,7 +58,7 @@ export class TagFormComponent implements OnInit {
     private router: Router,
     private verificationAppsFacade: VerificationAppsFacade,
     private appContextService: AppContextService,
-    private cdr: ChangeDetectorRef,
+    private cdr: ChangeDetectorRef
   ) {
     this.availableApps$ = this.verificationAppsFacade.allApps$;
   }
@@ -66,29 +74,37 @@ export class TagFormComponent implements OnInit {
     }
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   loadTag(id: string): void {
-    this.loading = true;
-    this.tagService.getTagById(id).subscribe({
-      next: (response) => {
-        const tag = response.data;
-        this.tag = {
-          name: tag.name,
-          description: tag.description || '',
-          icon: tag.icon || 'label',
-          verification_app_id: tag.verification_app_id,
-          is_active: tag.is_active,
-        };
-        this.selectedIcon = this.tag.icon;
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-      error: (error) => {
-        console.error('Error loading tag:', error);
-        this.error = error.error?.message || 'Failed to load tag';
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-    });
+    this.error = null;
+
+    this.tagService.getTagById(id)
+      .pipe(
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (response) => {
+          const tag = response.data;
+          this.tag = {
+            name: tag.name,
+            description: tag.description || '',
+            icon: tag.icon || 'label',
+            verification_app_id: tag.verification_app_id,
+            is_active: tag.is_active,
+          };
+          this.selectedIcon = this.tag.icon;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to load tag');
+          this.cdr.detectChanges();
+        },
+      });
   }
 
   toggleIconPicker(): void {
@@ -137,8 +153,8 @@ export class TagFormComponent implements OnInit {
       return;
     }
 
-    this.loading = true;
     this.error = null;
+    this.successMessage = '';
 
     const request: CreateTagRequest = {
       verification_app_id: this.tag.verification_app_id,
@@ -156,33 +172,43 @@ export class TagFormComponent implements OnInit {
   }
 
   createTag(request: CreateTagRequest): void {
-    this.tagService.createTag(request).subscribe({
-      next: (response) => {
-        alert('Tag created successfully');
-        this.router.navigate(['/tenant/tags']);
-      },
-      error: (error) => {
-        console.error('Error creating tag:', error);
-        this.error = error.error?.message || 'Failed to create tag';
-        this.loading = false;
-      },
-    });
+    this.tagService.createTag(request)
+      .pipe(
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (response) => {
+          this.successMessage = 'Tag created successfully';
+          setTimeout(() => {
+            this.router.navigate(['/tenant/tags']);
+          }, 1500);
+        },
+        error: (err) => {
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to create tag');
+        },
+      });
   }
 
   updateTag(request: Partial<CreateTagRequest>): void {
     if (!this.tagId) return;
 
-    this.tagService.updateTag(this.tagId, request).subscribe({
-      next: (response) => {
-        alert('Tag updated successfully');
-        this.router.navigate(['/tenant/tags']);
-      },
-      error: (error) => {
-        console.error('Error updating tag:', error);
-        this.error = error.error?.message || 'Failed to update tag';
-        this.loading = false;
-      },
-    });
+    this.tagService.updateTag(this.tagId, request)
+      .pipe(
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (response) => {
+          this.successMessage = 'Tag updated successfully';
+          setTimeout(() => {
+            this.router.navigate(['/tenant/tags']);
+          }, 1500);
+        },
+        error: (err) => {
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to update tag');
+        },
+      });
   }
 
   cancel(): void {

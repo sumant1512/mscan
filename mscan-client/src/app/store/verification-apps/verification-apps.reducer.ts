@@ -5,9 +5,14 @@ import * as VerificationAppsActions from './verification-apps.actions';
 export const initialState: VerificationAppsState = {
   apps: [],
   selectedApp: null,
+  selectedAppId: null,
   loading: false,
   error: null,
-  loaded: false
+  loaded: false,
+  successMessage: null,
+  lastCreatedAppId: null,
+  lastUpdatedAppId: null,
+  lastDeletedAppId: null
 };
 
 export const verificationAppsReducer = createReducer(
@@ -38,34 +43,43 @@ export const verificationAppsReducer = createReducer(
   // Select app
   on(VerificationAppsActions.selectApp, (state, { app }) => ({
     ...state,
-    selectedApp: app
+    selectedApp: app,
+    selectedAppId: app?.verification_app_id || null
   })),
 
   // Create app
   on(VerificationAppsActions.createVerificationApp, (state) => ({
     ...state,
     loading: true,
-    error: null
+    error: null,
+    successMessage: null,
+    lastCreatedAppId: null
   })),
 
   on(VerificationAppsActions.createVerificationAppSuccess, (state, { app }) => ({
     ...state,
     apps: [...state.apps, app],
     loading: false,
-    error: null
+    error: null,
+    successMessage: 'Verification app created successfully',
+    lastCreatedAppId: app.verification_app_id
   })),
 
   on(VerificationAppsActions.createVerificationAppFailure, (state, { error }) => ({
     ...state,
     loading: false,
-    error
+    error,
+    successMessage: null,
+    lastCreatedAppId: null
   })),
 
   // Update app
   on(VerificationAppsActions.updateVerificationApp, (state) => ({
     ...state,
     loading: true,
-    error: null
+    error: null,
+    successMessage: null,
+    lastUpdatedAppId: null
   })),
 
   on(VerificationAppsActions.updateVerificationAppSuccess, (state, { app }) => ({
@@ -73,20 +87,26 @@ export const verificationAppsReducer = createReducer(
     apps: state.apps.map(a => a.verification_app_id === app.verification_app_id ? app : a),
     selectedApp: state.selectedApp?.verification_app_id === app.verification_app_id ? app : state.selectedApp,
     loading: false,
-    error: null
+    error: null,
+    successMessage: 'Verification app updated successfully',
+    lastUpdatedAppId: app.verification_app_id
   })),
 
   on(VerificationAppsActions.updateVerificationAppFailure, (state, { error }) => ({
     ...state,
     loading: false,
-    error
+    error,
+    successMessage: null,
+    lastUpdatedAppId: null
   })),
 
   // Delete app
   on(VerificationAppsActions.deleteVerificationApp, (state) => ({
     ...state,
     loading: true,
-    error: null
+    error: null,
+    successMessage: null,
+    lastDeletedAppId: null
   })),
 
   on(VerificationAppsActions.deleteVerificationAppSuccess, (state, { id }) => ({
@@ -94,18 +114,23 @@ export const verificationAppsReducer = createReducer(
     apps: state.apps.filter(a => a.verification_app_id !== id),
     selectedApp: state.selectedApp?.verification_app_id === id ? null : state.selectedApp,
     loading: false,
-    error: null
+    error: null,
+    successMessage: 'Verification app deleted successfully',
+    lastDeletedAppId: id
   })),
 
   on(VerificationAppsActions.deleteVerificationAppFailure, (state, { error }) => ({
     ...state,
     loading: false,
-    error
+    error,
+    successMessage: null,
+    lastDeletedAppId: null
   })),
 
   // Clear error
   on(VerificationAppsActions.clearError, (state) => ({
     ...state,
-    error: null
+    error: null,
+    successMessage: null
   }))
 );

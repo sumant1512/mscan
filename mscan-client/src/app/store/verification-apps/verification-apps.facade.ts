@@ -54,6 +54,11 @@ export class VerificationAppsFacade {
     VerificationAppsSelectors.selectSelectedApp
   );
 
+    /** Currently selected app */
+  readonly selectedAppId$: Observable<string | null> = this.store.select(
+    VerificationAppsSelectors.selectSelectedAppId
+  );
+
   /** Loading state */
   readonly loading$: Observable<boolean> = this.store.select(
     VerificationAppsSelectors.selectVerificationAppsLoading
@@ -67,6 +72,26 @@ export class VerificationAppsFacade {
   /** Whether apps have been loaded */
   readonly loaded$: Observable<boolean> = this.store.select(
     VerificationAppsSelectors.selectVerificationAppsLoaded
+  );
+
+  /** Success message from operations */
+  readonly successMessage$: Observable<string | null> = this.store.select(
+    VerificationAppsSelectors.selectSuccessMessage
+  );
+
+  /** Last created app ID for navigation */
+  readonly lastCreatedAppId$: Observable<string | null> = this.store.select(
+    VerificationAppsSelectors.selectLastCreatedAppId
+  );
+
+  /** Last updated app ID for navigation */
+  readonly lastUpdatedAppId$: Observable<string | null> = this.store.select(
+    VerificationAppsSelectors.selectLastUpdatedAppId
+  );
+
+  /** Last deleted app ID */
+  readonly lastDeletedAppId$: Observable<string | null> = this.store.select(
+    VerificationAppsSelectors.selectLastDeletedAppId
   );
 
   // Action dispatchers
@@ -103,6 +128,7 @@ export class VerificationAppsFacade {
    */
   selectApp(app: VerificationApp | null): void {
     this.store.dispatch(VerificationAppsActions.selectApp({ app }));
+    this.store.dispatch(VerificationAppsActions.setSelectedAppId({ appId: app ? app.verification_app_id : null }));
   }
 
   /**

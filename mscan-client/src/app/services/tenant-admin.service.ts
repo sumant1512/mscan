@@ -14,18 +14,14 @@ import {
   TenantAdminResponse,
   TenantAdminsListResponse,
   TenantsListResponse,
-  AdminStats
+  AdminStats,
 } from '../models/tenant-admin.model';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class TenantAdminService {
   private apiUrl = environment.apiUrl;
-  
-  // Observable state for tenant list with admin counts
-  private tenantsWithCountSubject = new BehaviorSubject<Tenant[]>([]);
-  public tenantsWithCount$ = this.tenantsWithCountSubject.asObservable();
 
   constructor(private http: HttpClient) {}
 
@@ -33,32 +29,25 @@ export class TenantAdminService {
    * Get all tenants with admin count and admin details (no pagination)
    */
   getTenants(): Observable<TenantsListResponse> {
-    return this.http.get<TenantsListResponse>(`${this.apiUrl}/tenants`).pipe(
-      tap(response => {
-        this.tenantsWithCountSubject.next(response.tenants);
-      })
-    );
-  }
-
-  /**
-   * Get tenant admins from cached tenant data (no API call needed)
-   */
-  getTenantAdminsFromCache(tenantId: string): TenantAdmin[] {
-    const tenants = this.tenantsWithCountSubject.value;
-    const tenant = tenants.find(t => t.id === tenantId);
-    return tenant?.admins || [];
+    return this.http.get<TenantsListResponse>(`${this.apiUrl}/tenants`);
   }
 
   /**
    * Create a new Tenant Admin
    */
-  createTenantAdmin(tenantId: string, data: CreateTenantAdminRequest): Observable<TenantAdminResponse> {
+  createTenantAdmin(
+    tenantId: string,
+    data: CreateTenantAdminRequest,
+  ): Observable<TenantAdminResponse> {
     const payload = {
       ...data,
-      role: 'TENANT_ADMIN' // Ensure role is always TENANT_ADMIN
+      role: 'TENANT_ADMIN', // Ensure role is always TENANT_ADMIN
     };
-    
-    return this.http.post<TenantAdminResponse>(`${this.apiUrl}/v1/tenants/${tenantId}/users`, payload);
+
+    return this.http.post<TenantAdminResponse>(
+      `${this.apiUrl}/v1/tenants/${tenantId}/users`,
+      payload,
+    );
   }
 
   /**
@@ -69,13 +58,13 @@ export class TenantAdminService {
       total_tenants: tenants.length,
       tenants_with_admins: 0,
       tenants_without_admins: 0,
-      total_tenant_admins: 0
+      total_tenant_admins: 0,
     };
 
-    tenants.forEach(tenant => {
+    tenants.forEach((tenant) => {
       const adminCount = tenant.tenant_admin_count || 0;
       stats.total_tenant_admins += adminCount;
-      
+
       if (adminCount > 0) {
         stats.tenants_with_admins++;
       } else {
@@ -90,7 +79,7 @@ export class TenantAdminService {
    * Filter tenants without admins
    */
   filterTenantsWithoutAdmins(tenants: Tenant[]): Tenant[] {
-    return tenants.filter(t => !t.tenant_admin_count || t.tenant_admin_count === 0);
+    return tenants.filter((t) => !t.tenant_admin_count || t.tenant_admin_count === 0);
   }
 
   /**
@@ -102,10 +91,11 @@ export class TenantAdminService {
     }
 
     const term = searchTerm.toLowerCase();
-    return tenants.filter(t => 
-      t.tenant_name.toLowerCase().includes(term) ||
-      (t.subdomain_slug && t.subdomain_slug.toLowerCase().includes(term)) ||
-      (t.email && t.email.toLowerCase().includes(term))
+    return tenants.filter(
+      (t) =>
+        t.tenant_name.toLowerCase().includes(term) ||
+        (t.subdomain_slug && t.subdomain_slug.toLowerCase().includes(term)) ||
+        (t.email && t.email.toLowerCase().includes(term)),
     );
   }
 }

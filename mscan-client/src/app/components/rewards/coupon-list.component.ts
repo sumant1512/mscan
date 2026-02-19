@@ -2,13 +2,17 @@ import { Component, OnInit, ChangeDetectorRef, OnDestroy, inject } from '@angula
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subject } from 'rxjs';
+import { filter, takeUntil } from 'rxjs/operators';
 import { RewardsService } from '../../services/rewards.service';
 import { Coupon } from '../../models/rewards.model';
-import { finalize } from 'rxjs/operators';
 import { AppContextService } from '../../services/app-context.service';
 import { VerificationAppsFacade } from '../../store/verification-apps';
 import { AuthService } from '../../services/auth.service';
+import { LoadingService } from '../../shared/services/loading.service';
+import { ConfirmationService } from '../../shared/services/confirmation.service';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
+
 @Component({
   selector: 'app-coupon-list',
   standalone: true,
@@ -17,13 +21,17 @@ import { AuthService } from '../../services/auth.service';
   styleUrls: ['./coupon-list.component.css']
 })
 export class CouponListComponent implements OnInit, OnDestroy {
-  subscription = new Subscription();
+  private destroy$ = new Subject<void>();
+
   verificationAppsFacade = inject(VerificationAppsFacade);
   coupons: Coupon[] = [];
   verificationApps: any[] = [];
-  loading = false;
+  private loadingService = inject(LoadingService);
+
+  loading$ = this.loadingService.loading$;
   loadingMore = false;
   error = '';
+  successMessage = '';
 
   statusFilter: 'all' | 'draft' | 'printed' | 'active' | 'used' | 'inactive' | 'expired' = 'all';
   searchQuery = '';
@@ -52,6 +60,7 @@ export class CouponListComponent implements OnInit, OnDestroy {
   };
   rangePreviewCount = 0;
   loadingPreview = false;
+  rangeActivationError = '';
 
   // Deactivation form
   deactivation = {
@@ -59,6 +68,7 @@ export class CouponListComponent implements OnInit, OnDestroy {
     to_reference: '',
     deactivation_reason: ''
   };
+  deactivationError = '';
 
   // Permission flags
   canCreateCoupon = false;
@@ -66,26 +76,19 @@ export class CouponListComponent implements OnInit, OnDestroy {
   canDeleteCoupon = false;
   canViewCoupons = false;
 
-  private appContextSubscription?: Subscription;
-
   constructor(
     private rewardsService: RewardsService,
     private router: Router,
     private cdr: ChangeDetectorRef,
     private appContextService: AppContextService,
     private authService: AuthService,
+    private confirmationService: ConfirmationService
   ) {
     // Initialize permission flags
     this.canCreateCoupon = this.authService.hasPermission('create_coupon');
     this.canEditCoupon = this.authService.hasPermission('edit_coupon');
     this.canDeleteCoupon = this.authService.hasPermission('delete_coupon');
     this.canViewCoupons = this.authService.hasPermission('view_coupons');
-    console.log('Permission Flags:', {
-      canCreateCoupon: this.canCreateCoupon,
-      canEditCoupon: this.canEditCoupon,
-      canDeleteCoupon: this.canDeleteCoupon,
-      canViewCoupons: this.canViewCoupons
-    });
   }
 
   ngOnInit() {
@@ -93,13 +96,16 @@ export class CouponListComponent implements OnInit, OnDestroy {
     this.loadCoupons();
 
     // Reload coupons when app selection changes
-    this.appContextSubscription = this.appContextService.appContext$.subscribe(() => {
-      this.loadCoupons();
-    });
+    this.appContextService.appContext$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.loadCoupons();
+      });
   }
 
   ngOnDestroy() {
-    this.appContextSubscription?.unsubscribe();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   toggleCoupon(couponId: string) {
@@ -118,29 +124,28 @@ export class CouponListComponent implements OnInit, OnDestroy {
     const element = event.target;
     const atBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 
-    if (atBottom && !this.loadingMore && this.hasMore && !this.loading) {
+    if (atBottom && !this.loadingMore && this.hasMore) {
       this.loadMoreCoupons();
     }
   }
 
   loadVerificationApps() {
-    this.subscription.add(
-      this.verificationAppsFacade.allApps$.subscribe(apps => {
+    this.verificationAppsFacade.allApps$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(apps => {
         this.verificationApps = apps;
-      })
-    )
+      });
   }
 
   loadCoupons() {
-    this.loading = true;
     this.error = '';
+    this.successMessage = '';
     this.currentPage = 1;
     this.hasMore = true;
 
     const params: any = { page: this.currentPage, limit: 20 };
     if (this.statusFilter !== 'all') params.status = this.statusFilter;
 
-    // Use app context service instead of appFilter
     const selectedAppId = this.appContextService.getSelectedAppId();
     if (selectedAppId !== null) {
       params.verification_app_id = selectedAppId;
@@ -149,18 +154,17 @@ export class CouponListComponent implements OnInit, OnDestroy {
     if (this.searchQuery) params.search = this.searchQuery;
 
     this.rewardsService.getCoupons(params)
-      .pipe(finalize(() => {
-        this.loading = false;
-        this.cdr.detectChanges();
-      }))
+      .pipe(
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: (response) => {
-          this.coupons = response.coupons;
-          this.hasMore = response.pagination?.hasMore || false;
+          this.coupons = response?.data?.coupons || [];
+          this.hasMore = response?.data?.pagination?.hasMore || false;
         },
         error: (err) => {
-          console.error('Load coupons error:', err);
-          this.error = err.error?.error || err.message || 'Failed to load coupons';
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to load coupons');
         }
       });
   }
@@ -174,7 +178,6 @@ export class CouponListComponent implements OnInit, OnDestroy {
     const params: any = { page: this.currentPage, limit: 20 };
     if (this.statusFilter !== 'all') params.status = this.statusFilter;
 
-    // Use app context service instead of appFilter
     const selectedAppId = this.appContextService.getSelectedAppId();
     if (selectedAppId !== null) {
       params.verification_app_id = selectedAppId;
@@ -183,18 +186,17 @@ export class CouponListComponent implements OnInit, OnDestroy {
     if (this.searchQuery) params.search = this.searchQuery;
 
     this.rewardsService.getCoupons(params)
-      .pipe(finalize(() => {
-        this.loadingMore = false;
-        this.cdr.detectChanges();
-      }))
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          this.coupons = [...this.coupons, ...response.coupons];
-          this.hasMore = response.pagination?.hasMore || false;
+          this.coupons = [...this.coupons, ...response?.data?.coupons || []];
+          this.hasMore = response?.data?.pagination?.hasMore || false;
+          this.loadingMore = false;
+          this.cdr.detectChanges();
         },
         error: (err) => {
-          console.error('Load more coupons error:', err);
-          this.error = err.error?.error || err.message || 'Failed to load more coupons';
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to load more coupons');
+          this.loadingMore = false;
         }
       });
   }
@@ -223,47 +225,30 @@ export class CouponListComponent implements OnInit, OnDestroy {
 
   toggleStatus(coupon: Coupon) {
     const newStatus = coupon.status === 'active' ? 'inactive' : 'active';
-    if (confirm(`Are you sure you want to ${newStatus === 'active' ? 'activate' : 'deactivate'} this coupon?`)) {
-      this.rewardsService.updateCouponStatus(coupon.id, newStatus).subscribe({
-        next: () => {
-          this.loadCoupons();
-        },
-        error: (err) => {
-          console.error('Update coupon status error:', err);
-          alert(err.error?.error || err.message || 'Failed to update coupon status');
-        }
+    const action = newStatus === 'active' ? 'activate' : 'deactivate';
+
+    this.confirmationService
+      .confirmToggle(action, `coupon ${coupon.coupon_code}`)
+      .pipe(
+        filter(confirmed => confirmed),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.rewardsService.updateCouponStatus(coupon.id, newStatus)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: () => {
+              this.successMessage = `Coupon ${action}d successfully`;
+              this.loadCoupons();
+            },
+            error: (err) => {
+              this.error = HttpErrorHandler.getMessage(err, 'Failed to update coupon status');
+            }
+          });
       });
-    }
-  }
-
-  getStatusClass(status: string): string {
-    switch (status) {
-      case 'draft': return 'status-draft';
-      case 'printed': return 'status-printed';
-      case 'active': return 'status-active';
-      case 'used': return 'status-used';
-      case 'inactive': return 'status-inactive';
-      case 'expired': return 'status-expired';
-      case 'exhausted': return 'status-exhausted';
-      default: return '';
-    }
-  }
-
-  getStatusIcon(status: string): string {
-    switch (status) {
-      case 'draft': return '📝';
-      case 'printed': return '🖨️';
-      case 'active': return '✅';
-      case 'used': return '✓';
-      case 'inactive': return '🚫';
-      case 'expired': return '⏰';
-      case 'exhausted': return '🏁';
-      default: return '';
-    }
   }
 
   getDiscountDisplay(coupon: Coupon): string {
-    // Only FIXED_AMOUNT is supported now
     return `₹${coupon.discount_value} OFF`;
   }
 
@@ -276,7 +261,8 @@ export class CouponListComponent implements OnInit, OnDestroy {
   copyCode() {
     if (this.selectedCoupon) {
       navigator.clipboard.writeText(this.selectedCoupon.coupon_code);
-      alert('Coupon code copied to clipboard!');
+      this.successMessage = 'Coupon code copied to clipboard!';
+      setTimeout(() => this.successMessage = '', 3000);
     }
   }
 
@@ -289,33 +275,36 @@ export class CouponListComponent implements OnInit, OnDestroy {
       status_filter: 'printed',
       activation_note: ''
     };
+    this.rangeActivationError = '';
   }
 
   closeRangeActivationModal() {
     this.showRangeActivationModal = false;
+    this.rangeActivationError = '';
   }
 
   activateRange() {
+    this.rangeActivationError = '';
+
     if (!this.rangeActivation.from_reference || !this.rangeActivation.to_reference) {
-      alert('Please enter both from and to coupon references');
+      this.rangeActivationError = 'Please enter both from and to coupon references';
       return;
     }
 
-    this.loading = true;
     this.rewardsService.activateCouponRange(this.rangeActivation)
-      .pipe(finalize(() => {
-        this.loading = false;
-        this.cdr.detectChanges();
-      }))
+      .pipe(
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: (response) => {
-          alert(`Success! ${response.activated_count} coupons activated. ${response.skipped_count > 0 ? response.skipped_count + ' skipped.' : ''}`);
+          const message = `${response.activated_count} coupon(s) activated${response.skipped_count > 0 ? `, ${response.skipped_count} skipped` : ''}`;
+          this.successMessage = message;
           this.closeRangeActivationModal();
           this.loadCoupons();
         },
         error: (err) => {
-          console.error('Activate range error:', err);
-          alert(err.error?.error || err.message || 'Failed to activate coupon range');
+          this.rangeActivationError = HttpErrorHandler.getMessage(err, 'Failed to activate coupon range');
         }
       });
   }
@@ -323,30 +312,33 @@ export class CouponListComponent implements OnInit, OnDestroy {
   markAsPrinted(coupon: Coupon) {
     let confirmMessage = 'Mark this coupon as printed?';
 
-    // Check if already printed
     if (coupon.printed_at && coupon.printed_count && coupon.printed_count > 0) {
-      confirmMessage = `This coupon has already been printed ${coupon.printed_count} time(s).\n\nLast printed: ${new Date(coupon.printed_at).toLocaleString()}\n\nDo you want to mark it as printed again?`;
+      confirmMessage = `This coupon has already been printed ${coupon.printed_count} time(s). Last printed: ${new Date(coupon.printed_at).toLocaleString()}. Mark as printed again?`;
     }
 
-    if (confirm(confirmMessage)) {
-      this.loading = true;
-      this.rewardsService.markCouponAsPrinted(coupon.id)
-        .pipe(finalize(() => {
-          this.loading = false;
-          this.cdr.detectChanges();
-        }))
-        .subscribe({
-          next: (response) => {
-            const printCount = response.coupon?.printed_count || 1;
-            alert(`Coupon marked as printed (${printCount} time${printCount > 1 ? 's' : ''} total)`);
-            this.loadCoupons();
-          },
-          error: (err) => {
-            console.error('Mark as printed error:', err);
-            alert(err.error?.error || err.message || 'Failed to mark coupon as printed');
-          }
-        });
-    }
+    this.confirmationService
+      .confirm(confirmMessage, 'Mark as Printed')
+      .pipe(
+        filter(confirmed => confirmed),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.rewardsService.markCouponAsPrinted(coupon.id)
+          .pipe(
+            this.loadingService.wrapLoading(),
+            takeUntil(this.destroy$)
+          )
+          .subscribe({
+            next: (response) => {
+              const printCount = response.coupon?.printed_count || 1;
+              this.successMessage = `Coupon marked as printed (${printCount} time${printCount > 1 ? 's' : ''} total)`;
+              this.loadCoupons();
+            },
+            error: (err) => {
+              this.error = HttpErrorHandler.getMessage(err, 'Failed to mark coupon as printed');
+            }
+          });
+      });
   }
 
   // Bulk selection methods
@@ -387,7 +379,7 @@ export class CouponListComponent implements OnInit, OnDestroy {
   // Bulk operations
   bulkPrint() {
     if (this.selectedCouponIds.size === 0) {
-      alert('Please select coupons to print');
+      this.error = 'Please select coupons to print';
       return;
     }
 
@@ -401,16 +393,15 @@ export class CouponListComponent implements OnInit, OnDestroy {
 
     if (selectedDraftCoupons.length === 0) {
       if (selectedPrintedCoupons.length > 0) {
-        alert(`The selected coupons are already marked as printed.\n\nTo activate them, use the "Activate Selected" button or "Activate Range" feature.`);
+        this.error = 'The selected coupons are already marked as printed. To activate them, use the "Activate Selected" button or "Activate Range" feature.';
       } else {
-        alert('Please select draft coupons to mark as printed');
+        this.error = 'Please select draft coupons to mark as printed';
       }
       return;
     }
 
     if (selectedPrintedCoupons.length > 0) {
-      const message = `${selectedDraftCoupons.length} draft coupon(s) will be shown in print preview.\n\n${selectedPrintedCoupons.length} already printed coupon(s) will be skipped.`;
-      alert(message);
+      this.successMessage = `${selectedDraftCoupons.length} draft coupon(s) will be shown in print preview. ${selectedPrintedCoupons.length} already printed coupon(s) will be skipped.`;
     }
 
     // Navigate to print page with selected draft coupons
@@ -421,7 +412,7 @@ export class CouponListComponent implements OnInit, OnDestroy {
 
   bulkActivate() {
     if (this.selectedCouponIds.size === 0) {
-      alert('Please select coupons to activate');
+      this.error = 'Please select coupons to activate';
       return;
     }
 
@@ -430,35 +421,39 @@ export class CouponListComponent implements OnInit, OnDestroy {
     );
 
     if (selectedPrintedCoupons.length === 0) {
-      alert('Please select printed coupons to activate');
+      this.error = 'Please select printed coupons to activate';
       return;
     }
 
-    if (confirm(`Activate ${selectedPrintedCoupons.length} coupon(s)?`)) {
-      this.loading = true;
-      const couponIds = selectedPrintedCoupons.map(c => c.id);
+    this.confirmationService
+      .confirm(`Activate ${selectedPrintedCoupons.length} coupon(s)?`, 'Bulk Activation')
+      .pipe(
+        filter(confirmed => confirmed),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        const couponIds = selectedPrintedCoupons.map(c => c.id);
 
-      this.rewardsService.bulkActivateCoupons(couponIds, 'Bulk activation from selection')
-        .pipe(finalize(() => {
-          this.loading = false;
-          this.cdr.detectChanges();
-        }))
-        .subscribe({
-          next: (response) => {
-            let message = `Success! ${response.activated_count} coupon(s) activated`;
-            if (response.skipped_count > 0) {
-              message += `. ${response.skipped_count} skipped (already active or invalid status)`;
+        this.rewardsService.bulkActivateCoupons(couponIds, 'Bulk activation from selection')
+          .pipe(
+            this.loadingService.wrapLoading(),
+            takeUntil(this.destroy$)
+          )
+          .subscribe({
+            next: (response) => {
+              let message = `${response.activated_count} coupon(s) activated`;
+              if (response.skipped_count > 0) {
+                message += `, ${response.skipped_count} skipped (already active or invalid status)`;
+              }
+              this.successMessage = message;
+              this.clearSelection();
+              this.loadCoupons();
+            },
+            error: (err) => {
+              this.error = HttpErrorHandler.getMessage(err, 'Failed to activate coupons');
             }
-            alert(message);
-            this.clearSelection();
-            this.loadCoupons();
-          },
-          error: (err) => {
-            console.error('Bulk activate error:', err);
-            alert(err.error?.error || err.message || 'Failed to activate coupons');
-          }
-        });
-    }
+          });
+      });
   }
 
   // Deactivation methods
@@ -469,43 +464,49 @@ export class CouponListComponent implements OnInit, OnDestroy {
       to_reference: '',
       deactivation_reason: ''
     };
+    this.deactivationError = '';
   }
 
   closeDeactivationModal() {
     this.showDeactivationModal = false;
+    this.deactivationError = '';
   }
 
   deactivateRange() {
+    this.deactivationError = '';
+
     if (!this.deactivation.from_reference || !this.deactivation.to_reference) {
-      alert('Please enter both from and to coupon references');
+      this.deactivationError = 'Please enter both from and to coupon references';
       return;
     }
 
     if (!this.deactivation.deactivation_reason.trim()) {
-      alert('Please provide a reason for deactivation');
+      this.deactivationError = 'Please provide a reason for deactivation';
       return;
     }
 
-    if (!confirm('Are you sure you want to deactivate these coupons? This action cannot be undone.')) {
-      return;
-    }
-
-    this.loading = true;
-    this.rewardsService.deactivateCouponRange(this.deactivation)
-      .pipe(finalize(() => {
-        this.loading = false;
-        this.cdr.detectChanges();
-      }))
-      .subscribe({
-        next: (response) => {
-          alert(`Success! ${response.deactivated_count} coupon(s) deactivated`);
-          this.closeDeactivationModal();
-          this.loadCoupons();
-        },
-        error: (err) => {
-          console.error('Deactivate range error:', err);
-          alert(err.error?.error || err.message || 'Failed to deactivate coupon range');
-        }
+    this.confirmationService
+      .confirm('Are you sure you want to deactivate these coupons? This action cannot be undone.', 'Deactivate Range')
+      .pipe(
+        filter(confirmed => confirmed),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.rewardsService.deactivateCouponRange(this.deactivation)
+          .pipe(
+            this.loadingService.wrapLoading(),
+            takeUntil(this.destroy$)
+          )
+          .subscribe({
+            next: (response) => {
+              this.successMessage = `${response.deactivated_count} coupon(s) deactivated`;
+              this.closeDeactivationModal();
+              this.loadCoupons();
+            },
+            error: (err) => {
+              this.deactivationError = HttpErrorHandler.getMessage(err, 'Failed to deactivate coupon range');
+            }
+          });
       });
   }
 
@@ -519,8 +520,7 @@ export class CouponListComponent implements OnInit, OnDestroy {
   }
 
   private loadPreviewCount() {
-    // Debounced preview count - in production, you'd add debouncing
-    // For now, just estimate based on reference pattern (CP-###)
+    // Estimate based on reference pattern (CP-###)
     const fromMatch = this.rangeActivation.from_reference.match(/(\d+)$/);
     const toMatch = this.rangeActivation.to_reference.match(/(\d+)$/);
 
@@ -534,6 +534,48 @@ export class CouponListComponent implements OnInit, OnDestroy {
       }
     } else {
       this.rangePreviewCount = 0;
+    }
+  }
+
+  getStatusClass(status: string): string {
+    switch (status) {
+      case 'draft':
+        return 'status-draft';
+      case 'printed':
+        return 'status-printed';
+      case 'active':
+        return 'status-active';
+      case 'used':
+        return 'status-used';
+      case 'expired':
+        return 'status-expired';
+      case 'exhausted':
+        return 'status-exhausted';
+      case 'inactive':
+        return 'status-inactive';
+      default:
+        return '';
+    }
+  }
+
+  getStatusIcon(status: string): string {
+    switch (status) {
+      case 'draft':
+        return '📝';
+      case 'printed':
+        return '🖨️';
+      case 'active':
+        return '✅';
+      case 'used':
+        return '☑️';
+      case 'expired':
+        return '⏱️';
+      case 'exhausted':
+        return '❌';
+      case 'inactive':
+        return '🚫';
+      default:
+        return '';
     }
   }
 }

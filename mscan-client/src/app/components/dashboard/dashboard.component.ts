@@ -2,13 +2,15 @@
  * Dashboard Component
  * Routes to Super Admin or Tenant dashboard based on user role
  */
-import { ChangeDetectionStrategy, Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core'
+import { inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { filter, takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { SuperAdminDashboardComponent } from '../super-admin-dashboard/super-admin-dashboard.component';
 import { TenantDashboardComponent } from '../tenant-dashboard/tenant-dashboard.component';
-import { filter, take } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
@@ -18,7 +20,9 @@ import { filter, take } from 'rxjs';
   styleUrls: ['./dashboard.component.css'],
   changeDetection: ChangeDetectionStrategy.Default
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   isSuperAdmin = false;
   loading = true;
 
@@ -37,14 +41,18 @@ export class DashboardComponent implements OnInit {
     this.authService.currentUser$
       .pipe(
         filter(user => user !== null),
-        take(1)
+        takeUntil(this.destroy$)
       )
       .subscribe(user => {
         this.isSuperAdmin = user.role === 'SUPER_ADMIN';
         this.loading = false;
         this.cdr.detectChanges();
-        console.log('Dashboard initialized for', this.isSuperAdmin ? 'Super Admin' : 'Tenant', this.loading);
       });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   logout(): void {

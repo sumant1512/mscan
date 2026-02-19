@@ -204,7 +204,7 @@
         <button
           (click)="assignPermissions()"
           class="btn-primary"
-          [disabled]="selectedPermissionIds.length === 0 || loading"
+          [disabled]="selectedPermissionIds.length === 0 || (loading$ | async)"
         >
           Assign Permissions
         </button>

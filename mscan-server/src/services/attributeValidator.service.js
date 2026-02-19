@@ -48,8 +48,12 @@ class AttributeValidator {
     // Get template attributes (already filtered, no nulls in JSONB array)
     const templateAttributes = template.attributes || [];
 
+    // Extract custom_fields from attributes structure
+    const customFields = attributes?.custom_fields || {};
+
     for (const attr of templateAttributes) {
-      const value = attributes[attr.attribute_key];
+      // Look for value in custom_fields object
+      const value = customFields[attr.attribute_key];
 
       // Check required
       if (attr.is_required && (value === undefined || value === null || value === '')) {

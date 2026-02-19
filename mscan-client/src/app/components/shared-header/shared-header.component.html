@@ -1,7 +1,7 @@
 <div class="shared-header">
   <div class="header-left">
     <h1 class="tenant-name">{{ currentTenantName$ | async }}</h1>
-    <p class="welcome-text" *ngIf="currentUser$ | async as user">Welcome, {{ user.fullName }}</p>
+    <p class="welcome-text" *ngIf="currentUser$ | async as user">Welcome, {{ user.full_name }}</p>
   </div>
   <div class="header-right">
     <!-- Show app selector for Tenant Admin and Tenant User -->

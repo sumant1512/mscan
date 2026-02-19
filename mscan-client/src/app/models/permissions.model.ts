@@ -72,7 +72,7 @@ export interface ListPermissionsFilters {
  * Permissions List Response
  */
 export interface PermissionsListResponse {
-  success: boolean;
+  status: boolean;
   data: {
     permissions: Permission[];
     pagination: {
@@ -126,7 +126,7 @@ export interface ListTenantUsersFilters {
  * Tenant Users List Response
  */
 export interface TenantUsersListResponse {
-  success: boolean;
+  status: boolean;
   data: {
     users: TenantUser[];
     pagination: {
@@ -149,7 +149,7 @@ export interface AssignPermissionsRequest {
  * User Permissions Response
  */
 export interface UserPermissionsResponse {
-  success: boolean;
+  status: boolean;
   data: {
     user_id: string;
     tenant_id: string;

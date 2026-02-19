@@ -46,9 +46,6 @@ export class TagService {
       params = params.set('is_active', filters.is_active.toString());
     }
 
-    console.log('Fetching tags with params:', filters);
-    console.log('**********HTTP params:', params.toString());
-
     return this.http.get<TagListResponse>(this.apiUrl, { params });
   }
 

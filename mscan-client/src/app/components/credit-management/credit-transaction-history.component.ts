@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CreditTransaction, CreditRequest } from '../../models/rewards.model';
@@ -10,17 +10,19 @@ import { TenantsFacade } from '../../store/tenants';
 import { CreditCardComponent, CreditCardData } from '../shared/credit-card/credit-card.component';
 import { Subject, Observable } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { LoadingService } from '../../shared/services/loading.service';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
 
 // Display item for unified transaction/request view
 interface TransactionDisplayItem {
-  id: number;
+  id: string;
   type: 'CREDIT' | 'DEBIT' | 'PENDING' | 'REJECTED' | 'REFUND';
   amount: number;
   balance_before?: number;
   balance_after?: number;
   description?: string;
   reference_type?: string;
-  reference_id?: number;
+  reference_id?: string;
   created_at: string;
   created_by_name?: string;
   created_by_email?: string;
@@ -45,8 +47,10 @@ export class CreditTransactionHistoryComponent implements OnInit, OnDestroy {
   displayItems: TransactionDisplayItem[] = [];
   cardData: CreditCardData[] = [];
   tenants$!: Observable<Tenant[]>;
-  loading = false;
-  error: string | null = null;
+  private loadingService = inject(LoadingService);
+
+  loading$ = this.loadingService.loading$;
+  errorMessage = '';
 
   // Filtering
   tenantFilter: string = '';
@@ -69,7 +73,7 @@ export class CreditTransactionHistoryComponent implements OnInit, OnDestroy {
   ngOnInit() {
     // Check if user is super admin
     this.isSuperAdmin = this.authService.isSuperAdmin();
-    
+
     // Load transactions and pending requests
     this.loadData();
 
@@ -87,9 +91,6 @@ export class CreditTransactionHistoryComponent implements OnInit, OnDestroy {
   }
 
   loadData() {
-    this.loading = true;
-    this.error = null;
-
     // Get selected app ID
     const selectedAppId = this.appContextService.getSelectedAppId();
 
@@ -111,7 +112,10 @@ export class CreditTransactionHistoryComponent implements OnInit, OnDestroy {
     // Load transactions using unified service method
     // Transaction history shows actual credit/debit transactions + rejected requests
     this.creditService.getTransactions(transactionParams)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: (response) => {
           const transactions = response.transactions || [];
@@ -147,13 +151,11 @@ export class CreditTransactionHistoryComponent implements OnInit, OnDestroy {
             tenant_name: (t as any).tenant_name
           }));
 
-          this.loading = false;
+          this.errorMessage = '';
           this.cdr.markForCheck();
         },
         error: (err) => {
-          this.error = err.error?.error || 'Failed to load data';
-          this.loading = false;
-          this.cdr.markForCheck();
+          this.errorMessage = HttpErrorHandler.getMessage(err, 'Failed to load transaction history');
         }
       });
   }

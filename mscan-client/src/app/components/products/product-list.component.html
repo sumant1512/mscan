@@ -21,13 +21,14 @@
     </div>
   </div>
 
-  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+  <div *ngIf="error$ | async as error" class="alert alert-error">{{ error }}</div>
+  <div *ngIf="successMessage" class="alert alert-success">{{ successMessage }}</div>
 
-  <div *ngIf="loading" class="loading">
+  <div *ngIf="loading$ | async" class="loading">
     <p>Loading products...</p>
   </div>
 
-  <div *ngIf="!loading && products.length === 0" class="empty-state">
+  <div *ngIf="!(loading$ | async) && (products$ | async)?.length === 0" class="empty-state">
     <span class="material-icons">inventory_2</span>
     <h3>No products found</h3>
     <p *ngIf="canCreateProduct">Create your first product to get started</p>
@@ -38,8 +39,8 @@
     </button>
   </div>
 
-  <div *ngIf="!loading && products.length > 0" class="products-grid">
-    <div *ngFor="let product of products" class="product-card">
+  <div *ngIf="!(loading$ | async) && ((products$ | async)?.length ?? 0) > 0" class="products-grid">
+    <div *ngFor="let product of (products$ | async)" class="product-card">
       <div class="product-image">
         <img *ngIf="product.image_url" [src]="product.image_url" alt="{{ product.product_name }}" />
         <div *ngIf="!product.image_url" class="no-image">📦</div>
@@ -64,13 +65,21 @@
         </span>
       </div>
       <div class="product-actions">
-        <button *ngIf="canEditProduct" (click)="editProduct(product)" class="btn-secondary">Edit</button>
-        <button *ngIf="canDeleteProduct" (click)="confirmDelete(product)" class="btn-danger">Delete</button>
-        <span *ngIf="!canEditProduct && !canDeleteProduct" class="info-text">View-only</span>
+        <button (click)="viewProduct(product)" class="btn-info" title="View details">
+          <span class="material-icons">visibility</span>
+          View
+        </button>
+        <button *ngIf="canEditProduct" (click)="editProduct(product)" class="btn-secondary" title="Edit product">
+          <span class="material-icons">edit</span>
+          Edit
+        </button>
+        <button *ngIf="canDeleteProduct" (click)="confirmDelete(product)" class="btn-danger" title="Delete product">
+          <span class="material-icons">delete</span>
+          Delete
+        </button>
       </div>
+    </div>
   </div>
-
-  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
 </div>
 
 <!-- Delete Confirmation Modal -->

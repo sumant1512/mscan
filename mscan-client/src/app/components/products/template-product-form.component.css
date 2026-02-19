@@ -89,7 +89,7 @@
 
 .form-control {
   width: 100%;
-  padding: 0.6250rem 0.8750rem;
+  padding: 10px 14px;
   border: 0.0625rem solid #ddd;
   border-radius: 0.3750rem;
   font-size: 0.8750rem;
@@ -189,17 +189,17 @@ textarea.form-control {
 /* Tags Section */
 .tags-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9.3750rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(166px, 1fr));
   gap: 0.7500rem;
 }
 
 .tag-chip {
   display: flex;
   align-items: center;
-  gap: 0.5000rem;
-  padding: 0.6250rem 0.8750rem;
+  gap: 8px;
+  padding: 10px 8px;
   border: 0.1250rem solid #e0e0e0;
-  border-radius: 1.2500rem;
+  border-radius: 40px;
   background: white;
   cursor: pointer;
   transition: all 0.2s;

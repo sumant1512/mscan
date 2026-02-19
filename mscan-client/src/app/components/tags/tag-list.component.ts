@@ -1,15 +1,17 @@
-import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subject, Observable } from 'rxjs';
+import { filter, takeUntil } from 'rxjs/operators';
 import { TagService } from '../../services/tag.service';
 import { Tag } from '../../models/templates.model';
 import { AppContextService } from '../../services/app-context.service';
-import { Subscription } from 'rxjs/internal/Subscription';
 import { VerificationAppsFacade } from '../../store/verification-apps';
 import { TagsFacade } from '../../store/tags';
-import { Observable } from 'rxjs/internal/Observable';
 import { TenantsFacade } from '../../store/tenants';
+import { ConfirmationService } from '../../shared/services/confirmation.service';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
 
 @Component({
   selector: 'app-tag-list',
@@ -18,13 +20,16 @@ import { TenantsFacade } from '../../store/tenants';
   templateUrl: './tag-list.component.html',
   styleUrls: ['./tag-list.component.css'],
 })
-export class TagListComponent implements OnInit {
+export class TagListComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
   private router = inject(Router);
   tagsFacade = inject(TagsFacade);
+
   tags: Tag[] = [];
   loading$: Observable<boolean> = this.tagsFacade.loading$;
   error$: Observable<string | null> = this.tagsFacade.error$;
-  private tagsSubscription?: Subscription;
+  successMessage = '';
+  errorMessage = '';
 
   // Filters
   searchQuery = '';
@@ -35,18 +40,26 @@ export class TagListComponent implements OnInit {
     private tagService: TagService,
     private cdr: ChangeDetectorRef,
     private appContextService: AppContextService,
+    private confirmationService: ConfirmationService
   ) {}
 
   ngOnInit(): void {
     this.getUserContext();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   getUserContext() {
-    this.tagsSubscription = this.appContextService.appContext$.subscribe((appContext) => {
-      if (appContext?.selectedAppId) {
-        this.loadTags();
-      }
-    });
+    this.appContextService.appContext$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((appContext) => {
+        if (appContext?.selectedAppId) {
+          this.loadTags();
+        }
+      });
   }
 
   loadTags(): void {
@@ -63,10 +76,12 @@ export class TagListComponent implements OnInit {
 
     this.tagsFacade.loadTags(selectedAppId);
 
-    this.tagsFacade.allTags$.subscribe((tags) => {
-      this.tags = tags;
-      this.cdr.detectChanges();
-    });
+    this.tagsFacade.allTags$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((tags) => {
+        this.tags = tags;
+        this.cdr.detectChanges();
+      });
   }
 
   onSearch(): void {
@@ -86,31 +101,38 @@ export class TagListComponent implements OnInit {
   }
 
   deleteTag(tag: Tag): void {
-    if (!confirm(`Are you sure you want to delete tag "${tag.name}"?`)) {
-      return;
-    }
-
-    this.tagService.deleteTag(tag.id).subscribe({
-      next: () => {
-        this.loadTags();
-        alert('Tag deleted successfully');
-      },
-      error: (error) => {
-        console.error('Error deleting tag:', error);
-        alert(error.error?.message || 'Failed to delete tag');
-      },
-    });
+    this.confirmationService
+      .confirm(`Are you sure you want to delete tag "${tag.name}"?`, 'Delete Tag')
+      .pipe(
+        filter(confirmed => confirmed),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.tagService.deleteTag(tag.id)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: () => {
+              this.successMessage = 'Tag deleted successfully';
+              this.loadTags();
+            },
+            error: (err) => {
+              this.errorMessage = HttpErrorHandler.getMessage(err, 'Failed to delete tag');
+            },
+          });
+      });
   }
 
   toggleActive(tag: Tag): void {
-    this.tagService.updateTag(tag.id, { is_active: !tag.is_active }).subscribe({
-      next: () => {
-        tag.is_active = !tag.is_active;
-      },
-      error: (error) => {
-        console.error('Error updating tag:', error);
-        alert(error.error?.message || 'Failed to update tag');
-      },
-    });
+    this.tagService.updateTag(tag.id, { is_active: !tag.is_active })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          tag.is_active = !tag.is_active;
+          this.successMessage = `Tag ${tag.is_active ? 'activated' : 'deactivated'} successfully`;
+        },
+        error: (err) => {
+          this.errorMessage = HttpErrorHandler.getMessage(err, 'Failed to update tag');
+        },
+      });
   }
 }

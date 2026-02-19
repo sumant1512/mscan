@@ -19,7 +19,7 @@
     Each batch can have its own description.
   </div>
 
-  <div *ngIf="!selectedAppId && !loading" class="alert alert-warning">
+  <div *ngIf="!selectedAppId && !(loading$ | async)" class="alert alert-warning">
     ⚠️ Please select an application from the dropdown in the top header before creating coupons.
   </div>
 
@@ -251,17 +251,15 @@
 
     <!-- Actions -->
     <div class="form-actions">
-      <button type="button" (click)="cancel()" class="btn-secondary" [disabled]="loading">
+      <button type="button" (click)="cancel()" class="btn-secondary" [disabled]="loading$ | async">
         Cancel
       </button>
       <button
         type="submit"
         class="btn-primary"
-        [disabled]="loading || couponForm.invalid || estimatedCost > currentBalance"
+        [disabled]="(loading$ | async) || estimatedCost > currentBalance"
       >
-        {{
-          loading
-            ? 'Creating...'
+        {{ (loading$ | async) ? 'Creating...'
             : multiCouponMode
             ? 'Create All Batches'
             : couponForm.value.quantity > 1

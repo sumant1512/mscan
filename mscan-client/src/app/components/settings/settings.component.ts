@@ -22,7 +22,6 @@ export class SettingsComponent {
   };
 
   saveSettings() {
-    console.log('Settings saved:', this.settings);
     // TODO: Implement API call to save settings
   }
 }

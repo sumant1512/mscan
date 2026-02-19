@@ -218,7 +218,7 @@ export interface TemplateListResponse {
  * Template response (single)
  */
 export interface TemplateResponse {
-  success: boolean;
+  status: boolean;
   message?: string;
   data: ProductTemplate;
 }

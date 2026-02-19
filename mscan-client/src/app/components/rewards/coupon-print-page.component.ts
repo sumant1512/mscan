@@ -1,9 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { CouponCardComponent } from './coupon-card/coupon-card.component';
 import { RewardsService } from '../../services/rewards.service';
-import { finalize } from 'rxjs/operators';
+import { LoadingService } from '../../shared/services/loading.service';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
 
 @Component({
   selector: 'app-coupon-print-page',
@@ -12,10 +15,16 @@ import { finalize } from 'rxjs/operators';
   templateUrl: './coupon-print-page.component.html',
   styleUrls: ['./coupon-print-page.component.css']
 })
-export class CouponPrintPageComponent implements OnInit {
+export class CouponPrintPageComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   coupons: any[] = [];
-  loading = false;
+  private loadingService = inject(LoadingService);
+
+  loading$ = this.loadingService.loading$;
   hasPrinted = false;
+  successMessage = '';
+  error = '';
 
   constructor(
     private router: Router,
@@ -36,6 +45,11 @@ export class CouponPrintPageComponent implements OnInit {
     }
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   handlePrint() {
     // Open browser print dialog
     window.print();
@@ -51,20 +65,22 @@ export class CouponPrintPageComponent implements OnInit {
   markAsPrinted() {
     const couponIds = this.coupons.map(c => c.id);
 
-    this.loading = true;
+    this.error = '';
+    this.successMessage = '';
+
     this.rewardsService.bulkMarkAsPrinted(couponIds)
-      .pipe(finalize(() => {
-        this.loading = false;
-      }))
+      .pipe(
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: (response) => {
           this.hasPrinted = true;
-          alert(`Success! ${response.printed_count} coupon(s) marked as printed`);
-          this.goBack();
+          this.successMessage = `Success! ${response.printed_count} coupon(s) marked as printed`;
+          setTimeout(() => this.goBack(), 2000);
         },
         error: (err) => {
-          console.error('Bulk print error:', err);
-          alert(err.error?.error || err.message || 'Failed to mark coupons as printed');
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to mark coupons as printed');
         }
       });
   }

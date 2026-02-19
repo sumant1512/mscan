@@ -1,8 +1,11 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, OnDestroy } from '@angular/core'
+import { inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TemplateService } from '../../services/template.service';
+import { Subject } from 'rxjs';
+import { takeUntil, filter } from 'rxjs/operators';
+import { TemplatesFacade } from '../../store/templates/templates.facade';
 import {
   ProductTemplate,
   TemplateAttribute,
@@ -13,6 +16,8 @@ import {
   VariantDimension,
   VariantCommonField
 } from '../../models/templates.model';
+import { LoadingService } from '../../shared/services/loading.service';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
 
 @Component({
   selector: 'app-template-form',
@@ -21,11 +26,18 @@ import {
   templateUrl: './template-form.component.html',
   styleUrls: ['./template-form.component.css']
 })
-export class TemplateFormComponent implements OnInit {
+export class TemplateFormComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+  private templatesFacade = inject(TemplatesFacade);
+  private loadingService = inject(LoadingService);
+
   isEditMode = false;
   templateId: string | null = null;
-  loading = false;
+
+  loading$ = this.templatesFacade.loading$;
+  error$ = this.templatesFacade.error$;
   error: string | null = null;
+  successMessage = '';
 
   // Form model
   template = {
@@ -65,7 +77,6 @@ export class TemplateFormComponent implements OnInit {
   variantFieldTypes = ['text', 'number', 'select'];
 
   constructor(
-    private templateService: TemplateService,
     private route: ActivatedRoute,
     private router: Router,
     private cdr: ChangeDetectorRef
@@ -78,66 +89,110 @@ export class TemplateFormComponent implements OnInit {
     if (this.isEditMode && this.templateId) {
       this.loadTemplate(this.templateId);
     }
+
+    // Subscribe to selected template from store
+    this.templatesFacade.selectedTemplate$
+      .pipe(
+        takeUntil(this.destroy$),
+        filter(tmpl => tmpl !== null)
+      )
+      .subscribe((tmpl) => {
+        if (tmpl) {
+          this.template = {
+            name: tmpl.template_name || tmpl.name || '',
+            industry_type: tmpl.industry_type || '',
+            description: tmpl.description || '',
+            icon: tmpl.icon || ''
+          };
+
+          this.attributes = (tmpl.custom_fields || tmpl.attributes || []).map((attr: any) => ({
+            id: attr.id,
+            attribute_name: attr.attribute_name,
+            attribute_key: attr.attribute_key,
+            data_type: attr.data_type,
+            is_required: attr.is_required,
+            validation_rules: attr.validation_rules || {},
+            default_value: attr.default_value || '',
+            display_order: attr.display_order,
+            field_group: attr.field_group || '',
+            help_text: attr.help_text || '',
+            placeholder: attr.placeholder || ''
+          }));
+
+          // Load variant configuration
+          if (tmpl.variant_config) {
+            this.variantConfig = {
+              variant_label: tmpl.variant_config.variant_label || 'Variants',
+              dimensions: (tmpl.variant_config.dimensions || []).map((dim: any) => ({
+                attribute_key: dim.attribute_key,
+                attribute_name: dim.attribute_name,
+                type: dim.type,
+                required: dim.required || false,
+                options: dim.options || []
+              })),
+              common_fields: (tmpl.variant_config.common_fields || []).map((field: any) => ({
+                attribute_key: field.attribute_key,
+                attribute_name: field.attribute_name,
+                type: field.type,
+                required: field.required || false,
+                placeholder: field.placeholder || '',
+                min: field.min,
+                max: field.max
+              }))
+            };
+          }
+
+          this.cdr.detectChanges();
+        }
+      });
+
+    // Subscribe to error
+    this.error$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(error => {
+        if (error) {
+          this.error = error;
+          this.cdr.detectChanges();
+        }
+      });
+
+    // Subscribe to success message and created template ID for navigation after create
+    this.templatesFacade.lastCreatedTemplateId$
+      .pipe(
+        takeUntil(this.destroy$),
+        filter(id => id !== null)
+      )
+      .subscribe((templateId) => {
+        this.successMessage = 'Template created successfully';
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.router.navigate(['/tenant/templates']);
+        }, 1500);
+      });
+
+    // Subscribe to updated template ID for navigation after update
+    this.templatesFacade.lastUpdatedTemplateId$
+      .pipe(
+        takeUntil(this.destroy$),
+        filter(id => id !== null && id === this.templateId)
+      )
+      .subscribe((templateId) => {
+        this.successMessage = 'Template updated successfully';
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.router.navigate(['/tenant/templates', templateId]);
+        }, 1500);
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadTemplate(id: string): void {
-    this.loading = true;
-    this.templateService.getTemplate(id).subscribe({
-      next: (response) => {
-        const tmpl = response.data;
-        this.template = {
-          name: tmpl.template_name || tmpl.name || '',
-          industry_type: tmpl.industry_type || '',
-          description: tmpl.description || '',
-          icon: tmpl.icon || ''
-        };
-
-        this.attributes = (tmpl.custom_fields || tmpl.attributes || []).map((attr: any) => ({
-          id: attr.id,
-          attribute_name: attr.attribute_name,
-          attribute_key: attr.attribute_key,
-          data_type: attr.data_type,
-          is_required: attr.is_required,
-          validation_rules: attr.validation_rules || {},
-          default_value: attr.default_value || '',
-          display_order: attr.display_order,
-          field_group: attr.field_group || '',
-          help_text: attr.help_text || '',
-          placeholder: attr.placeholder || ''
-        }));
-
-        // Load variant configuration
-        if (tmpl.variant_config) {
-          this.variantConfig = {
-            variant_label: tmpl.variant_config.variant_label || 'Variants',
-            dimensions: (tmpl.variant_config.dimensions || []).map((dim: any) => ({
-              attribute_key: dim.attribute_key,
-              attribute_name: dim.attribute_name,
-              type: dim.type,
-              required: dim.required || false,
-              options: dim.options || []
-            })),
-            common_fields: (tmpl.variant_config.common_fields || []).map((field: any) => ({
-              attribute_key: field.attribute_key,
-              attribute_name: field.attribute_name,
-              type: field.type,
-              required: field.required || false,
-              placeholder: field.placeholder || '',
-              min: field.min,
-              max: field.max
-            }))
-          };
-        }
-
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-      error: (error) => {
-        console.error('Error loading template:', error);
-        this.error = error.error?.message || 'Failed to load template';
-        this.loading = false;
-      }
-    });
+    this.error = null;
+    this.templatesFacade.loadTemplate(id);
   }
 
   addAttribute(): void {
@@ -209,8 +264,8 @@ export class TemplateFormComponent implements OnInit {
       attribute.validation_rules.options = [];
     }
     const option = prompt('Enter option value:');
-    if (option) {
-      attribute.validation_rules.options.push(option);
+    if (option && option.trim()) {
+      attribute.validation_rules.options.push(option.trim());
     }
   }
 
@@ -285,8 +340,8 @@ export class TemplateFormComponent implements OnInit {
       return;
     }
 
-    this.loading = true;
     this.error = null;
+    this.successMessage = '';
 
     if (this.isEditMode && this.templateId) {
       this.updateTemplate();
@@ -320,17 +375,12 @@ export class TemplateFormComponent implements OnInit {
       }))
     };
 
-    this.templateService.createTemplate(request).subscribe({
-      next: (response) => {
-        alert('Template created successfully');
-        this.router.navigate(['/templates']);
-      },
-      error: (error) => {
-        console.error('Error creating template:', error);
-        this.error = error.error?.message || 'Failed to create template';
-        this.loading = false;
-      }
-    });
+    // Clear any previous messages
+    this.error = null;
+    this.successMessage = '';
+
+    // Dispatch action - success/navigation handled by subscription
+    this.templatesFacade.createTemplate(request);
   }
 
   updateTemplate(): void {
@@ -360,17 +410,12 @@ export class TemplateFormComponent implements OnInit {
       }))
     };
 
-    this.templateService.updateTemplate(this.templateId, request).subscribe({
-      next: (response) => {
-        alert('Template updated successfully');
-        this.router.navigate(['/templates', this.templateId]);
-      },
-      error: (error) => {
-        console.error('Error updating template:', error);
-        this.error = error.error?.message || 'Failed to update template';
-        this.loading = false;
-      }
-    });
+    // Clear any previous messages
+    this.error = null;
+    this.successMessage = '';
+
+    // Dispatch action - success/navigation handled by subscription
+    this.templatesFacade.updateTemplate(this.templateId, request);
   }
 
   cancel(): void {

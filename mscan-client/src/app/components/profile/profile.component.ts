@@ -1,6 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -10,7 +12,9 @@ import { AuthService } from '../../services/auth.service';
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.css']
 })
-export class ProfileComponent implements OnInit {
+export class ProfileComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   profileForm: FormGroup;
   loading = false;
   error = '';
@@ -32,21 +36,28 @@ export class ProfileComponent implements OnInit {
     this.loadUserProfile();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   loadUserProfile() {
-    this.authService.currentUser$.subscribe({
-      next: (user) => {
-        if (user) {
-          this.currentUser = user;
-          this.profileForm.patchValue({
-            full_name: user.fullName,
-            email: user.email,
-            phone: user.phone || ''
-          });
-          // Disable email field as it's usually not editable
-          this.profileForm.get('email')?.disable();
+    this.authService.currentUser$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (user) => {
+          if (user) {
+            this.currentUser = user;
+            this.profileForm.patchValue({
+              full_name: user.full_name,
+              email: user.email,
+              phone: user.phone || ''
+            });
+            // Disable email field as it's usually not editable
+            this.profileForm.get('email')?.disable();
+          }
         }
-      }
-    });
+      });
   }
 
   onSubmit() {

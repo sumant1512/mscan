@@ -4,7 +4,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { Router, ActivatedRoute } from '@angular/router';
 import { TenantService } from '../../services/tenant.service';
 import { TenantsFacade } from '../../store/tenants';
-import { debounceTime, distinctUntilChanged, switchMap, finalize, filter, takeUntil } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, switchMap, filter, takeUntil } from 'rxjs/operators';
 import { of, Subject, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
@@ -62,7 +62,6 @@ export class TenantFormComponent implements OnInit, OnDestroy {
     this.successMessage$ = this.tenantsFacade.successMessage$;
 
     const id = this.route.snapshot.paramMap.get('id');
-    console.log('TenantFormComponent initialized with id:', id);
 
     // Listen for success messages and navigate
     this.successMessage$
@@ -80,7 +79,6 @@ export class TenantFormComponent implements OnInit, OnDestroy {
     if (id && id !== 'new') {
       this.isEditMode = true;
       this.tenantId = id;
-      console.log('Edit mode enabled for tenant ID:', this.tenantId);
       this.loadTenant();
     } else {
       // Setup subdomain auto-suggestion and validation for new tenants
@@ -98,7 +96,8 @@ export class TenantFormComponent implements OnInit, OnDestroy {
     this.tenantForm.get('tenant_name')?.valueChanges
       .pipe(
         debounceTime(500),
-        distinctUntilChanged()
+        distinctUntilChanged(),
+        takeUntil(this.destroy$)
       )
       .subscribe(name => {
         // Only auto-suggest in create mode
@@ -119,19 +118,22 @@ export class TenantFormComponent implements OnInit, OnDestroy {
           }
           this.checkingAvailability = true;
           return this.tenantService.checkSubdomainAvailability(slug);
-        })
+        }),
+        takeUntil(this.destroy$)
       )
       .subscribe(result => {
         this.checkingAvailability = false;
-        if (result) {
-          this.subdomainAvailable = result.available;
-          if (!result.available) {
+        if (result && result.data) {
+          this.subdomainAvailable = result.data.available;
+          if (!result.data.available) {
             // Get suggestions if not available
             const tenantName = this.tenantForm.get('tenant_name')?.value;
             if (tenantName) {
-              this.tenantService.getSubdomainSuggestions(tenantName).subscribe(
-                res => this.suggestions = res.suggestions
-              );
+              this.tenantService.getSubdomainSuggestions(tenantName)
+                .pipe(takeUntil(this.destroy$))
+                .subscribe(
+                  res => this.suggestions = res.data?.suggestions || []
+                );
             }
           }
         }
@@ -144,13 +146,15 @@ export class TenantFormComponent implements OnInit, OnDestroy {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
       .substring(0, 50);
-    
+
     this.tenantForm.patchValue({ subdomain_slug: slug }, { emitEvent: true });
-    
+
     // Also get server suggestions
-    this.tenantService.getSubdomainSuggestions(tenantName).subscribe(result => {
-      this.suggestions = result.suggestions;
-    });
+    this.tenantService.getSubdomainSuggestions(tenantName)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(result => {
+        this.suggestions = result.data?.suggestions || [];
+      });
   }
 
   selectSuggestion(slug: string) {

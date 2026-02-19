@@ -4,7 +4,7 @@
   </div>
 
   <!-- Loading State -->
-  <div *ngIf="loading && isEditMode" class="loading">
+  <div *ngIf="(loading$ | async) && isEditMode" class="loading">
     <div class="spinner"></div>
     <p>Loading product...</p>
   </div>
@@ -15,7 +15,7 @@
   </div>
 
   <!-- Form -->
-  <form *ngIf="!loading || !isEditMode" (ngSubmit)="onSubmit()" class="product-form">
+  <form *ngIf="!(loading$ | async) || !isEditMode" (ngSubmit)="onSubmit()" class="product-form">
 
     <!-- Basic Information Section -->
     <div class="form-section">
@@ -392,9 +392,9 @@
       <button type="button" class="btn btn-secondary" (click)="cancel()">
         Cancel
       </button>
-      <button type="submit" class="btn btn-primary" [disabled]="loading || !selectedTemplate">
-        <span *ngIf="!loading">{{ isEditMode ? 'Update Product' : 'Create Product' }}</span>
-        <span *ngIf="loading">Saving...</span>
+      <button type="submit" class="btn btn-primary" [disabled]="(loading$ | async) || !selectedTemplate">
+        <span *ngIf="!(loading$ | async)">{{ isEditMode ? 'Update Product' : 'Create Product' }}</span>
+        <span *ngIf="loading$ | async">Saving...</span>
       </button>
     </div>
   </form>

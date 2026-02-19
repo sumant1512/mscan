@@ -17,7 +17,6 @@ export class TagsEffects {
         this.tagService.getAllTags({ app_id: appId }).pipe(
           map((response) =>
             {
-              console.log('Loaded tags for appId:', response);
               return TagsActions.loadTagsSuccess({
               tags: response.data,
               appId,

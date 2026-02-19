@@ -11,7 +11,7 @@ const authenticateAppApiKey = async (req, res, next) => {
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
-        success: false,
+        status: false,
         message: 'Missing or invalid Authorization header. Format: Bearer <api_key>'
       });
     }
@@ -20,14 +20,14 @@ const authenticateAppApiKey = async (req, res, next) => {
 
     if (!apiKey) {
       return res.status(401).json({
-        success: false,
+        status: false,
         message: 'API key is required'
       });
     }
 
     // Look up verification app by API key
     const result = await db.query(
-      `SELECT 
+      `SELECT
         va.id,
         va.app_name,
         va.code,
@@ -43,7 +43,7 @@ const authenticateAppApiKey = async (req, res, next) => {
 
     if (result.rows.length === 0) {
       return res.status(401).json({
-        success: false,
+        status: false,
         message: 'Invalid API key'
       });
     }
@@ -53,7 +53,7 @@ const authenticateAppApiKey = async (req, res, next) => {
     // Check if app is active
     if (!app.is_active) {
       return res.status(403).json({
-        success: false,
+        status: false,
         message: 'This application has been deactivated. Please contact the tenant administrator.'
       });
     }
@@ -72,7 +72,7 @@ const authenticateAppApiKey = async (req, res, next) => {
   } catch (error) {
     console.error('App API key authentication error:', error);
     res.status(500).json({
-      success: false,
+      status: false,
       message: 'Authentication failed',
       error: error.message
     });

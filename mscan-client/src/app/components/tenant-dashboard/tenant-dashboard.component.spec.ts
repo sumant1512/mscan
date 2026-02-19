@@ -18,7 +18,7 @@ describe('TenantDashboardComponent', () => {
   const mockTenantUser: User = {
     id: 'user-id',
     email: 'admin@tenant.com',
-    fullName: 'Tenant Admin',
+    full_name: 'Tenant Admin',
     role: UserRole.TENANT_ADMIN,
     permissions: ['view_dashboard'],
     tenant: {
@@ -110,7 +110,7 @@ describe('TenantDashboardComponent', () => {
     it('should update current user when stream emits', () => {
       component.loadUserInfo();
 
-      const newUser = { ...mockTenantUser, fullName: 'Updated Name' };
+      const newUser = { ...mockTenantUser, full_name: 'Updated Name' };
       currentUserSubject.next(newUser);
 
       expect(component.currentUser).toEqual(newUser);

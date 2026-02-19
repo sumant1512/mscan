@@ -29,11 +29,14 @@
     </div>
   </div>
 
-  <div *ngIf="loading" class="loading">Loading requests...</div>
-  <div *ngIf="error" class="error">{{ error }}</div>
+  <div *ngIf="loading$ | async" class="loading">Loading requests...</div>
+
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
 
   <!-- Requests Table -->
-  <div class="table-container" *ngIf="!loading">
+  <div class="table-container" *ngIf="!(loading$ | async)">
     <table class="requests-table">
       <thead>
         <tr>
@@ -54,8 +57,8 @@
           <td *ngIf="isSuperAdmin">{{ request.tenant_name }}</td>
           <td class="amount">{{ request.requested_amount }} credits</td>
           <td>
-            <span class="status-badge" [ngClass]="getStatusClass(request.status)">
-              {{ request.status }}
+            <span class="status-badge" [ngClass]="request.status | statusDisplay:'class'">
+              {{ request.status | statusDisplay:'label' }}
             </span>
           </td>
           <td>{{ formatDate(request.requested_at) }}</td>

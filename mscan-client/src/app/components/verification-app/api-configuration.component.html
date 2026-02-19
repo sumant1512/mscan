@@ -17,12 +17,12 @@
   </div>
 
   <!-- Loading State -->
-  <div *ngIf="loading" class="loading-container">
+  <div *ngIf="loading$ | async" class="loading-container">
     <div class="spinner"></div>
     <p>Loading configuration...</p>
   </div>
 
-  <div *ngIf="!loading">
+  <div *ngIf="!(loading$ | async)">
     <!-- Mobile API Section -->
     <div class="api-section">
       <div class="section-header">
@@ -279,7 +279,7 @@
       <button class="btn btn-outline" (click)="goBack()" [disabled]="saving">
         Cancel
       </button>
-      <button class="btn btn-primary" (click)="saveConfiguration()" [disabled]="saving || loading">
+      <button class="btn btn-primary" (click)="saveConfiguration()" [disabled]="saving || (loading$ | async)">
         <span *ngIf="!saving">💾 Save Configuration</span>
         <span *ngIf="saving">Saving...</span>
       </button>

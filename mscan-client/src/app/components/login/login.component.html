@@ -36,9 +36,9 @@
           </div>
         </div>
 
-        <button type="submit" class="btn-primary" [disabled]="loading || emailForm.invalid">
-          <span *ngIf="!loading">Send OTP</span>
-          <span *ngIf="loading">Sending...</span>
+        <button type="submit" class="btn-primary" [disabled]="(loading$ | async) || emailForm.invalid">
+          <span *ngIf="!(loading$ | async)">Send OTP</span>
+          <span *ngIf="loading$ | async">Sending...</span>
         </button>
       </form>
     </div>
@@ -73,13 +73,13 @@
           </div>
         </div>
 
-        <button type="submit" class="btn-primary" [disabled]="loading || otpForm.invalid">
-          <span *ngIf="!loading">Verify & Login</span>
-          <span *ngIf="loading">Verifying...</span>
+        <button type="submit" class="btn-primary" [disabled]="(loading$ | async) || otpForm.invalid">
+          <span *ngIf="!(loading$ | async)">Verify & Login</span>
+          <span *ngIf="loading$ | async">Verifying...</span>
         </button>
 
         <div class="form-actions">
-          <button type="button" class="btn-text" (click)="resendOTP()" [disabled]="loading">
+          <button type="button" class="btn-text" (click)="resendOTP()" [disabled]="loading$ | async">
             Resend OTP
           </button>
           <button type="button" class="btn-text" (click)="goBack()">

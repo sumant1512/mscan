@@ -3,9 +3,9 @@
     <h1>{{ isEditMode ? 'Edit' : 'Create' }} Verification App</h1>
   </div>
 
-  <div *ngIf="loading" class="loading">Loading verification app...</div>
+  <div *ngIf="loading$ | async" class="loading">Loading verification app...</div>
 
-  <div class="form-card" *ngIf="!loading">
+  <div class="form-card" *ngIf="!(loading$ | async)">
     <form [formGroup]="configForm" (ngSubmit)="onSubmit()">
       <div *ngIf="error" class="alert alert-error">{{ error }}</div>
       <div *ngIf="success" class="alert alert-success">{{ success }}</div>
@@ -164,12 +164,12 @@
       </div>
 
       <div class="form-actions">
-        <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading">
+        <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading$ | async">
           Cancel
         </button>
-        <button type="submit" class="btn-primary" [disabled]="loading || configForm.invalid">
-          <span *ngIf="!loading">{{ isEditMode ? 'Update' : 'Create' }} App</span>
-          <span *ngIf="loading">Saving...</span>
+        <button type="submit" class="btn-primary" [disabled]="(loading$ | async) || configForm.invalid">
+          <span *ngIf="!(loading$ | async)">{{ isEditMode ? 'Update' : 'Create' }} App</span>
+          <span *ngIf="loading$ | async">Saving...</span>
         </button>
       </div>
     </form>

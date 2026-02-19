@@ -4,7 +4,7 @@
   </label>
   <select id="app-select" class="app-selector-dropdown" [(ngModel)]="selectedAppId" (change)="onAppChange()">
     <option [ngValue]="null">All Applications</option>
-    <option *ngFor="let app of availableApps$ | async" [ngValue]="app.verification_app_id" [disabled]="!app.is_active">
+    <option *ngFor="let app of availableApps$ | async" [ngValue]="app" [disabled]="!app.is_active">
       {{ app.app_name }}
       <span *ngIf="!app.is_active">(Inactive)</span>
     </option>

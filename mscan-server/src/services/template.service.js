@@ -164,13 +164,33 @@ class TemplateService {
   async updateTemplate(templateId, tenantId, updates) {
     try {
       // Check if template has products before allowing any updates
-      const usageCheck = await db.query(
+      const productCheck = await db.query(
         'SELECT COUNT(*) as count FROM products WHERE template_id = $1',
         [templateId]
       );
 
-      if (parseInt(usageCheck.rows[0].count) > 0) {
-        throw new Error('Cannot update template that has products. Please delete all products first or create a new template.');
+      const productCount = parseInt(productCheck.rows[0].count);
+
+      if (productCount > 0) {
+        const error = new Error('Cannot update template that has products. Please delete all products first or create a new template.');
+        error.statusCode = 400;
+        error.code = 'TEMPLATE_HAS_PRODUCTS';
+        throw error;
+      }
+
+      // Check if template is assigned to any verification apps
+      const appCheck = await db.query(
+        'SELECT COUNT(*) as count FROM verification_apps WHERE template_id = $1',
+        [templateId]
+      );
+
+      const appCount = parseInt(appCheck.rows[0].count);
+
+      if (appCount > 0) {
+        const error = new Error('Cannot update template that is assigned to verification apps. Please unassign from all apps first or create a new template.');
+        error.statusCode = 400;
+        error.code = 'TEMPLATE_ASSIGNED_TO_APPS';
+        throw error;
       }
 
       const {

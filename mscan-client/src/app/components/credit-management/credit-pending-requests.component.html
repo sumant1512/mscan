@@ -2,9 +2,9 @@
   <div class="header">
     <h2>Pending Credit Requests</h2>
     <div class="header-actions">
-      <button class="btn btn-secondary" (click)="refresh()" [disabled]="loading">
-        <span *ngIf="!loading">🔄 Refresh</span>
-        <span *ngIf="loading">Loading...</span>
+      <button class="btn btn-secondary" (click)="refresh()" [disabled]="loading$ | async">
+        <span *ngIf="!(loading$ | async)">🔄 Refresh</span>
+        <span *ngIf="loading$ | async">Loading...</span>
       </button>
       <a routerLink="/tenant/credits/request" class="btn btn-primary">
         + New Request
@@ -18,7 +18,7 @@
   </div>
 
   <!-- Loading State -->
-  <div *ngIf="loading && !error" class="loading">
+  <div *ngIf="(loading$ | async) && !error" class="loading">
     Loading pending requests...
   </div>
 
@@ -31,7 +31,7 @@
     </app-credit-card>
 
     <!-- Empty State -->
-    <div *ngIf="!loading && !error && cardData.length === 0" class="no-data">
+    <div *ngIf="!(loading$ | async) && !error && cardData.length === 0" class="no-data">
       No pending credit requests
     </div>
   </div>

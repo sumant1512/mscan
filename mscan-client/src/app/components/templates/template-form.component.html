@@ -13,13 +13,13 @@
   </div>
 
   <!-- Loading State -->
-  <div *ngIf="loading && isEditMode" class="loading-container">
+  <div *ngIf="(loading$ | async) && isEditMode" class="loading-container">
     <div class="spinner"></div>
     <p>Loading template...</p>
   </div>
 
   <!-- Form -->
-  <form *ngIf="!loading || !isEditMode" (ngSubmit)="onSubmit()" class="template-form">
+  <form *ngIf="!(loading$ | async) || !isEditMode" (ngSubmit)="onSubmit()" class="template-form">
     <!-- Template Metadata -->
     <div class="form-section">
       <h2 class="section-title">Template Information</h2>
@@ -577,12 +577,12 @@
 
     <!-- Form Actions -->
     <div class="form-actions">
-      <button type="button" class="btn btn-outline" (click)="cancel()" [disabled]="loading">
+      <button type="button" class="btn btn-outline" (click)="cancel()" [disabled]="loading$ | async">
         Cancel
       </button>
-      <button type="submit" class="btn btn-primary" [disabled]="loading">
-        <span *ngIf="!loading">{{ isEditMode ? 'Update Template' : 'Create Template' }}</span>
-        <span *ngIf="loading">Processing...</span>
+      <button type="submit" class="btn btn-primary" [disabled]="loading$ | async">
+        <span *ngIf="!(loading$ | async)">{{ isEditMode ? 'Update Template' : 'Create Template' }}</span>
+        <span *ngIf="loading$ | async">Processing...</span>
       </button>
     </div>
   </form>

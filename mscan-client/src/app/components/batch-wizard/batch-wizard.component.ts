@@ -7,12 +7,16 @@
  * 4. Create reward campaign (common or custom)
  */
 
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil, filter } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { ConfirmationService } from '../../shared/services/confirmation.service';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
 
 interface Batch {
   id: string;
@@ -30,7 +34,7 @@ interface RewardVariation {
 }
 
 interface ApiResponse {
-  success: boolean;
+  status: boolean;
   message?: string;
   data?: any;
 }
@@ -42,7 +46,9 @@ interface ApiResponse {
   templateUrl: './batch-wizard.component.html',
   styleUrls: ['./batch-wizard.component.css']
 })
-export class BatchWizardComponent implements OnInit {
+export class BatchWizardComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   // Wizard state
   currentStep = signal<number>(1);
   batch = signal<Batch | null>(null);
@@ -85,12 +91,18 @@ export class BatchWizardComponent implements OnInit {
 
   constructor(
     private http: HttpClient,
-    private router: Router
+    private router: Router,
+    private confirmationService: ConfirmationService
   ) {}
 
   ngOnInit(): void {
     // Load verification apps if needed
     this.loadVerificationApps();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadVerificationApps(): void {
@@ -120,12 +132,13 @@ export class BatchWizardComponent implements OnInit {
     };
 
     this.http.post<ApiResponse>(`${this.apiUrl}/batches`, body, { headers })
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          if (response.success && response.data) {
+          if (response.status && response.data) {
             this.batch.set(response.data.batch);
             this.success.set('Batch created successfully');
-            
+
             // Initialize custom rewards percentages
             const qty = this.quantity();
             this.customRewards.set([
@@ -140,7 +153,7 @@ export class BatchWizardComponent implements OnInit {
           this.loading.set(false);
         },
         error: (err) => {
-          this.error.set(err.error?.message || 'Failed to create batch');
+          this.error.set(HttpErrorHandler.getMessage(err, 'Failed to create batch'));
           this.loading.set(false);
         }
       });
@@ -167,34 +180,36 @@ export class BatchWizardComponent implements OnInit {
       `${this.apiUrl}/batches/${batchId}/assign-codes`,
       body,
       { headers }
-    ).subscribe({
-      next: (response) => {
-        if (response.success && response.data) {
-          this.serialRange.set(response.data.serial_range);
-          this.success.set(
-            `Assigned ${response.data.codes_assigned} serial codes`
-          );
-          
-          // Update batch status
-          const currentBatch = this.batch();
-          if (currentBatch) {
-            this.batch.set({
-              ...currentBatch,
-              status: 'code_assigned',
-              serial_range: response.data.serial_range
-            });
-          }
+    )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          if (response.status && response.data) {
+            this.serialRange.set(response.data.serial_range);
+            this.success.set(
+              `Assigned ${response.data.codes_assigned} serial codes`
+            );
 
-          // Move to next step
-          setTimeout(() => this.nextStep(), 1500);
+            // Update batch status
+            const currentBatch = this.batch();
+            if (currentBatch) {
+              this.batch.set({
+                ...currentBatch,
+                status: 'code_assigned',
+                serial_range: response.data.serial_range
+              });
+            }
+
+            // Move to next step
+            setTimeout(() => this.nextStep(), 1500);
+          }
+          this.loading.set(false);
+        },
+        error: (err) => {
+          this.error.set(HttpErrorHandler.getMessage(err, 'Failed to assign codes'));
+          this.loading.set(false);
         }
-        this.loading.set(false);
-      },
-      error: (err) => {
-        this.error.set(err.error?.message || 'Failed to assign codes');
-        this.loading.set(false);
-      }
-    });
+      });
   }
 
   /**
@@ -214,30 +229,32 @@ export class BatchWizardComponent implements OnInit {
       `${this.apiUrl}/batches/${batchId}/activate`,
       {},
       { headers }
-    ).subscribe({
-      next: (response) => {
-        if (response.success) {
-          this.success.set('Batch activated successfully');
-          
-          // Update batch status
-          const currentBatch = this.batch();
-          if (currentBatch) {
-            this.batch.set({
-              ...currentBatch,
-              status: 'activated'
-            });
-          }
+    )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          if (response.status) {
+            this.success.set('Batch activated successfully');
 
-          // Move to next step
-          setTimeout(() => this.nextStep(), 1000);
+            // Update batch status
+            const currentBatch = this.batch();
+            if (currentBatch) {
+              this.batch.set({
+                ...currentBatch,
+                status: 'activated'
+              });
+            }
+
+            // Move to next step
+            setTimeout(() => this.nextStep(), 1000);
+          }
+          this.loading.set(false);
+        },
+        error: (err) => {
+          this.error.set(HttpErrorHandler.getMessage(err, 'Failed to activate batch'));
+          this.loading.set(false);
         }
-        this.loading.set(false);
-      },
-      error: (err) => {
-        this.error.set(err.error?.message || 'Failed to activate batch');
-        this.loading.set(false);
-      }
-    });
+      });
   }
 
   /**
@@ -275,12 +292,13 @@ export class BatchWizardComponent implements OnInit {
         };
 
     this.http.post<ApiResponse>(endpoint, body, { headers })
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          if (response.success) {
+          if (response.status) {
             this.success.set('Reward campaign created successfully! Coupons are now live.');
             this.loading.set(false);
-            
+
             // Navigate to batch list after 2 seconds
             setTimeout(() => {
               this.router.navigate(['/tenant-admin/batches']);
@@ -288,7 +306,7 @@ export class BatchWizardComponent implements OnInit {
           }
         },
         error: (err) => {
-          this.error.set(err.error?.message || 'Failed to create campaign');
+          this.error.set(HttpErrorHandler.getMessage(err, 'Failed to create campaign'));
           this.loading.set(false);
         }
       });
@@ -353,8 +371,17 @@ export class BatchWizardComponent implements OnInit {
    * Cancel and go back to batch list
    */
   cancel(): void {
-    if (confirm('Are you sure you want to cancel? All progress will be lost.')) {
-      this.router.navigate(['/tenant-admin/batches']);
-    }
+    this.confirmationService
+      .confirm(
+        'Are you sure you want to cancel? All progress will be lost.',
+        'Cancel Batch Creation'
+      )
+      .pipe(
+        filter(confirmed => confirmed),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.router.navigate(['/tenant-admin/batches']);
+      });
   }
 }

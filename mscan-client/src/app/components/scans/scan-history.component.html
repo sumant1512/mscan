@@ -36,15 +36,15 @@
   </div>
 
   <div class="table-card">
-    <div *ngIf="loading" class="loading">Loading scan history...</div>
+    <div *ngIf="loading$ | async" class="loading">Loading scan history...</div>
 
-    <div *ngIf="!loading && scans.length === 0" class="empty-state">
+    <div *ngIf="!(loading$ | async) && scans.length === 0" class="empty-state">
       <span class="material-icons">qr_code_scanner</span>
       <h3>No Scans Yet</h3>
       <p>Scan history will appear here once customers start scanning your coupon QR codes.</p>
     </div>
 
-    <table *ngIf="!loading && scans.length > 0">
+    <table *ngIf="!(loading$ | async) && scans.length > 0">
       <thead>
         <tr>
           <th>Timestamp</th>
@@ -55,7 +55,7 @@
       </thead>
       <tbody>
         <tr *ngFor="let scan of scans">
-          <td>{{ scan.scan_timestamp | date:'short' }}</td>
+          <td>{{ scan.scanned_at | date:'short' }}</td>
           <td>{{ scan.coupon_code }}</td>
           <td>
             <span class="badge" [class.success]="scan.scan_status === 'SUCCESS'" [class.error]="scan.scan_status !== 'SUCCESS'">

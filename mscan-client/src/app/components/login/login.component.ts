@@ -1,14 +1,17 @@
 /**
  * Login Component
  */
-import { ChangeDetectorRef, Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { finalize } from 'rxjs/operators';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { SubdomainService } from '../../services/subdomain.service';
 import { AuthContextFacade } from '../../store/auth-context';
+import { LoadingService } from '../../shared/services/loading.service';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
 
 @Component({
   selector: 'app-login',
@@ -17,12 +20,16 @@ import { AuthContextFacade } from '../../store/auth-context';
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
-export class LoginComponent {
+export class LoginComponent implements OnDestroy {
+  private destroy$ = new Subject<void>();
+
   emailForm: FormGroup;
   otpForm: FormGroup;
 
   step: 'email' | 'otp' = 'email';
-  loading = false;
+  private loadingService = inject(LoadingService);
+
+  loading$ = this.loadingService.loading$;
   error = '';
   success = '';
   email = '';
@@ -58,37 +65,41 @@ export class LoginComponent {
     });
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   /**
    * Request OTP
    */
   requestOTP(): void {
     if (this.emailForm.invalid) return;
 
-    this.loading = true;
     this.error = '';
     this.success = '';
     this.email = this.emailForm.value.email;
 
     this.authService.requestOTP(this.email)
       .pipe(
-        finalize(() => {
-          this.loading = false;
-          this.cdr.detectChanges();
-        })
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
       )
       .subscribe({
         next: (response) => {
-          if (response.success) {
+          if (response.status) {
             this.success = response.message || 'OTP sent successfully';
             this.step = 'otp';
             this.startCountdown(5);
           } else {
             this.error = response.message || 'Failed to send OTP';
           }
+          this.cdr.detectChanges();
         },
         error: (error) => {
-          console.error('OTP Request Error:', error);
-          this.error = error.error?.message || error.message || 'Failed to send OTP. Please try again.';
+          this.error = HttpErrorHandler.getMessage(error, 'Failed to send OTP. Please try again.');
+          console.log(this.error)
+          this.cdr.detectChanges();
         }
       });
   }
@@ -99,49 +110,45 @@ export class LoginComponent {
   verifyOTP(): void {
     if (this.otpForm.invalid) return;
 
-    this.loading = true;
     this.error = '';
 
     const otp = this.otpForm.value.otp;
 
     this.authService.verifyOTP(this.email, otp)
       .pipe(
-        finalize(() => {
-          this.loading = false;
-          this.cdr.detectChanges();
-        })
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
       )
       .subscribe({
         next: (response) => {
-          if (response.success && response.data) {
+          if (response.status && response.data) {
             const userType = response.data.userType;
             const subdomain = response.data.subdomain;
 
-            // Load user context into NgRx store after successful login
-            this.authContextFacade.loadUserContext();
-
-            // Issue 2 & 3: Handle subdomain redirect and navigation properly
+            // Navigate based on user type
             if (userType === 'SUPER_ADMIN') {
               // Super admin - navigate to super admin dashboard
               this.router.navigate(['/super-admin/dashboard']);
-            } else if (subdomain) {
-              // Tenant user
-              if (this.currentSubdomain === subdomain) {
-                // Already on correct subdomain - navigate to dashboard
+            } else {
+              // If subdomain mismatch, auth service will handle redirect
+              if (this.currentSubdomain === subdomain || !subdomain) {
+                // Already on correct subdomain or no subdomain - navigate to dashboard
                 this.router.navigate(['/tenant/dashboard']);
               } else {
-                // Wrong subdomain - redirect to correct one
-                // Auth service will handle the redirect
+                console.log('LoginComponent.verifyOTP: Subdomain mismatch - auth service will handle redirect');
               }
             }
           } else {
+            console.log(response)
             this.error = response.message || 'Login failed. Please try again.';
           }
+          this.cdr.detectChanges();
         },
         error: (error) => {
-          console.error('OTP Verification Error:', error);
-          this.error = error.error?.message || error.message || 'Invalid OTP. Please try again.';
+          console.log(error)
+          this.error = HttpErrorHandler.getMessage(error, 'Invalid OTP. Please try again.');
           this.otpForm.patchValue({ otp: '' });
+          this.cdr.detectChanges();
         }
       });
   }

@@ -43,13 +43,13 @@
   </div>
 
   <!-- Loading State -->
-  <div *ngIf="loading" class="loading-container">
+  <div *ngIf="loading$ | async" class="loading-container">
     <div class="spinner"></div>
     <p>Loading templates...</p>
   </div>
 
   <!-- Templates Grid -->
-  <div *ngIf="!loading && templates.length > 0" class="templates-grid">
+  <div *ngIf="!(loading$ | async) && templates.length > 0" class="templates-grid">
     <div *ngFor="let template of templates" class="template-card">
       <div class="template-header">
         <div class="template-icon">
@@ -124,7 +124,7 @@
   </div>
 
   <!-- Empty State -->
-  <div *ngIf="!loading && templates.length === 0" class="empty-state">
+  <div *ngIf="!(loading$ | async) && templates.length === 0" class="empty-state">
     <div class="empty-icon">📋</div>
     <h3>No Templates Found</h3>
     <p *ngIf="searchTerm">
@@ -139,7 +139,7 @@
   </div>
 
   <!-- Pagination -->
-  <div *ngIf="!loading && templates.length > 0 && totalPages > 1" class="pagination">
+  <div *ngIf="!(loading$ | async) && templates.length > 0 && totalPages > 1" class="pagination">
     <button
       class="btn btn-sm btn-outline"
       [disabled]="currentPage === 1"

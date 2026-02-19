@@ -1,22 +1,31 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-import { RewardsService } from '../../services/rewards.service';
-import { TemplateService } from '../../services/template.service';
+import { Subject } from 'rxjs';
+import { takeUntil, filter } from 'rxjs/operators';
+import { TemplatesFacade } from '../../store/templates/templates.facade';
+import { VerificationAppsFacade } from '../../store/verification-apps/verification-apps.facade';
 import { ProductTemplate } from '../../models/templates.model';
-import { finalize } from 'rxjs/operators';
+import { LoadingService } from '../../shared/services/loading.service';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
 
 @Component({
   selector: 'app-verification-app-configure',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './verification-app-configure.component.html',
-  styleUrls: ['./verification-app-configure.component.css']
+  styleUrls: ['./verification-app-configure.component.css'],
 })
-export class VerificationAppConfigureComponent implements OnInit {
+export class VerificationAppConfigureComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+  private loadingService = inject(LoadingService);
+  private templatesFacade = inject(TemplatesFacade);
+  private verificationAppsFacade = inject(VerificationAppsFacade);
+
   configForm: FormGroup;
-  loading = false;
+  loading$ = this.verificationAppsFacade.loading$;
+  error$ = this.verificationAppsFacade.error$;
   error = '';
   success = '';
   isEditMode = false;
@@ -46,16 +55,14 @@ export class VerificationAppConfigureComponent implements OnInit {
     { code: 'HKD', name: 'Hong Kong Dollar', symbol: 'HK$' },
     { code: 'SEK', name: 'Swedish Krona', symbol: 'kr' },
     { code: 'NOK', name: 'Norwegian Krone', symbol: 'kr' },
-    { code: 'DKK', name: 'Danish Krone', symbol: 'kr' }
+    { code: 'DKK', name: 'Danish Krone', symbol: 'kr' },
   ];
 
   constructor(
     private fb: FormBuilder,
     private router: Router,
     private route: ActivatedRoute,
-    private rewardsService: RewardsService,
-    private templateService: TemplateService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
   ) {
     this.configForm = this.fb.group({
       app_name: ['', [Validators.required, Validators.minLength(3)]],
@@ -67,130 +74,122 @@ export class VerificationAppConfigureComponent implements OnInit {
       scan_success_message: ['Coupon verified successfully!'],
       scan_failure_message: ['Invalid or expired coupon.'],
       post_scan_redirect_url: [''],
-      template_id: ['', Validators.required],  // Made required
-      currency: ['INR', Validators.required]  // Application currency
+      template_id: ['', Validators.required], // Made required
+      currency: ['INR', Validators.required], // Application currency
     });
   }
 
   ngOnInit() {
     this.loadTemplates();
     const id = this.route.snapshot.paramMap.get('id');
-    console.log('VerificationAppConfigureComponent - Route ID:', id);
-    this.setFormMode(id as string)
+    this.setFormMode(id as string);
+
+    // Getting template list from store to populate template dropdown
+    this.getTemplateList();
+
+    // Subscribe to error state
+    this.error$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(error => {
+        if (error) {
+          this.error = error;
+          this.cdr.detectChanges();
+        }
+      });
+
+    // Subscribe to success message and navigate after operations complete
+    this.verificationAppsFacade.successMessage$
+      .pipe(
+        takeUntil(this.destroy$),
+        filter(msg => msg !== null)
+      )
+      .subscribe((message) => {
+        this.success = message || '';
+        this.cdr.detectChanges();
+
+        // Navigate to verification apps list after success
+        setTimeout(() => {
+          this.router.navigate(['/tenant/verification-app']);
+        }, 1500);
+      });
+  }
+
+  private getTemplateList() {
+    this.templatesFacade.templates$.pipe(takeUntil(this.destroy$)).subscribe((templates) => {
+      this.templates = templates;
+
+      // If no templates exist, show error and disable form
+      if (this.templates.length === 0 && !this.isEditMode) {
+        this.error =
+          'No product templates found. Please create a product template first before creating a verification app.';
+        this.configForm.disable();
+      }
+      if(this.templates.length > 0) {
+        this.error = '';
+        this.configForm.enable();
+      }
+      this.cdr.detectChanges();
+    });
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadTemplates(): void {
-    this.templateService.getTemplates({ include_system: true, limit: 100 }).subscribe({
-      next: (response) => {
-        this.templates = response.templates;
-
-        // If no templates exist, show error and disable form
-        if (this.templates.length === 0 && !this.isEditMode) {
-          this.error = 'No product templates found. Please create a product template first before creating a verification app.';
-          this.configForm.disable();
-        }
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Failed to load templates:', err);
-        this.error = 'Failed to load templates. Please try again.';
-        this.cdr.detectChanges();
-      }
-    });
+    this.templatesFacade.loadTemplates({ include_system: true, limit: 100 });
   }
 
   setFormMode(id: string) {
     if (id) {
       this.isEditMode = true;
       this.appId = id;
-      console.log('Edit mode enabled for app ID:', this.appId);
       this.loadApp(this.appId);
-    } else {
-      console.log('Create mode - no ID provided');
     }
   }
 
   loadApp(appId: string) {
     if (!appId) return;
 
-    console.log('Loading verification app with ID:', appId);
-    this.loading = true;
-
-    this.rewardsService.getVerificationAppById(appId)
-      .pipe(finalize(() => {
-        this.loading = false;
-        this.cdr.detectChanges();
-      }))
-      .subscribe({
-        next: (response) => {
-          console.log('Verification app loaded:', response);
-          if (response.app) {
-            console.log('Patching form with app data:', response.app);
-            this.configForm.patchValue(response.app);
-            this.cdr.detectChanges();
-          } else {
-            this.error = 'Verification app not found';
-          }
-        },
-        error: (err) => {
-          console.error('Load verification app error:', err);
-          this.error = err.error?.error || err.message || 'Failed to load verification app';
+    // Subscribe to app from store by ID
+    this.verificationAppsFacade.getAppById(appId)
+      .pipe(
+        takeUntil(this.destroy$),
+        filter(app => app !== undefined)
+      )
+      .subscribe((app) => {
+        if (app) {
+          this.configForm.patchValue(app);
+          this.cdr.detectChanges();
+        } else {
+          this.error = 'Verification app not found';
         }
       });
   }
 
   onSubmit() {
     if (this.configForm.invalid) {
-      Object.keys(this.configForm.controls).forEach(key => {
+      Object.keys(this.configForm.controls).forEach((key) => {
         this.configForm.controls[key].markAsTouched();
       });
       return;
     }
 
-    this.loading = true;
+    // Clear any previous messages
     this.error = '';
     this.success = '';
 
     const formData = this.configForm.value;
 
     if (this.isEditMode && this.appId) {
-      // Update existing app
-      this.rewardsService.updateVerificationApp(this.appId, formData)
-        .pipe(finalize(() => {
-          this.loading = false;
-          this.cdr.detectChanges();
-        }))
-        .subscribe({
-          next: (response) => {
-            this.success = response.message || 'Verification app updated successfully!';
-            setTimeout(() => {
-              this.router.navigate(['/tenant/verification-app']);
-            }, 1500);
-          },
-          error: (err) => {
-            console.error('Update verification app error:', err);
-            this.error = err.error?.error || err.message || 'Failed to update verification app';
-          }
-        });
+      // Update existing app via NgRx store
+      this.verificationAppsFacade.updateApp(this.appId, formData);
+      // Success/navigation handled by subscription in ngOnInit
     } else {
-      // Create new app
-      this.rewardsService.createVerificationApp(formData)
-        .pipe(finalize(() => {
-          this.loading = false;
-          this.cdr.detectChanges();
-        }))
-        .subscribe({
-          next: (response) => {
-            this.success = response.message || 'Verification app created successfully!';
-            setTimeout(() => {
-              this.router.navigate(['/tenant/verification-app']);
-            }, 1500);
-          },
-          error: (err) => {
-            console.error('Create verification app error:', err);
-            this.error = err.error?.error || err.message || 'Failed to create verification app';
-          }
-        });
+      // Create new app via NgRx store
+      this.verificationAppsFacade.createApp(formData);
+      // Success/navigation handled by subscription in ngOnInit
     }
   }
 

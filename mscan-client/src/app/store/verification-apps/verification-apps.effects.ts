@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { of } from 'rxjs';
 import { map, catchError, switchMap, tap } from 'rxjs/operators';
@@ -8,6 +9,7 @@ import * as VerificationAppsActions from './verification-apps.actions';
 @Injectable()
 export class VerificationAppsEffects {
   private actions$ = inject(Actions);
+  private router = inject(Router);
   private verificationAppService = inject(VerificationAppService);
 
   loadVerificationApps$ = createEffect(() =>
@@ -15,17 +17,21 @@ export class VerificationAppsEffects {
       ofType(VerificationAppsActions.loadVerificationApps),
       switchMap(() =>
         this.verificationAppService.getVerificationApps().pipe(
-          map(response => 
-            VerificationAppsActions.loadVerificationAppsSuccess({ apps: response.apps })
+          map((response) =>
+            VerificationAppsActions.loadVerificationAppsSuccess({
+              apps: response?.data?.apps || [],
+            }),
           ),
-          catchError(error =>
-            of(VerificationAppsActions.loadVerificationAppsFailure({ 
-              error: error.error?.message || error.message || 'Failed to load verification apps' 
-            }))
-          )
-        )
-      )
-    )
+          catchError((error) =>
+            of(
+              VerificationAppsActions.loadVerificationAppsFailure({
+                error: error.error?.message || error.message || 'Failed to load verification apps',
+              }),
+            ),
+          ),
+        ),
+      ),
+    ),
   );
 
   createVerificationApp$ = createEffect(() =>
@@ -33,17 +39,23 @@ export class VerificationAppsEffects {
       ofType(VerificationAppsActions.createVerificationApp),
       switchMap(({ app }) =>
         this.verificationAppService.createVerificationApp(app).pipe(
-          map(response =>
-            VerificationAppsActions.createVerificationAppSuccess({ app: response.app })
+          map((response) => {
+            if (!response.status) {
+              throw new Error('Internal Server Error');
+            }
+            this.router.navigate(['/tenant/verification-app']);
+            return VerificationAppsActions.loadVerificationApps();
+          }),
+          catchError((error) =>
+            of(
+              VerificationAppsActions.createVerificationAppFailure({
+                error: error.error?.message || error.message || 'Failed to create verification app',
+              }),
+            ),
           ),
-          catchError(error =>
-            of(VerificationAppsActions.createVerificationAppFailure({ 
-              error: error.error?.message || error.message || 'Failed to create verification app' 
-            }))
-          )
-        )
-      )
-    )
+        ),
+      ),
+    ),
   );
 
   updateVerificationApp$ = createEffect(() =>
@@ -51,17 +63,23 @@ export class VerificationAppsEffects {
       ofType(VerificationAppsActions.updateVerificationApp),
       switchMap(({ id, changes }) =>
         this.verificationAppService.updateVerificationApp(id, changes).pipe(
-          map(response =>
-            VerificationAppsActions.updateVerificationAppSuccess({ app: response.app })
+          map((response) => {
+            if (!response.status) {
+              throw new Error('Internal Server Error');
+            }
+            this.router.navigate(['/tenant/verification-app']);
+            return VerificationAppsActions.loadVerificationApps();
+          }),
+          catchError((error) =>
+            of(
+              VerificationAppsActions.updateVerificationAppFailure({
+                error: error.error?.message || error.message || 'Failed to update verification app',
+              }),
+            ),
           ),
-          catchError(error =>
-            of(VerificationAppsActions.updateVerificationAppFailure({ 
-              error: error.error?.message || error.message || 'Failed to update verification app' 
-            }))
-          )
-        )
-      )
-    )
+        ),
+      ),
+    ),
   );
 
   deleteVerificationApp$ = createEffect(() =>
@@ -69,16 +87,19 @@ export class VerificationAppsEffects {
       ofType(VerificationAppsActions.deleteVerificationApp),
       switchMap(({ id }) =>
         this.verificationAppService.deleteVerificationApp(id).pipe(
-          map(() =>
-            VerificationAppsActions.deleteVerificationAppSuccess({ id })
+          map(() => {
+            this.router.navigate(['/tenant/verification-app']);
+            return VerificationAppsActions.loadVerificationApps();
+          }),
+          catchError((error) =>
+            of(
+              VerificationAppsActions.deleteVerificationAppFailure({
+                error: error.error?.message || error.message || 'Failed to delete verification app',
+              }),
+            ),
           ),
-          catchError(error =>
-            of(VerificationAppsActions.deleteVerificationAppFailure({ 
-              error: error.error?.message || error.message || 'Failed to delete verification app' 
-            }))
-          )
-        )
-      )
-    )
+        ),
+      ),
+    ),
   );
 }

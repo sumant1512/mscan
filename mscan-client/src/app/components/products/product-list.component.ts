@@ -1,10 +1,11 @@
-import { ChangeDetectorRef, Component, OnInit, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
-import { ProductsService } from '../../services/products.service';
-import { Product } from '../../models/rewards.model';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { ProductsFacade } from '../../store/products/products.facade';
+import { Product } from '../../store/products/products.models';
 import { AppContextService } from '../../services/app-context.service';
 import { AuthService } from '../../services/auth.service';
 
@@ -16,13 +17,17 @@ import { AuthService } from '../../services/auth.service';
   styleUrls: ['./product-list.component.css']
 })
 export class ProductListComponent implements OnInit, OnDestroy {
-  products: Product[] = [];
-  loading = false;
-  error = '';
+  private destroy$ = new Subject<void>();
+  private productsFacade = inject(ProductsFacade);
+
+  products$ = this.productsFacade.products$;
+  loading$ = this.productsFacade.loading$;
+  error$ = this.productsFacade.error$;
+
+  successMessage = '';
   searchQuery = '';
   selectedProduct: Product | null = null;
   showDeleteModal = false;
-  private appContextSubscription?: Subscription;
 
   // Permission flags
   canCreateProduct = false;
@@ -30,7 +35,6 @@ export class ProductListComponent implements OnInit, OnDestroy {
   canDeleteProduct = false;
 
   constructor(
-    private productsService: ProductsService,
     private router: Router,
     private cdr: ChangeDetectorRef,
     private appContextService: AppContextService,
@@ -42,47 +46,35 @@ export class ProductListComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.loadProducts();
-    
-    // Reload products when app selection changes
-    this.appContextSubscription = this.appContextService.appContext$.subscribe(() => {
-      this.loadProducts();
-    });
+    this.appContextService.appContext$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.loadProducts();
+      });
   }
 
   ngOnDestroy() {
-    this.appContextSubscription?.unsubscribe();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadProducts() {
-    this.loading = true;
-    this.error = '';
-    
+    this.successMessage = '';
+    this.productsFacade.clearError();
+
     // Get selected app ID
     const selectedAppId = this.appContextService.getSelectedAppId();
-    
-    const params: any = {
+
+    const filter: any = {
       search: this.searchQuery
     };
-    
+
     // Only add app_id filter if a specific app is selected
     if (selectedAppId !== null) {
-      params.app_id = selectedAppId;
+      filter.app_id = selectedAppId;
     }
-    
-    this.productsService.getProducts(params).subscribe({
-      next: (response) => {
-        this.products = response.products || [];
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        this.error = err.error?.error || 'Failed to load products';
-        this.products = [];
-        this.loading = false;
-        this.cdr.detectChanges();
-      }
-    });
+
+    this.productsFacade.loadProducts(filter);
   }
 
   onSearch() {
@@ -91,6 +83,10 @@ export class ProductListComponent implements OnInit, OnDestroy {
 
   createProduct() {
     this.router.navigate(['/tenant/products/create']);
+  }
+
+  viewProduct(product: Product) {
+    this.router.navigate(['/tenant/products', product.id]);
   }
 
   editProduct(product: Product) {
@@ -104,17 +100,11 @@ export class ProductListComponent implements OnInit, OnDestroy {
 
   deleteProduct() {
     if (!this.selectedProduct) return;
-    
-    this.productsService.deleteProduct(this.selectedProduct.id).subscribe({
-      next: () => {
-        this.showDeleteModal = false;
-        this.loadProducts();
-      },
-      error: (err) => {
-        this.error = err.error?.error || 'Failed to delete product';
-        this.showDeleteModal = false;
-      }
-    });
+
+    this.productsFacade.deleteProduct(this.selectedProduct.id);
+    this.successMessage = 'Product deleted successfully';
+    this.showDeleteModal = false;
+    this.selectedProduct = null;
   }
 
   closeDeleteModal() {

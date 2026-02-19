@@ -21,7 +21,7 @@ export class ProductsService {
     return this.http.get(this.apiUrl, { params: params as any });
   }
 
-  getProduct(id: number): Observable<{ product: Product }> {
+  getProduct(id: string): Observable<{ product: Product }> {
     return this.http.get<{ product: Product }>(`${this.apiUrl}/${id}`);
   }
 
@@ -33,7 +33,7 @@ export class ProductsService {
     return this.http.put<{ message: string; product: Product }>(`${this.apiUrl}/${id}`, data);
   }
 
-  deleteProduct(id: number): Observable<{ message: string }> {
+  deleteProduct(id: string): Observable<{ message: string }> {
     return this.http.delete<{ message: string }>(`${this.apiUrl}/${id}`);
   }
 }

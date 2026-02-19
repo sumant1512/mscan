@@ -11,13 +11,13 @@
   </div>
 
   <!-- Loading State -->
-  <div *ngIf="loading" class="loading-container">
+  <div *ngIf="loading$ | async" class="loading-container">
     <div class="spinner"></div>
     <p>Loading template...</p>
   </div>
 
   <!-- Template Details -->
-  <div *ngIf="!loading && template">
+  <div *ngIf="!(loading$ | async) && template">
     <!-- Template Overview -->
     <div class="template-overview">
       <div class="overview-header">
@@ -52,6 +52,8 @@
         <button
           *ngIf="!template.is_system_template"
           class="btn btn-primary"
+          [disabled]="!canEditTemplate()"
+          [title]="getEditButtonTooltip()"
           (click)="editTemplate()"
         >
           <span class="material-icons">edit</span>
@@ -141,6 +143,18 @@
         <div class="metadata-item">
           <span class="metadata-label">Type:</span>
           <span>{{ template.is_system_template ? 'System Template' : 'Custom Template' }}</span>
+        </div>
+        <div class="metadata-item">
+          <span class="metadata-label">Products Using:</span>
+          <span [class]="template.product_count && template.product_count > 0 ? 'text-warning' : ''">
+            {{ template.product_count || 0 }}
+          </span>
+        </div>
+        <div class="metadata-item">
+          <span class="metadata-label">Apps Using:</span>
+          <span [class]="template.app_count && template.app_count > 0 ? 'text-warning' : ''">
+            {{ template.app_count || 0 }}
+          </span>
         </div>
         <div class="metadata-item">
           <span class="metadata-label">Created:</span>

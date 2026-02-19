@@ -16,7 +16,7 @@ export class DashboardEffects {
       switchMap(() =>
         this.dashboardService.getDashboardStats().pipe(
           map((response) => {
-            if (response.success && response.data) {
+            if (response.status && response.data) {
               return DashboardActions.loadDashboardStatsSuccess({ stats: response.data });
             } else {
               return DashboardActions.loadDashboardStatsFailure({

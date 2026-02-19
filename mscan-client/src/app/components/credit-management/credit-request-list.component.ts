@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -9,11 +9,14 @@ import { Tenant } from '../../models/tenant-admin.model';
 import { TenantsFacade } from '../../store/tenants';
 import { Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { StatusDisplayPipe } from '../../shared/pipes/status-display.pipe';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
+import { LoadingService } from '../../shared/services/loading.service';
 
 @Component({
   selector: 'app-credit-request-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, StatusDisplayPipe],
   templateUrl: './credit-request-list.component.html',
   styleUrls: ['./credit-request-list.component.css']
 })
@@ -23,9 +26,11 @@ export class CreditRequestListComponent implements OnInit, OnDestroy {
   requests: CreditRequest[] = [];
   filteredRequests: CreditRequest[] = [];
   tenants$!: Observable<Tenant[]>;
-  loading = false;
-  error: string | null = null;
+  private loadingService = inject(LoadingService);
+
+  loading$ = this.loadingService.loading$;
   isSuperAdmin = false;
+  errorMessage = '';
 
   // Filtering
   statusFilter: string = 'all';
@@ -57,9 +62,6 @@ export class CreditRequestListComponent implements OnInit, OnDestroy {
   }
 
   loadRequests() {
-    this.loading = true;
-    this.error = null;
-
     const params: any = {
       status: this.statusFilter,
       page: this.currentPage,
@@ -74,19 +76,20 @@ export class CreditRequestListComponent implements OnInit, OnDestroy {
     // Use unified getRequests method for both super admin and tenant admin
     // Tenant isolation is handled automatically by backend
     this.creditService.getRequests(params)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: (response) => {
           this.requests = response.requests || [];
           this.filteredRequests = this.requests;
           this.totalRequests = response.pagination?.total || 0;
-          this.loading = false;
+          this.errorMessage = '';
           this.cdr.markForCheck();
         },
         error: (err) => {
-          this.error = err.error?.error || 'Failed to load requests';
-          this.loading = false;
-          this.cdr.markForCheck();
+          this.errorMessage = HttpErrorHandler.getMessage(err, 'Failed to load credit requests');
         }
       });
   }
@@ -112,15 +115,6 @@ export class CreditRequestListComponent implements OnInit, OnDestroy {
   onPageChange(newPage: number) {
     this.currentPage = newPage;
     this.loadRequests();
-  }
-
-  getStatusClass(status: string): string {
-    switch (status) {
-      case 'pending': return 'status-pending';
-      case 'approved': return 'status-approved';
-      case 'rejected': return 'status-rejected';
-      default: return '';
-    }
   }
 
   formatDate(dateString: string): string {

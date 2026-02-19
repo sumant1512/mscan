@@ -6,7 +6,7 @@ import { Tenant } from './tenant-admin.model';
 export interface User {
   id: string;
   email: string;
-  fullName: string;
+  full_name: string; // Matches backend snake_case convention
   phone?: string;
   role: UserRole;
   permissions: string[];
@@ -23,19 +23,20 @@ export enum UserRole {
  * Authentication Models
  */
 export interface LoginResponse {
-  success: boolean;
-  message: string;
+  status: boolean;
   data: {
     accessToken: string;
     refreshToken: string;
     userType: string;
     subdomain?: string | null;
   };
+  message?: string;
 }
 
 export interface UserContext {
-  success: boolean;
+  status: boolean;
   data: User;
+  message?: string;
 }
 
 /**
@@ -51,9 +52,9 @@ export interface SuperAdminDashboard {
 
 export interface RecentTenant {
   id: string;
-  companyName: string;
-  contactEmail: string;
-  createdAt: string;
+  tenant_name: string;
+  email: string;
+  created_at: string;
 }
 
 export interface TenantDashboard {
@@ -98,11 +99,12 @@ export interface CreateCustomerRequest {
 
 /**
  * API Response Models
+ * Standardized response format for all API endpoints
  */
 export interface ApiResponse<T = any> {
-  success: boolean;
-  message?: string;
+  status: boolean;
   data?: T;
+  message?: string;
 }
 
 /**

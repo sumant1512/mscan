@@ -1,13 +1,17 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, OnDestroy } from '@angular/core';
+import { inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormArray, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { RewardsService } from '../../services/rewards.service';
 import { CreditService } from '../../services/credit.service';
-import { ProductsService } from '../../services/products.service';
 import { AppContextService } from '../../services/app-context.service';
-import { VerificationApp, Product } from '../../models/rewards.model';
-import { finalize } from 'rxjs/operators';
+import { LoadingService } from '../../shared/services/loading.service';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
+import { Product, ProductsFacade } from '../../store/products';
+import { VerificationAppsFacade } from '../../store/verification-apps';
 
 @Component({
   selector: 'app-coupon-create',
@@ -16,9 +20,13 @@ import { finalize } from 'rxjs/operators';
   templateUrl: './coupon-create.component.html',
   styleUrls: ['./coupon-create.component.css'],
 })
-export class CouponCreateComponent implements OnInit {
+export class CouponCreateComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   couponForm: FormGroup;
-  loading = false;
+  private loadingService = inject(LoadingService);
+
+  loading$ = this.loadingService.loading$;
   error = '';
   success = '';
   selectedAppId: string | null = null;
@@ -34,11 +42,11 @@ export class CouponCreateComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private rewardsService: RewardsService,
-    private productsService: ProductsService,
+    private verificationAppsFacade: VerificationAppsFacade,
+    private productsFacade: ProductsFacade,
     private creditService: CreditService,
-    private appContextService: AppContextService,
     private router: Router,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
   ) {
     // Set default expiry date to 1 year from now
     const oneYearFromNow = new Date();
@@ -54,75 +62,71 @@ export class CouponCreateComponent implements OnInit {
       coupon_generation_type: ['SINGLE', Validators.required],
       expiry_date: [defaultExpiryDate, Validators.required],
       // Multi-batch mode field
-      batches: this.fb.array([])
+      batches: this.fb.array([]),
     });
   }
 
   ngOnInit() {
-    // Get selected app from context
-    this.appContextService.appContext$.subscribe(context => {
-      this.selectedAppId = context.selectedAppId;
-      if (!this.selectedAppId) {
+    this.getSelectedApp();
+    this.loadBalance();
+    this.calculateEstimatedCost();
+  }
+
+  private getSelectedApp() {
+    this.verificationAppsFacade.selectedAppId$.pipe(takeUntil(this.destroy$)).subscribe((appId) => {
+      if (appId) {
+        this.error = '';
+        this.selectedAppId = appId;
+        this.loadProducts(appId);
+      } else {
         this.error = 'Please select an application from the top header before creating coupons.';
         this.products = [];
-      } else {
-        this.error = '';
-        // Load products for the selected app
-        this.loadProducts();
       }
-      this.cdr.detectChanges();
-    });
-
-    this.loadBalance();
-    this.couponForm.valueChanges.subscribe(() => {
-      this.calculateEstimatedCost();
     });
   }
 
-  loadProducts() {
-    if (!this.selectedAppId) {
-      this.products = [];
-      return;
-    }
+  private calculateEstimatedCost() {
+    this.couponForm.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      if (this.multiCouponMode) {
+        // Calculate total across all batches
+        const batches = this.batches.value;
+        this.estimatedCost = batches.reduce((sum: number, batch: any) => {
+          return sum + (batch.quantity * batch.discount_value || 0);
+        }, 0);
+      } else {
+        // Single mode calculation
+        const { discount_value, quantity } = this.couponForm.value;
+        this.estimatedCost = quantity * discount_value;
+      }
+    });
+  }
 
-    console.log('Loading products for app ID:', this.selectedAppId);
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
-    this.productsService.getProducts({ app_id: this.selectedAppId }).subscribe({
-      next: (response) => {
-        this.products = response.products || [];
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Load products error:', err);
-        this.products = [];
-      },
+  private loadProducts(appId: string) {
+    this.productsFacade.loadProducts({ app_id: appId });
+    this.productsFacade.products$.pipe(takeUntil(this.destroy$)).subscribe((products) => {
+      this.products = products;
+      this.cdr.detectChanges();
     });
   }
 
   loadBalance() {
-    this.creditService.getBalance().subscribe({
-      next: (balance) => {
-        this.currentBalance = balance.balance;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Load balance error:', err);
-      },
-    });
-  }
-
-  calculateEstimatedCost() {
-    if (this.multiCouponMode) {
-      // Calculate total across all batches
-      const batches = this.batches.value;
-      this.estimatedCost = batches.reduce((sum: number, batch: any) => {
-        return sum + (batch.quantity * batch.discount_value || 0);
-      }, 0);
-    } else {
-      // Single mode calculation
-      const { discount_value, quantity } = this.couponForm.value;
-      this.estimatedCost = quantity * discount_value;
-    }
+    this.creditService
+      .getBalance()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (balance) => {
+          this.currentBalance = balance.balance;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to load balance');
+        },
+      });
   }
 
   get batches(): FormArray {
@@ -131,7 +135,7 @@ export class CouponCreateComponent implements OnInit {
 
   toggleMultiCouponMode() {
     this.multiCouponMode = !this.multiCouponMode;
-    
+
     if (this.multiCouponMode) {
       // Clear single mode validators and values
       this.couponForm.get('description')?.clearValidators();
@@ -139,32 +143,38 @@ export class CouponCreateComponent implements OnInit {
       this.couponForm.get('quantity')?.clearValidators();
       this.couponForm.get('product_id')?.clearValidators();
       this.couponForm.get('expiry_date')?.clearValidators();
-      
+
       this.couponForm.patchValue({
         description: '',
         discount_value: '',
         quantity: '',
         product_id: '',
-        expiry_date: ''
+        expiry_date: '',
       });
-      
+
       this.couponForm.get('description')?.updateValueAndValidity();
       this.couponForm.get('discount_value')?.updateValueAndValidity();
       this.couponForm.get('quantity')?.updateValueAndValidity();
       this.couponForm.get('product_id')?.updateValueAndValidity();
       this.couponForm.get('expiry_date')?.updateValueAndValidity();
-      
+
       if (this.batches.length === 0) {
         this.addBatch();
       }
     } else {
       // Restore single mode validators
-      this.couponForm.get('description')?.setValidators([Validators.required, Validators.minLength(3)]);
-      this.couponForm.get('discount_value')?.setValidators([Validators.required, Validators.min(1)]);
-      this.couponForm.get('quantity')?.setValidators([Validators.required, Validators.min(1), Validators.max(500)]);
+      this.couponForm
+        .get('description')
+        ?.setValidators([Validators.required, Validators.minLength(3)]);
+      this.couponForm
+        .get('discount_value')
+        ?.setValidators([Validators.required, Validators.min(1)]);
+      this.couponForm
+        .get('quantity')
+        ?.setValidators([Validators.required, Validators.min(1), Validators.max(500)]);
       this.couponForm.get('product_id')?.setValidators(Validators.required);
       this.couponForm.get('expiry_date')?.setValidators(Validators.required);
-      
+
       // Clear batches and restore single mode defaults
       while (this.batches.length) {
         this.batches.removeAt(0);
@@ -176,9 +186,9 @@ export class CouponCreateComponent implements OnInit {
         discount_value: '',
         quantity: 1,
         product_id: '',
-        expiry_date: oneYearFromNow.toISOString().slice(0, 16)
+        expiry_date: oneYearFromNow.toISOString().slice(0, 16),
       });
-      
+
       this.couponForm.get('description')?.updateValueAndValidity();
       this.couponForm.get('discount_value')?.updateValueAndValidity();
       this.couponForm.get('quantity')?.updateValueAndValidity();
@@ -198,10 +208,10 @@ export class CouponCreateComponent implements OnInit {
       quantity: ['', [Validators.required, Validators.min(1), Validators.max(500)]],
       discount_value: ['', [Validators.required, Validators.min(0.01)]],
       product_id: ['', Validators.required],
-      expiry_date: [defaultExpiryDate, Validators.required]
+      expiry_date: [defaultExpiryDate, Validators.required],
     });
 
-    batchGroup.valueChanges.subscribe(() => {
+    batchGroup.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.calculateEstimatedCost();
     });
 
@@ -226,12 +236,14 @@ export class CouponCreateComponent implements OnInit {
       return;
     }
 
+    console.log('Form submitted with value:', this.couponForm.value);
+
     if (this.couponForm.invalid) {
       Object.keys(this.couponForm.controls).forEach((key) => {
         this.couponForm.controls[key].markAsTouched();
       });
       if (this.multiCouponMode) {
-        this.batches.controls.forEach(control => control.markAllAsTouched());
+        this.batches.controls.forEach((control) => control.markAllAsTouched());
       }
       return;
     }
@@ -249,7 +261,6 @@ export class CouponCreateComponent implements OnInit {
   }
 
   onSubmitSingle() {
-    this.loading = true;
     this.error = '';
     this.success = '';
     this.showBatchResults = false;
@@ -268,15 +279,11 @@ export class CouponCreateComponent implements OnInit {
       batch_quantity: quantity,
     };
 
-    this.rewardsService.createCoupon(formData)
-      .pipe(finalize(() => {
-        this.loading = false;
-        this.cdr.detectChanges();
-      }))
+    this.rewardsService
+      .createCoupon(formData)
+      .pipe(this.loadingService.wrapLoading(), takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          const { quantity } = this.couponForm.value;
-
           // Always show batch results screen for single mode
           if (response.coupons && response.coupons.length > 0) {
             this.generatedCoupons = response.coupons;
@@ -292,16 +299,15 @@ export class CouponCreateComponent implements OnInit {
           } else {
             this.error = 'Invalid response from server';
           }
+          this.cdr.detectChanges();
         },
         error: (err) => {
-          console.error('Create coupon error:', err);
-          this.error = err.error?.error || err.message || 'Failed to create coupon';
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to create coupon');
         },
       });
   }
 
   onSubmitMultiple() {
-    this.loading = true;
     this.showProgressBar = true;
     this.progressMessage = `Creating ${this.batches.length} batches...`;
     this.error = '';
@@ -314,20 +320,17 @@ export class CouponCreateComponent implements OnInit {
       discountAmount: batch.discount_value,
       productName: batch.product_name || null,
       productSku: batch.product_sku || null,
-      expiryDate: new Date(batch.expiry_date).toISOString()
+      expiryDate: new Date(batch.expiry_date).toISOString(),
     }));
 
     const requestData = {
-      verificationAppId: this.selectedAppId!,  // Non-null assertion safe since we check in onSubmit
-      batches
+      verificationAppId: this.selectedAppId!, // Non-null assertion safe since we check in onSubmit
+      batches,
     };
 
-    this.rewardsService.createMultiBatchCoupons(requestData)
-      .pipe(finalize(() => {
-        this.loading = false;
-        this.showProgressBar = false;
-        this.cdr.detectChanges();
-      }))
+    this.rewardsService
+      .createMultiBatchCoupons(requestData)
+      .pipe(this.loadingService.wrapLoading(), takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
           this.generatedCoupons = response.coupons || [];
@@ -335,10 +338,12 @@ export class CouponCreateComponent implements OnInit {
           const totalCoupons = this.generatedCoupons.length;
           this.success = `Generated ${totalCoupons} coupons across ${this.batches.length} batches! Cost: ${response.credit_cost} credits. New balance: ${response.new_balance}`;
           this.currentBalance = response.new_balance;
+          this.showProgressBar = false;
+          this.cdr.detectChanges();
         },
         error: (err) => {
-          console.error('Create multi-batch coupons error:', err);
-          this.error = err.error?.error || err.message || 'Failed to create coupons';
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to create coupons');
+          this.showProgressBar = false;
         },
       });
   }
@@ -376,8 +381,8 @@ export class CouponCreateComponent implements OnInit {
 
   copyCouponCode(code: string) {
     navigator.clipboard.writeText(code).then(() => {
-      // Could show a toast notification here
-      console.log('Coupon code copied:', code);
+      this.success = 'Coupon code copied to clipboard!';
+      setTimeout(() => (this.success = ''), 3000);
     });
   }
 

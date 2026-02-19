@@ -1,11 +1,11 @@
 import { Component, OnInit, ChangeDetectorRef, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { finalize } from 'rxjs/operators';
+import { Subject } from 'rxjs';
+import { takeUntil, filter } from 'rxjs/operators';
 import { RewardsService } from '../../services/rewards.service';
 import { VerificationApp } from '../../models/rewards.model';
 import { VerificationAppsFacade } from '../../store/verification-apps';
-import { Subscription } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
@@ -13,12 +13,16 @@ import { AuthService } from '../../services/auth.service';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './verification-app-list.component.html',
-  styleUrls: ['./verification-app-list.component.css']
+  styleUrls: ['./verification-app-list.component.css'],
 })
 export class VerificationAppListComponent implements OnInit, OnDestroy {
-  subscription = new Subscription();
+  private destroy$ = new Subject<void>();
   verificationAppsFacade = inject(VerificationAppsFacade);
   apps: VerificationApp[] = [];
+  loading$ = this.verificationAppsFacade.loading$;
+  error$ = this.verificationAppsFacade.error$;
+  successMessage = '';
+  errorMessage = '';
 
   // Permission flags
   canCreateApp = false;
@@ -29,7 +33,7 @@ export class VerificationAppListComponent implements OnInit, OnDestroy {
     private router: Router,
     private cdr: ChangeDetectorRef,
     private rewardsService: RewardsService,
-    private authService: AuthService
+    private authService: AuthService,
   ) {
     // Initialize permission flags
     this.canCreateApp = this.authService.hasPermission('create_app');
@@ -38,21 +42,20 @@ export class VerificationAppListComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    // Load verification apps from store
     this.loadApps();
   }
 
-  ngOnDestroy() {
-    this.subscription.unsubscribe();
+  loadApps() {
+    this.verificationAppsFacade.allApps$.pipe(takeUntil(this.destroy$)).subscribe((apps) => {
+      this.apps = apps;
+      this.cdr.detectChanges();
+    });
   }
 
-  loadApps() {
-    this.subscription.add(
-      this.verificationAppsFacade.allApps$.subscribe(apps => {
-        this.apps = apps;
-        this.cdr.detectChanges();
-        console.log('Loaded apps from facade:', apps);
-      })
-    )
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   configureApp() {

@@ -1,13 +1,16 @@
 /**
  * Customer Registration Component (Super Admin Only)
  */
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
-import { finalize } from 'rxjs/operators';
+import { LoadingService } from '../../shared/services/loading.service';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
 
 @Component({
   selector: 'app-customer-registration',
@@ -16,9 +19,13 @@ import { finalize } from 'rxjs/operators';
   templateUrl: './customer-registration.component.html',
   styleUrls: ['./customer-registration.component.css']
 })
-export class CustomerRegistrationComponent implements OnInit {
+export class CustomerRegistrationComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   registrationForm: FormGroup;
-  loading = false;
+  private loadingService = inject(LoadingService);
+
+  loading$ = this.loadingService.loading$;
   error = '';
   success = '';
 
@@ -44,6 +51,11 @@ export class CustomerRegistrationComponent implements OnInit {
     }
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   /**
    * Submit customer registration
    */
@@ -53,20 +65,22 @@ export class CustomerRegistrationComponent implements OnInit {
       return;
     }
 
-    this.loading = true;
     this.error = '';
     this.success = '';
 
     const customerData = this.registrationForm.value;
 
     this.userService.createCustomer(customerData)
-      .pipe(finalize(() => this.loading = false))
+      .pipe(
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: (response) => {
-          if (response.success) {
+          if (response.status) {
             this.success = `Customer "${customerData.companyName}" registered successfully! Welcome email sent to ${customerData.contactEmail}`;
             this.registrationForm.reset();
-            
+
             // Navigate to dashboard after 3 seconds
             setTimeout(() => {
               this.router.navigate(['/dashboard']);
@@ -74,8 +88,7 @@ export class CustomerRegistrationComponent implements OnInit {
           }
         },
         error: (error) => {
-          console.error('Create customer error:', error);
-          this.error = error.error?.message || error.message || 'Failed to register customer. Please try again.';
+          this.error = HttpErrorHandler.getMessage(error, 'Failed to register customer. Please try again.');
         }
       });
   }

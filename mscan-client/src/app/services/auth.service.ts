@@ -45,7 +45,6 @@ export class AuthService {
   ) {
     // Sync NgRx store user to currentUserSubject for backward compatibility
     this.authContextFacade.currentUser$.subscribe(user => {
-      console.log('AuthService: Syncing user from AuthContextFacade', user);
       this.currentUserSubject.next(user);
 
       // Handle subdomain redirect when user context is loaded
@@ -104,11 +103,11 @@ export class AuthService {
     return this.http.post<LoginResponse>(`${this.apiUrl}/auth/verify-otp`, { email, otp })
       .pipe(
         tap(response => {
-          if (response.success && response.data) {
+          if (response.status && response.data) {
             // Issue 2: Clear old tokens first to prevent subdomain persistence
             this.clearTokens();
             this.stopTokenRefreshTimer();
-            
+
             // Store new tokens
             this.storeTokens(
               response.data.accessToken,
@@ -123,10 +122,10 @@ export class AuthService {
             // Redirect tenant users to their subdomain
             const userType = response.data.userType;
             const subdomain = response.data.subdomain;
-            
+
             if (userType !== 'SUPER_ADMIN' && subdomain) {
               const currentSubdomain = this.subdomainService.getCurrentSubdomain();
-              
+
               // Only redirect if not already on the correct subdomain
               if (currentSubdomain !== subdomain) {
                 this.subdomainService.redirectToSubdomain(subdomain, '/tenant/dashboard');
@@ -163,7 +162,7 @@ export class AuthService {
       { refreshToken }
     ).pipe(
       tap(response => {
-        if (response.success && response.data) {
+        if (response.status && response.data) {
           this.storeTokens(
             response.data.accessToken,
             response.data.refreshToken,
@@ -264,7 +263,6 @@ export class AuthService {
       if (this.getRefreshToken()) {
         // Check if user is active before refreshing token
         if (this.inactivityService.isUserActive()) {
-          console.log('User is active - refreshing token');
           this.refreshToken().subscribe({
             next: () => {
               console.log('Token refreshed automatically');

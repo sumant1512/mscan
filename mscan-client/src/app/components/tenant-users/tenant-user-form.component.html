@@ -5,11 +5,11 @@
 
   <div *ngIf="error" class="alert alert-error">{{ error }}</div>
 
-  <div *ngIf="loading" class="loading">
+  <div *ngIf="loading$ | async" class="loading">
     <p>Loading user data...</p>
   </div>
 
-  <form *ngIf="!loading" (ngSubmit)="onSubmit()" class="user-form">
+  <form *ngIf="!(loading$ | async)" (ngSubmit)="onSubmit()" class="user-form">
     <!-- Basic Information Section -->
     <div class="form-section">
       <h3>Basic Information</h3>

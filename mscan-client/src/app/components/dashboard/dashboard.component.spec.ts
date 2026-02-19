@@ -23,7 +23,7 @@ describe('DashboardComponent', () => {
   const mockSuperAdmin: User = {
     id: 'super-id',
     email: 'admin@mscan.com',
-    fullName: 'Super Admin',
+    full_name: 'Super Admin',
     role: UserRole.SUPER_ADMIN,
     permissions: ['all'],
     tenant: undefined
@@ -32,7 +32,7 @@ describe('DashboardComponent', () => {
   const mockTenantAdmin: User = {
     id: 'tenant-id',
     email: 'admin@tenant.com',
-    fullName: 'Tenant Admin',
+    full_name: 'Tenant Admin',
     role: UserRole.TENANT_ADMIN,
     permissions: ['view_dashboard'],
     tenant: {

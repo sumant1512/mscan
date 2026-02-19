@@ -8,6 +8,7 @@ import {
   TemplateListResponse,
   TemplateResponse
 } from '../models/templates.model';
+import { ApiResponse } from '../models';
 
 @Injectable({
   providedIn: 'root'
@@ -31,7 +32,7 @@ export class TemplateService {
     is_active?: boolean;
     search?: string;
     include_system?: boolean;
-  }): Observable<TemplateListResponse> {
+  }): Observable<ApiResponse<TemplateListResponse>> {
     let params = new HttpParams();
 
     if (filters) {
@@ -52,7 +53,7 @@ export class TemplateService {
       }
     }
 
-    return this.http.get<TemplateListResponse>(this.apiUrl, { params });
+    return this.http.get<ApiResponse<TemplateListResponse>>(this.apiUrl, { params });
   }
 
   /**
@@ -64,21 +65,21 @@ export class TemplateService {
     limit?: number;
     include_system?: boolean;
     search?: string;
-  }): Observable<TemplateListResponse> {
+  }): Observable<ApiResponse<TemplateListResponse>> {
     return this.getAllTemplates(params);
   }
 
   /**
    * Get template by ID
    */
-  getTemplateById(id: string): Observable<TemplateResponse> {
-    return this.http.get<TemplateResponse>(`${this.apiUrl}/${id}`);
+  getTemplateById(id: string): Observable<ApiResponse<ProductTemplate>> {
+    return this.http.get<ApiResponse<ProductTemplate>>(`${this.apiUrl}/${id}`);
   }
 
   /**
    * Get template (legacy method for backward compatibility)
    */
-  getTemplate(id: string): Observable<TemplateResponse> {
+  getTemplate(id: string): Observable<ApiResponse<ProductTemplate>> {
     return this.getTemplateById(id);
   }
 
@@ -99,8 +100,8 @@ export class TemplateService {
   /**
    * Delete template
    */
-  deleteTemplate(id: string): Observable<{ success: boolean; message: string }> {
-    return this.http.delete<{ success: boolean; message: string }>(`${this.apiUrl}/${id}`);
+  deleteTemplate(id: string): Observable<{ status: boolean; message: string }> {
+    return this.http.delete<{ status: boolean; message: string }>(`${this.apiUrl}/${id}`);
   }
 
   /**
@@ -113,7 +114,7 @@ export class TemplateService {
   /**
    * Search templates by name
    */
-  searchTemplates(searchTerm: string): Observable<TemplateListResponse> {
+  searchTemplates(searchTerm: string): Observable<ApiResponse<TemplateListResponse>> {
     return this.getAllTemplates({ search: searchTerm });
   }
 

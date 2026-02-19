@@ -1,7 +1,7 @@
 export interface CreditRequest {
-  id: number;
+  id: string; // UUID
   tenant_id: string;
-  requested_by?: number; // User ID who requested
+  requested_by?: string; // User ID (UUID) who requested
   requested_by_name?: string; // Name of tenant admin who requested
   requested_by_email?: string; // Email of requester
   requested_amount: number;
@@ -9,7 +9,7 @@ export interface CreditRequest {
   status: 'pending' | 'approved' | 'rejected';
   requested_at: string;
   processed_at?: string;
-  processed_by?: number; // User ID who approved/rejected
+  processed_by?: string; // User ID (UUID) who approved/rejected
   processed_by_name?: string; // Name of super admin who approved/rejected
   rejection_reason?: string;
   tenant_name?: string;
@@ -29,17 +29,17 @@ export interface CreditBalance {
 }
 
 export interface CreditTransaction {
-  id: number;
+  id: string; // UUID
   tenant_id: string;
   transaction_type: 'CREDIT' | 'DEBIT' | 'REJECTED' | 'REFUND';
   amount: number;
   balance_before: number;
   balance_after: number;
-  reference_id?: number;
+  reference_id?: string; // UUID
   reference_type?: string;
   description?: string;
   created_at: string;
-  created_by?: number;
+  created_by?: string; // User ID (UUID)
   created_by_name?: string; // Name of the person who requested the credit
   created_by_email?: string; // Email of the requester
   processed_by_name?: string; // Name of super admin who approved/rejected
@@ -69,9 +69,9 @@ export interface VerificationApp {
 }
 
 export interface Product {
-  id: number;
+  id: string; // UUID
   tenant_id: string;
-  verification_app_id?: string | number;
+  verification_app_id?: string; // UUID
   product_name: string;
   product_sku?: string;
   description?: string;
@@ -91,7 +91,7 @@ export interface Coupon {
   tenant_id: string;
   verification_app_id?: string;
   coupon_code: string;
-  discount_type: 'FIXED_AMOUNT';
+  discount_type: 'PERCENTAGE' | 'FIXED_AMOUNT' | 'BUY_X_GET_Y'; // All 3 types from database
   discount_value: number;
   discount_currency?: string;
   buy_quantity?: number;
@@ -122,13 +122,13 @@ export interface Coupon {
 }
 
 export interface Scan {
-  id: number;
-  coupon_id: number;
+  id: string; // UUID
+  coupon_id: string; // UUID
   tenant_id: string;
-  scan_timestamp: string;
-  scan_status: 'SUCCESS' | 'EXPIRED' | 'EXHAUSTED' | 'INVALID' | 'INACTIVE';
-  location_lat?: number;
-  location_lng?: number;
+  scanned_at: string; // Renamed from scan_timestamp to match database
+  scan_status: 'SUCCESS' | 'EXPIRED' | 'EXHAUSTED' | 'INVALID' | 'INACTIVE' | 'NOT_ACTIVE' | 'NOT_PRINTED' | 'USED';
+  latitude?: number; // Renamed from location_lat to match database
+  longitude?: number; // Renamed from location_lng to match database
   device_info?: string;
   user_agent?: string;
   ip_address?: string;

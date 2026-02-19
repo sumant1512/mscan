@@ -17,21 +17,19 @@ export class CouponPrintPreviewComponent implements OnInit {
   @Output() onCancel = new EventEmitter<void>();
 
   ngOnInit() {
-    console.log('Print preview initialized with', this.coupons.length, 'coupons');
+    // Print preview initialized
   }
 
   handlePrint() {
     // Get the coupons grid content
     const printContent = document.querySelector('.coupons-grid');
     if (!printContent) {
-      console.error('Print content not found');
       return;
     }
 
     // Create a new window for printing
     const printWindow = window.open('', '', 'width=800,height=600');
     if (!printWindow) {
-      console.error('Could not open print window');
       return;
     }
 

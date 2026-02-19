@@ -1,11 +1,14 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Observable, Subject } from 'rxjs';
+import { takeUntil, filter } from 'rxjs/operators';
 import { TenantService } from '../../services/tenant.service';
 import { TenantsFacade } from '../../store/tenants';
 import { Tenant } from '../../models/tenant-admin.model';
-import { Observable } from 'rxjs';
+import { ConfirmationService } from '../../shared/services/confirmation.service';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
 
 @Component({
   selector: 'app-tenant-list',
@@ -14,10 +17,12 @@ import { Observable } from 'rxjs';
   templateUrl: './tenant-list.component.html',
   styleUrls: ['./tenant-list.component.css'],
 })
-export class TenantListComponent implements OnInit {
+export class TenantListComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
   private tenantsFacade = inject(TenantsFacade);
   private tenantService = inject(TenantService);
   private router = inject(Router);
+  private confirmationService = inject(ConfirmationService);
 
   // NgRx observables
   tenants$: Observable<Tenant[]> = this.tenantsFacade.filteredTenants$;
@@ -25,7 +30,14 @@ export class TenantListComponent implements OnInit {
   error$: Observable<string | null> = this.tenantsFacade.error$;
   filters$ = this.tenantsFacade.filters$;
 
+  errorMessage = '';
+
   ngOnInit() {
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   onSearch(searchQuery: string) {
@@ -65,24 +77,30 @@ export class TenantListComponent implements OnInit {
   }
 
   toggleStatus(tenant: Tenant) {
-    if (
-      confirm(
-        `Are you sure you want to ${tenant.status === 'active' ? 'deactivate' : 'activate'} ${
-          tenant.tenant_name
-        }?`
+    const action = tenant.status === 'active' ? 'deactivate' : 'activate';
+    this.confirmationService
+      .confirm(
+        `Are you sure you want to ${action} ${tenant.tenant_name}?`,
+        `${action.charAt(0).toUpperCase() + action.slice(1)} Tenant`
       )
-    ) {
-      this.tenantService.toggleTenantStatus(tenant.id).subscribe({
-        next: () => {
-          // Reload tenants after status change
-          this.tenantsFacade.loadTenants();
-        },
-        error: (err) => {
-          console.error('Toggle status error:', err);
-          alert(err.error?.error || err.message || 'Failed to update tenant status');
-        },
+      .pipe(
+        filter(confirmed => confirmed),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.errorMessage = '';
+        this.tenantService.toggleTenantStatus(tenant.id)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: () => {
+              // Reload tenants after status change
+              this.tenantsFacade.loadTenants();
+            },
+            error: (err) => {
+              this.errorMessage = HttpErrorHandler.getMessage(err, 'Failed to update tenant status');
+            },
+          });
       });
-    }
   }
 
   getStatusClass(status: string): string {
@@ -97,4 +115,5 @@ export class TenantListComponent implements OnInit {
         return '';
     }
   }
+
 }

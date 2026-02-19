@@ -1,34 +1,43 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-import { ProductsService } from '../../services/products.service';
-import { TemplateService } from '../../services/template.service';
-import { TagService } from '../../services/tag.service';
+import { Subject } from 'rxjs';
+import { takeUntil, filter, combineLatestWith } from 'rxjs/operators';
+import { ProductsFacade } from '../../store/products/products.facade';
+import { TemplatesFacade } from '../../store/templates/templates.facade';
 import { AppContextService } from '../../services/app-context.service';
 import { VerificationApp } from '../../store/verification-apps/verification-apps.models';
 import {
   ProductTemplate,
   Tag,
-  CreateProductRequest,
   ProductVariant,
   DescriptionSection,
-  ProductImage
+  ProductImage,
 } from '../../models/templates.model';
+import { CreateProductRequest } from '../../store/products/products.models';
 import { RemainingCharsPipe } from '../../pipes/remaining-chars.pipe';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
+import { TagsFacade } from '../../store/tags';
+import { VerificationAppsFacade } from '../../store/verification-apps';
 
 @Component({
   selector: 'app-template-product-form',
   standalone: true,
   imports: [CommonModule, FormsModule, RemainingCharsPipe],
   templateUrl: './template-product-form.component.html',
-  styleUrls: ['./template-product-form.component.css']
+  styleUrls: ['./template-product-form.component.css'],
 })
-export class TemplateProductFormComponent implements OnInit {
-  loading = false;
+export class TemplateProductFormComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+  private productsFacade = inject(ProductsFacade);
+  private templatesFacade = inject(TemplatesFacade);
+
+  loading$ = this.productsFacade.loading$;
   error: string | null = null;
+  successMessage = '';
   isEditMode = false;
-  productId: number | null = null;
+  productId: string | null = null;
 
   // Verification Apps
   availableApps: VerificationApp[] = [];
@@ -48,7 +57,7 @@ export class TemplateProductFormComponent implements OnInit {
     verification_app_id: '',
     template_id: '',
     thumbnail_url: '',
-    is_active: true
+    is_active: true,
   };
 
   // Variants (dynamic based on template)
@@ -64,37 +73,81 @@ export class TemplateProductFormComponent implements OnInit {
   productImages: ProductImage[] = [];
 
   constructor(
-    private productsService: ProductsService,
-    private templateService: TemplateService,
-    private tagService: TagService,
+    private tagsFacade: TagsFacade,
     private appContextService: AppContextService,
+    private verificationAppsFacade: VerificationAppsFacade,
     private router: Router,
     private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
     // Check if edit mode first
-    this.route.params.subscribe(params => {
+    this.route.params.pipe(takeUntil(this.destroy$)).subscribe((params) => {
       if (params['id']) {
         this.isEditMode = true;
-        this.productId = +params['id'];
-        this.loadProduct();
+        this.productId = params['id'];
+        // Load product via NgRx
+        this.productsFacade.loadProduct(params['id']);
       }
     });
 
-    // Load available apps and auto-set selected app from header
-    this.appContextService.appContext$.subscribe(context => {
-      console.log('=== [TemplateProductForm] App context subscription fired ===');
-      console.log('[TemplateProductForm] Context:', context);
-      console.log('[TemplateProductForm] isEditMode:', this.isEditMode);
+    // Subscribe to selected product and template together for edit mode
+    if (this.isEditMode) {
+      this.productsFacade.selectedProduct$
+        .pipe(
+          takeUntil(this.destroy$),
+          filter((product) => product !== null),
+          combineLatestWith(
+            this.templatesFacade.selectedTemplate$,
+            this.tagsFacade.tagsForSelectedApp$,
+          ),
+        )
+        .subscribe(([product, template, tags]) => {
+          this.availableTags = tags;
+          console.log(this.availableTags);
+          if (product && template) {
+            this.populateFormWithProduct(product);
+          } else if (product && !template && product.template_id) {
+            // Template not loaded yet, load it
+            this.templatesFacade.loadTemplate(product.template_id);
+          }
+        });
+    }
 
+    // Subscribe to selected template from store (for create mode and after template loads in edit mode)
+    this.templatesFacade.selectedTemplate$
+      .pipe(
+        takeUntil(this.destroy$),
+        filter((tmpl) => tmpl !== null),
+      )
+      .subscribe((tmpl) => {
+        if (tmpl) {
+          this.selectedTemplate = tmpl;
+
+          // Only initialize empty form if NOT in edit mode
+          if (!this.isEditMode) {
+            // Initialize with one empty variant
+            this.variants = [];
+            this.addVariant();
+
+            // Initialize custom fields
+            this.initializeCustomFields();
+
+            // Initialize description sections
+            this.descriptionSections = [{ heading: '', descriptions: [''] }];
+          }
+
+          // Force change detection
+          this.cdr.detectChanges();
+        }
+      });
+
+    // Load available apps and auto-set selected app from header
+    this.appContextService.appContext$.pipe(takeUntil(this.destroy$)).subscribe((context) => {
       this.availableApps = context.availableApps;
       const newSelectedAppId = context.selectedAppId;
       this.selectedAppId = newSelectedAppId;
-
-      console.log('[TemplateProductForm] Available apps count:', this.availableApps.length);
-      console.log('[TemplateProductForm] New selected app ID from context:', newSelectedAppId);
 
       // Only update if not in edit mode
       if (!this.isEditMode && this.availableApps.length > 0) {
@@ -102,44 +155,45 @@ export class TemplateProductFormComponent implements OnInit {
 
         // Check if the app has actually changed
         const appChanged = this.previousAppId !== appToSelect;
-        console.log('[TemplateProductForm] App changed?', appChanged);
-        console.log('[TemplateProductForm] Previous app ID:', this.previousAppId);
-        console.log('[TemplateProductForm] New app ID:', appToSelect);
 
         if (appChanged || !this.previousAppId) {
-          console.log('[TemplateProductForm] Loading template for app:', appToSelect);
-
           // Update the selected app (automatically from header)
           this.product.verification_app_id = appToSelect;
           this.previousAppId = appToSelect;
 
           // Load template and tags for the new app
           this.loadTemplateFromApp(appToSelect);
-          this.loadTags(appToSelect);
-        } else {
-          console.log('[TemplateProductForm] App has not changed, skipping reload');
         }
-      } else {
-        console.log('[TemplateProductForm] Skipping - isEditMode:', this.isEditMode, 'apps length:', this.availableApps.length);
+      }
+    });
+
+    this.getSelectedApp();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.productsFacade.clearSelectedProduct();
+    this.productsFacade.clearError();
+  }
+
+  private getSelectedApp(): void {
+    this.verificationAppsFacade.selectedAppId$.pipe(takeUntil(this.destroy$)).subscribe((appId) => {
+      if (appId) {
+        this.loadTags(appId);
       }
     });
   }
 
   // Auto-load template from selected app's template_id
   loadTemplateFromApp(appId: string): void {
-    console.log('[TemplateProductForm] loadTemplateFromApp called with appId:', appId);
-    console.log('[TemplateProductForm] Available apps:', this.availableApps);
-
-    const selectedApp = this.availableApps.find(app => app.verification_app_id === appId);
-    console.log('[TemplateProductForm] Selected app:', selectedApp);
+    const selectedApp = this.availableApps.find((app) => app.verification_app_id === appId);
 
     if (selectedApp && selectedApp.template_id) {
-      console.log('[TemplateProductForm] App has template_id:', selectedApp.template_id);
       // App has a template - auto-load it
       this.product.template_id = selectedApp.template_id;
       this.loadTemplateDetails(selectedApp.template_id);
     } else {
-      console.log('[TemplateProductForm] No template assigned to app');
       // No template assigned to this app
       this.selectedTemplate = null;
       this.variants = [];
@@ -150,137 +204,69 @@ export class TemplateProductFormComponent implements OnInit {
 
   // Load template details and initialize form fields
   loadTemplateDetails(templateId: string): void {
-    console.log('[TemplateProductForm] loadTemplateDetails called with templateId:', templateId);
-    this.loading = true;
-    this.templateService.getTemplateById(templateId).subscribe({
-      next: (response) => {
-        console.log('[TemplateProductForm] Template response:', response);
-        this.selectedTemplate = response.data;
-        console.log('[TemplateProductForm] Selected template set to:', this.selectedTemplate);
-        console.log('[TemplateProductForm] Template has variant_config?', !!this.selectedTemplate?.variant_config);
-        console.log('[TemplateProductForm] Template has custom_fields?', !!this.selectedTemplate?.custom_fields);
-
-        if (this.selectedTemplate?.variant_config) {
-          console.log('[TemplateProductForm] Variant config:', this.selectedTemplate.variant_config);
-        }
-        if (this.selectedTemplate?.custom_fields) {
-          console.log('[TemplateProductForm] Custom fields:', this.selectedTemplate.custom_fields);
-        }
-
-        // Initialize with one empty variant
-        this.variants = [];
-        this.addVariant();
-
-        // Initialize custom fields
-        this.initializeCustomFields();
-
-        // Initialize description sections
-        this.descriptionSections = [{ heading: '', descriptions: [''] }];
-
-        this.loading = false;
-        console.log('[TemplateProductForm] Template loaded successfully');
-        console.log('[TemplateProductForm] Variants:', this.variants);
-        console.log('[TemplateProductForm] Custom fields:', this.customFields);
-
-        // Force change detection
-        this.cdr.detectChanges();
-      },
-      error: (error) => {
-        console.error('Error loading template:', error);
-        this.error = 'Failed to load template';
-        this.loading = false;
-      }
-    });
-  }
-
-  // Handle app change - auto-load template from new app
-  onAppChange(): void {
-    if (!this.product.verification_app_id) return;
-
-    this.loadTemplateFromApp(this.product.verification_app_id);
-    this.loadTags(this.product.verification_app_id);
+    this.error = null;
+    this.templatesFacade.loadTemplate(templateId);
   }
 
   loadTags(appId: string): void {
-    this.tagService.getAllTags({ app_id: appId }).subscribe({
-      next: (response) => {
-        this.availableTags = response.data.filter(tag => tag.is_active);
-      },
-      error: (error) => {
-        console.error('Error loading tags:', error);
-      }
-    });
+    this.tagsFacade.loadTags(appId);
   }
 
-  loadProduct(): void {
-    if (!this.productId) return;
+  populateFormWithProduct(product: any): void {
+    // Populate basic fields
+    this.product = {
+      product_name: product.product_name,
+      verification_app_id: product.verification_app_id,
+      template_id: product.template_id,
+      thumbnail_url: product.thumbnail_url || '',
+      is_active: product.is_active !== false,
+    };
 
-    this.loading = true;
-    this.productsService.getProduct(this.productId).subscribe({
-      next: (response: any) => {
-        const product = response.product || response;
+    // Load product images - Create mutable copy from immutable NgRx state
+    if (product.product_images && Array.isArray(product.product_images)) {
+      this.productImages = [...product.product_images.map((img: ProductImage) => ({ ...img }))];
+    } else {
+      this.productImages = [];
+    }
 
-        // Populate basic fields
-        this.product = {
-          product_name: product.product_name,
-          verification_app_id: product.verification_app_id,
-          template_id: product.template_id,
-          thumbnail_url: product.thumbnail_url || '',
-          is_active: product.is_active !== false
-        };
+    // Set selected tags - Create new array
+    if (product.tags) {
+      this.selectedTagIds = [...product.tags.map((tag: Tag) => tag.id)];
+    }
 
-        // Load product images
-        if (product.product_images && Array.isArray(product.product_images)) {
-          this.productImages = product.product_images;
-        }
+    // Populate variants - CRITICAL: Create mutable deep copy from immutable NgRx state
+    // NgRx state is frozen/sealed, so we must clone to allow modifications
+    if (product.attributes?.variants && product.attributes.variants.length > 0) {
+      this.variants = product.attributes.variants.map((v: any) => ({ ...v }));
+    } else if (this.selectedTemplate) {
+      this.variants = [];
+      this.addVariant();
+    }
 
-        // Load template and then populate dynamic fields
-        this.templateService.getTemplateById(product.template_id).subscribe({
-          next: (templateResponse) => {
-            this.selectedTemplate = templateResponse.data;
+    // Populate custom fields - Create mutable copy
+    if (product.attributes?.custom_fields) {
+      this.customFields = { ...product.attributes.custom_fields };
+    } else {
+      this.initializeCustomFields();
+    }
 
-            // Populate variants
-            if (product.attributes?.variants) {
-              this.variants = product.attributes.variants;
-            } else {
-              this.addVariant();
-            }
+    // Populate description sections - Create mutable deep copy
+    if (
+      product.attributes?.description_sections &&
+      product.attributes.description_sections.length > 0
+    ) {
+      this.descriptionSections = product.attributes.description_sections.map(
+        (section: DescriptionSection) => ({
+          heading: section.heading,
+          descriptions: [...section.descriptions],
+        }),
+      );
+    } else {
+      this.descriptionSections = [{ heading: '', descriptions: [''] }];
+    }
 
-            // Populate custom fields
-            if (product.attributes?.custom_fields) {
-              this.customFields = product.attributes.custom_fields;
-            } else {
-              this.initializeCustomFields();
-            }
-
-            // Populate description sections
-            if (product.attributes?.description_sections) {
-              this.descriptionSections = product.attributes.description_sections;
-            }
-
-            this.loading = false;
-          },
-          error: (error) => {
-            console.error('Error loading template:', error);
-            this.error = 'Failed to load product template';
-            this.loading = false;
-          }
-        });
-
-        // Load tags for this app
-        this.loadTags(product.verification_app_id);
-
-        // Set selected tags
-        if (product.tags) {
-          this.selectedTagIds = product.tags.map((tag: Tag) => tag.id);
-        }
-      },
-      error: (error) => {
-        console.error('Error loading product:', error);
-        this.error = 'Failed to load product';
-        this.loading = false;
-      }
-    });
+    // Force change detection
+    this.cdr.detectChanges();
   }
 
   // onTemplateChange removed - template is now auto-loaded from app
@@ -290,7 +276,7 @@ export class TemplateProductFormComponent implements OnInit {
     if (!this.selectedTemplate || !this.selectedTemplate.custom_fields) return;
 
     this.customFields = {};
-    this.selectedTemplate.custom_fields.forEach(field => {
+    this.selectedTemplate.custom_fields.forEach((field) => {
       this.customFields[field.attribute_key] = field.data_type === 'number' ? 0 : '';
     });
   }
@@ -302,14 +288,14 @@ export class TemplateProductFormComponent implements OnInit {
 
     // Add dimension fields
     if (this.selectedTemplate.variant_config.dimensions) {
-      this.selectedTemplate.variant_config.dimensions.forEach(dim => {
+      this.selectedTemplate.variant_config.dimensions.forEach((dim) => {
         newVariant[dim.attribute_key] = '';
       });
     }
 
     // Add common fields
     if (this.selectedTemplate.variant_config.common_fields) {
-      this.selectedTemplate.variant_config.common_fields.forEach(field => {
+      this.selectedTemplate.variant_config.common_fields.forEach((field) => {
         if (field.type === 'number') {
           newVariant[field.attribute_key] = 0;
         } else {
@@ -330,7 +316,7 @@ export class TemplateProductFormComponent implements OnInit {
   addDescriptionSection(): void {
     this.descriptionSections.push({
       heading: '',
-      descriptions: ['']
+      descriptions: [''],
     });
   }
 
@@ -355,6 +341,7 @@ export class TemplateProductFormComponent implements OnInit {
     } else {
       this.selectedTagIds.push(tagId);
     }
+    console.log('Selected Tag IDs:', this.selectedTagIds);
   }
 
   isTagSelected(tagId: string): boolean {
@@ -383,7 +370,11 @@ export class TemplateProductFormComponent implements OnInit {
       const variant = this.variants[i];
 
       // Check dimensions
-      if (this.selectedTemplate && this.selectedTemplate.variant_config && this.selectedTemplate.variant_config.dimensions) {
+      if (
+        this.selectedTemplate &&
+        this.selectedTemplate.variant_config &&
+        this.selectedTemplate.variant_config.dimensions
+      ) {
         for (const dim of this.selectedTemplate.variant_config.dimensions) {
           if (dim.required && !variant[dim.attribute_key]) {
             return `Variant ${i + 1}: ${dim.attribute_name} is required`;
@@ -433,8 +424,8 @@ export class TemplateProductFormComponent implements OnInit {
       return;
     }
 
-    this.loading = true;
     this.error = null;
+    this.successMessage = '';
 
     const request: CreateProductRequest = {
       product_name: this.product.product_name,
@@ -442,56 +433,62 @@ export class TemplateProductFormComponent implements OnInit {
       template_id: this.product.template_id,
       thumbnail_url: this.product.thumbnail_url || '',
       product_images: this.productImages,
-      tag_ids: this.selectedTagIds.length > 0 ? this.selectedTagIds : undefined,
+      tag_ids: this.selectedTagIds,
       is_active: this.product.is_active,
       attributes: {
         variants: this.variants,
         custom_fields: this.customFields,
-        description_sections: this.descriptionSections
-      }
+        description_sections: this.descriptionSections,
+      },
     };
 
     if (this.isEditMode && this.productId) {
-      // Update product
-      this.productsService.updateProduct(this.productId, request as any).subscribe({
-        next: () => {
-          alert('Product updated successfully');
-          this.router.navigate(['/tenant/products']);
-        },
-        error: (error) => {
-          console.error('Error updating product:', error);
-          this.error = error.error?.message || 'Failed to update product';
-          this.loading = false;
-        }
-      });
+      this.productsFacade.updateProduct(this.productId, { ...request, id: this.productId });
     } else {
-      // Create product
-      this.productsService.createProduct(request).subscribe({
-        next: () => {
-          alert('Product created successfully');
-          this.router.navigate(['/tenant/products']);
-        },
-        error: (error) => {
-          console.error('Error creating product:', error);
-          this.error = error.error?.message || 'Failed to create product';
-          this.loading = false;
+      this.productsFacade.createProduct(request);
+    }
+
+    // Subscribe to success/error via the store
+    this.productsFacade.error$.pipe(takeUntil(this.destroy$)).subscribe((error) => {
+      if (error) {
+        this.error = error;
+      }
+    });
+
+    // Navigate on success (watch for loading to become false and no error)
+    this.productsFacade.loading$
+      .pipe(
+        takeUntil(this.destroy$),
+        filter((loading) => !loading),
+      )
+      .subscribe(() => {
+        if (!this.error) {
+          this.successMessage = this.isEditMode
+            ? 'Product updated successfully'
+            : 'Product created successfully';
+          setTimeout(() => {
+            this.router.navigate(['/tenant/products']);
+          }, 1500);
         }
       });
-    }
   }
 
   cancel(): void {
     this.router.navigate(['/tenant/products']);
   }
 
-
   /**
    * Get dimension labels joined with 'and'
    */
   getDimensionLabels(): string {
-    if (!this.selectedTemplate || !this.selectedTemplate.variant_config || !this.selectedTemplate.variant_config.dimensions) return '';
+    if (
+      !this.selectedTemplate ||
+      !this.selectedTemplate.variant_config ||
+      !this.selectedTemplate.variant_config.dimensions
+    )
+      return '';
     return this.selectedTemplate.variant_config.dimensions
-      .map(d => d.attribute_name)
+      .map((d) => d.attribute_name)
       .join(' and ');
   }
 
@@ -500,7 +497,7 @@ export class TemplateProductFormComponent implements OnInit {
     this.productImages.push({
       url: '',
       is_first: this.productImages.length === 0,
-      order: this.productImages.length
+      order: this.productImages.length,
     });
   }
 
@@ -521,7 +518,7 @@ export class TemplateProductFormComponent implements OnInit {
 
   setFirstImage(index: number): void {
     // Unmark all as first
-    this.productImages.forEach(img => img.is_first = false);
+    this.productImages.forEach((img) => (img.is_first = false));
     // Mark selected as first
     this.productImages[index].is_first = true;
   }
@@ -541,11 +538,13 @@ export class TemplateProductFormComponent implements OnInit {
   getSelectedAppName(): string {
     if (this.isEditMode) {
       // In edit mode, find the app by the product's verification_app_id
-      const app = this.availableApps.find(a => a.verification_app_id === this.product.verification_app_id);
+      const app = this.availableApps.find(
+        (a) => a.verification_app_id === this.product.verification_app_id,
+      );
       return app?.app_name || '';
     }
     // In create mode, use the selected app from header
-    const app = this.availableApps.find(a => a.verification_app_id === this.selectedAppId);
+    const app = this.availableApps.find((a) => a.verification_app_id === this.selectedAppId);
     return app?.app_name || '';
   }
 }

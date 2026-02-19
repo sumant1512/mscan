@@ -1,9 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Subject } from 'rxjs';
+import { takeUntil, filter } from 'rxjs/operators';
 import { SubdomainService } from '../../services/subdomain.service';
+import { ConfirmationService } from '../../shared/services/confirmation.service';
+import { LoadingService } from '../../shared/services/loading.service';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
 
 interface ApiConfig {
   mobile_api_enabled: boolean;
@@ -42,11 +47,15 @@ interface ApiUsageStats {
   templateUrl: './api-configuration.component.html',
   styleUrls: ['./api-configuration.component.css']
 })
-export class ApiConfigurationComponent implements OnInit {
+export class ApiConfigurationComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   verificationAppId: string = '';
   appName: string = '';
-  loading: boolean = false;
-  saving: boolean = false;
+  private loadingService = inject(LoadingService);
+
+  loading$ = this.loadingService.loading$;
+  saving = false;
   error: string = '';
   success: string = '';
 
@@ -87,7 +96,8 @@ export class ApiConfigurationComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private http: HttpClient,
-    private subdomainService: SubdomainService
+    private subdomainService: SubdomainService,
+    private confirmationService: ConfirmationService
   ) {}
 
   ngOnInit(): void {
@@ -96,6 +106,11 @@ export class ApiConfigurationComponent implements OnInit {
       this.loadApiConfiguration();
       this.loadUsageStats();
     }
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   private getApiUrl(): string {
@@ -111,37 +126,38 @@ export class ApiConfigurationComponent implements OnInit {
   }
 
   loadApiConfiguration(): void {
-    this.loading = true;
     this.error = '';
 
     this.http.get<any>(`${this.getApiUrl()}/api-config`, { headers: this.getHeaders() })
+      .pipe(
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: (response) => {
           this.config = response.config;
           this.appName = response.app_name || 'Verification App';
-          this.loading = false;
         },
         error: (err) => {
-          this.error = err.error?.message || 'Failed to load API configuration';
-          this.loading = false;
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to load API configuration');
         }
       });
   }
 
   loadUsageStats(): void {
     this.http.get<any>(`${this.getApiUrl()}/api-usage`, { headers: this.getHeaders() })
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
           this.usageStats = response.stats;
         },
         error: (err) => {
-          console.error('Failed to load usage stats:', err);
+          // Silently fail - usage stats are not critical
         }
       });
   }
 
   saveConfiguration(): void {
-    this.saving = true;
     this.error = '';
     this.success = '';
 
@@ -151,15 +167,17 @@ export class ApiConfigurationComponent implements OnInit {
     };
 
     this.http.put<any>(`${this.getApiUrl()}/api-config`, payload, { headers: this.getHeaders() })
+      .pipe(
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: () => {
           this.success = 'Configuration saved successfully';
-          this.saving = false;
           setTimeout(() => this.success = '', 3000);
         },
         error: (err) => {
-          this.error = err.error?.message || 'Failed to save configuration';
-          this.saving = false;
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to save configuration');
         }
       });
   }
@@ -167,91 +185,119 @@ export class ApiConfigurationComponent implements OnInit {
   enableMobileApi(): void {
     if (this.config.mobile_api_enabled) return;
 
-    if (confirm('Enable Mobile API? This will generate a new API key.')) {
-      this.saving = true;
-      this.error = '';
+    this.confirmationService
+      .confirm('Enable Mobile API? This will generate a new API key.', 'Enable Mobile API')
+      .pipe(
+        filter(confirmed => confirmed),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.error = '';
 
-      this.http.post<any>(`${this.getApiUrl()}/enable-mobile-api`, {}, { headers: this.getHeaders() })
-        .subscribe({
-          next: (response) => {
-            this.config.mobile_api_enabled = true;
-            this.newMobileKey = response.api_key;
-            this.showMobileKey = true;
-            this.success = 'Mobile API enabled successfully! Copy your API key now - it will only be shown once.';
-            this.saving = false;
-          },
-          error: (err) => {
-            this.error = err.error?.message || 'Failed to enable Mobile API';
-            this.saving = false;
-          }
-        });
-    }
+        this.http.post<any>(`${this.getApiUrl()}/enable-mobile-api`, {}, { headers: this.getHeaders() })
+          .pipe(
+            this.loadingService.wrapLoading(),
+            takeUntil(this.destroy$)
+          )
+          .subscribe({
+            next: (response) => {
+              this.config.mobile_api_enabled = true;
+              this.newMobileKey = response.api_key;
+              this.showMobileKey = true;
+              this.success = 'Mobile API enabled successfully! Copy your API key now - it will only be shown once.';
+            },
+            error: (err) => {
+              this.error = HttpErrorHandler.getMessage(err, 'Failed to enable Mobile API');
+            }
+          });
+      });
   }
 
   enableEcommerceApi(): void {
     if (this.config.ecommerce_api_enabled) return;
 
-    if (confirm('Enable E-commerce API? This will generate a new API key.')) {
-      this.saving = true;
-      this.error = '';
+    this.confirmationService
+      .confirm('Enable E-commerce API? This will generate a new API key.', 'Enable E-commerce API')
+      .pipe(
+        filter(confirmed => confirmed),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.error = '';
 
-      this.http.post<any>(`${this.getApiUrl()}/enable-ecommerce-api`, {}, { headers: this.getHeaders() })
-        .subscribe({
-          next: (response) => {
-            this.config.ecommerce_api_enabled = true;
-            this.newEcommerceKey = response.api_key;
-            this.showEcommerceKey = true;
-            this.success = 'E-commerce API enabled successfully! Copy your API key now - it will only be shown once.';
-            this.saving = false;
-          },
-          error: (err) => {
-            this.error = err.error?.message || 'Failed to enable E-commerce API';
-            this.saving = false;
-          }
-        });
-    }
+        this.http.post<any>(`${this.getApiUrl()}/enable-ecommerce-api`, {}, { headers: this.getHeaders() })
+          .pipe(
+            this.loadingService.wrapLoading(),
+            takeUntil(this.destroy$)
+          )
+          .subscribe({
+            next: (response) => {
+              this.config.ecommerce_api_enabled = true;
+              this.newEcommerceKey = response.api_key;
+              this.showEcommerceKey = true;
+              this.success = 'E-commerce API enabled successfully! Copy your API key now - it will only be shown once.';
+            },
+            error: (err) => {
+              this.error = HttpErrorHandler.getMessage(err, 'Failed to enable E-commerce API');
+            }
+          });
+      });
   }
 
   regenerateMobileKey(): void {
-    if (confirm('Regenerate Mobile API key? The old key will stop working immediately.')) {
-      this.saving = true;
-      this.error = '';
+    this.confirmationService
+      .confirm('Regenerate Mobile API key? The old key will stop working immediately.', 'Regenerate Mobile API Key')
+      .pipe(
+        filter(confirmed => confirmed),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.error = '';
 
-      this.http.post<any>(`${this.getApiUrl()}/regenerate-mobile-key`, {}, { headers: this.getHeaders() })
-        .subscribe({
-          next: (response) => {
-            this.newMobileKey = response.api_key;
-            this.showMobileKey = true;
-            this.success = 'Mobile API key regenerated! Copy your new key now.';
-            this.saving = false;
-          },
-          error: (err) => {
-            this.error = err.error?.message || 'Failed to regenerate Mobile API key';
-            this.saving = false;
-          }
-        });
-    }
+        this.http.post<any>(`${this.getApiUrl()}/regenerate-mobile-key`, {}, { headers: this.getHeaders() })
+          .pipe(
+            this.loadingService.wrapLoading(),
+            takeUntil(this.destroy$)
+          )
+          .subscribe({
+            next: (response) => {
+              this.newMobileKey = response.api_key;
+              this.showMobileKey = true;
+              this.success = 'Mobile API key regenerated! Copy your new key now.';
+            },
+            error: (err) => {
+              this.error = HttpErrorHandler.getMessage(err, 'Failed to regenerate Mobile API key');
+            }
+          });
+      });
   }
 
   regenerateEcommerceKey(): void {
-    if (confirm('Regenerate E-commerce API key? The old key will stop working immediately.')) {
-      this.saving = true;
-      this.error = '';
+    this.confirmationService
+      .confirm('Regenerate E-commerce API key? The old key will stop working immediately.', 'Regenerate E-commerce API Key')
+      .pipe(
+        filter(confirmed => confirmed),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.error = '';
 
-      this.http.post<any>(`${this.getApiUrl()}/regenerate-ecommerce-key`, {}, { headers: this.getHeaders() })
-        .subscribe({
-          next: (response) => {
-            this.newEcommerceKey = response.api_key;
-            this.showEcommerceKey = true;
-            this.success = 'E-commerce API key regenerated! Copy your new key now.';
-            this.saving = false;
-          },
-          error: (err) => {
-            this.error = err.error?.message || 'Failed to regenerate E-commerce API key';
-            this.saving = false;
-          }
-        });
-    }
+        this.http.post<any>(`${this.getApiUrl()}/regenerate-ecommerce-key`, {}, { headers: this.getHeaders() })
+          .pipe(
+            this.loadingService.wrapLoading(),
+            takeUntil(this.destroy$)
+          )
+          .subscribe({
+            next: (response) => {
+              this.newEcommerceKey = response.api_key;
+              this.showEcommerceKey = true;
+              this.success = 'E-commerce API key regenerated! Copy your new key now.';
+            },
+            error: (err) => {
+              this.error = HttpErrorHandler.getMessage(err, 'Failed to regenerate E-commerce API key');
+            }
+          });
+      });
   }
 
   copyToClipboard(text: string, type: string): void {

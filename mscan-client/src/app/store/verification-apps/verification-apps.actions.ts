@@ -1,5 +1,5 @@
 import { createAction, props } from '@ngrx/store';
-import { VerificationApp } from './verification-apps.models';
+import { VerificationApp, VerificationAppResponse } from './verification-apps.models';
 
 // Load verification apps
 export const loadVerificationApps = createAction(
@@ -20,6 +20,12 @@ export const loadVerificationAppsFailure = createAction(
 export const selectApp = createAction(
   '[Verification Apps] Select App',
   props<{ app: VerificationApp | null }>()
+);
+
+// Select app
+export const setSelectedAppId = createAction(
+  '[Verification Apps] Set Selected App Id',
+  props<{ appId: string | null }>()
 );
 
 // Create app

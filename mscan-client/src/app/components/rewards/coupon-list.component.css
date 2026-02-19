@@ -835,7 +835,7 @@
 .form-select,
 .form-textarea {
   width: 100%;
-  padding: 0.6250rem 0.8750rem;
+  padding: 10px 14px;
   border: 0.0625rem solid #d1d5db;
   border-radius: 0.3750rem;
   font-size: 0.8750rem;

@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { PaginationParams } from '../models/rewards.model';
 import { SubdomainService } from './subdomain.service';
-import { Tenant } from '../models/tenant-admin.model';
+import { Tenant, TenantDetailsResponse } from '../models/tenant-admin.model';
 
 @Injectable({
   providedIn: 'root'
@@ -21,8 +21,8 @@ export class TenantService {
   /**
    * Check if a subdomain slug is available
    */
-  checkSubdomainAvailability(slug: string): Observable<{available: boolean, error?: string, message?: string}> {
-    return this.http.get<{available: boolean, error?: string, message?: string}>(
+  checkSubdomainAvailability(slug: string): Observable<{status: boolean, data: {available: boolean, error?: string, message?: string}}> {
+    return this.http.get<{status: boolean, data: {available: boolean, error?: string, message?: string}}>(
       `${this.apiUrl}/check-slug/${slug}`
     );
   }
@@ -30,8 +30,8 @@ export class TenantService {
   /**
    * Get subdomain suggestions based on tenant name
    */
-  getSubdomainSuggestions(tenantName: string): Observable<{suggestions: string[], count: number}> {
-    return this.http.get<{suggestions: string[], count: number}>(
+  getSubdomainSuggestions(tenantName: string): Observable<{status: boolean, data: {suggestions: string[], count: number}}> {
+    return this.http.get<{status: boolean, data: {suggestions: string[], count: number}}>(
       `${this.apiUrl}/suggest-slugs`,
       { params: { tenantName } }
     );
@@ -51,8 +51,8 @@ export class TenantService {
     return this.http.get<{ tenants: Tenant[]; total: number; page: number; limit: number; total_pages: number }>(this.apiUrl, { params: httpParams });
   }
 
-  getTenantById(id: string): Observable<{ tenant: Tenant }> {
-    return this.http.get<{ tenant: Tenant }>(`${this.apiUrl}/${id}`);
+  getTenantById(id: string): Observable<TenantDetailsResponse> {
+    return this.http.get<TenantDetailsResponse>(`${this.apiUrl}/${id}`);
   }
 
   updateTenant(id: string, tenant: Partial<Tenant>): Observable<{ message: string; tenant: Tenant }> {
@@ -61,7 +61,7 @@ export class TenantService {
 
   toggleTenantStatus(id: string): Observable<{ message: string; tenant: Tenant }> {
     return this.http.patch<{ message: string; tenant: Tenant }>(
-      `${this.apiUrl}/${id}/toggle-status`,
+      `${this.apiUrl}/${id}/status`,
       {}
     );
   }

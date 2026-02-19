@@ -123,9 +123,9 @@ exports.processScan = async ({
 
     // 7. Check if customer already used this coupon (for single-use coupons)
     const customerScanResult = await client.query(
-      `SELECT id, scan_timestamp FROM scans 
+      `SELECT id, scanned_at FROM scans
        WHERE coupon_id = $1 AND customer_id = $2 AND scan_status = 'SUCCESS'
-       ORDER BY scan_timestamp DESC LIMIT 1`,
+       ORDER BY scanned_at DESC LIMIT 1`,
       [coupon.id, customerId]
     );
 
@@ -138,7 +138,7 @@ exports.processScan = async ({
         message: 'You have already redeemed this coupon',
         statusCode: 409,
         previous_scan: {
-          scanned_at: previousScan.scan_timestamp,
+          scanned_at: previousScan.scanned_at,
           scan_id: previousScan.id
         }
       };
@@ -147,17 +147,17 @@ exports.processScan = async ({
     // 8. Create scan record
     const scanResult = await client.query(
       `INSERT INTO scans (
-        coupon_id, 
-        tenant_id, 
+        coupon_id,
+        tenant_id,
         customer_id,
-        scan_status, 
-        location_lat, 
-        location_lng, 
+        scan_status,
+        latitude,
+        longitude,
         device_info,
         customer_identifier,
-        scan_timestamp
+        scanned_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING id, scan_timestamp`,
+      RETURNING id, scanned_at`,
       [
         coupon.id,
         tenantId,
@@ -226,7 +226,7 @@ exports.processScan = async ({
         credits_earned: creditsEarned,
         credits_balance: creditsBalance
       },
-      scanned_at: scan.scan_timestamp
+      scanned_at: scan.scanned_at
     };
 
   } catch (error) {
@@ -274,13 +274,13 @@ exports.getScanHistory = async ({
     }
 
     if (fromDate) {
-      conditions.push(`s.scan_timestamp >= $${paramIndex}`);
+      conditions.push(`s.scanned_at >= $${paramIndex}`);
       params.push(fromDate);
       paramIndex++;
     }
 
     if (toDate) {
-      conditions.push(`s.scan_timestamp <= $${paramIndex}`);
+      conditions.push(`s.scanned_at <= $${paramIndex}`);
       params.push(toDate);
       paramIndex++;
     }
@@ -300,12 +300,12 @@ exports.getScanHistory = async ({
 
     // Get scan data
     const dataQuery = `
-      SELECT 
+      SELECT
         s.id,
-        s.scan_timestamp as scanned_at,
+        s.scanned_at,
         s.scan_status as status,
-        s.location_lat,
-        s.location_lng,
+        s.latitude,
+        s.longitude,
         c.code as coupon_code,
         c.discount_value,
         c.discount_currency,
@@ -317,7 +317,7 @@ exports.getScanHistory = async ({
       JOIN coupons c ON s.coupon_id = c.id
       JOIN verification_apps va ON c.verification_app_id = va.id
       WHERE ${whereClause}
-      ORDER BY s.scan_timestamp ${sortOrder}
+      ORDER BY s.scanned_at ${sortOrder}
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
     params.push(limit, offset);
@@ -361,9 +361,9 @@ exports.getScanHistory = async ({
         code: row.app_code,
         name: row.app_name
       },
-      location: (row.location_lat && row.location_lng) ? {
-        lat: parseFloat(row.location_lat),
-        lng: parseFloat(row.location_lng)
+      location: (row.latitude && row.longitude) ? {
+        lat: parseFloat(row.latitude),
+        lng: parseFloat(row.longitude)
       } : null
     }));
 
@@ -402,12 +402,12 @@ exports.getScanHistory = async ({
 exports.getScanDetails = async ({ scanId, customerId, tenantId }) => {
   try {
     const result = await db.query(
-      `SELECT 
+      `SELECT
         s.id,
-        s.scan_timestamp as scanned_at,
+        s.scanned_at,
         s.scan_status as status,
-        s.location_lat,
-        s.location_lng,
+        s.latitude,
+        s.longitude,
         s.device_info,
         c.code as coupon_code,
         c.discount_value,
@@ -471,9 +471,9 @@ exports.getScanDetails = async ({ scanId, customerId, tenantId }) => {
           name: scan.app_name,
           logo_url: scan.logo_url
         },
-        location: (scan.location_lat && scan.location_lng) ? {
-          lat: parseFloat(scan.location_lat),
-          lng: parseFloat(scan.location_lng)
+        location: (scan.latitude && scan.longitude) ? {
+          lat: parseFloat(scan.latitude),
+          lng: parseFloat(scan.longitude)
         } : null,
         device: scan.device_info ? JSON.parse(scan.device_info) : null
       }
@@ -498,8 +498,8 @@ exports.getScanStats = async ({ customerId, tenantId }) => {
         COUNT(CASE WHEN s.scan_status = 'EXHAUSTED' THEN 1 END) as exhausted_scans,
         COUNT(CASE WHEN s.scan_status = 'INVALID' THEN 1 END) as invalid_scans,
         COALESCE(SUM(CASE WHEN s.scan_status = 'SUCCESS' THEN c.discount_value ELSE 0 END), 0) as total_savings,
-        MAX(s.scan_timestamp) as last_scan_at,
-        MIN(s.scan_timestamp) as first_scan_at
+        MAX(s.scanned_at) as last_scan_at,
+        MIN(s.scanned_at) as first_scan_at
       FROM scans s
       JOIN coupons c ON s.coupon_id = c.id
       WHERE s.customer_id = $1 AND s.tenant_id = $2

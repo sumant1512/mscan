@@ -1,13 +1,17 @@
 /**
  * Super Admin Dashboard Component
  */
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, OnDestroy } from '@angular/core'
+import { inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { DashboardService } from '../../services/dashboard.service';
-import { catchError, of } from 'rxjs';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { SuperAdminDashboard } from '../../models';
+import { LoadingService } from '../../shared/services/loading.service';
+import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
 
 @Component({
   selector: 'app-super-admin-dashboard',
@@ -16,9 +20,13 @@ import { SuperAdminDashboard } from '../../models';
   templateUrl: './super-admin-dashboard.component.html',
   styleUrls: ['./super-admin-dashboard.component.css']
 })
-export class SuperAdminDashboardComponent implements OnInit {
+export class SuperAdminDashboardComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   stats: SuperAdminDashboard | null = null;
-  loading = true;
+  private loadingService = inject(LoadingService);
+
+  loading$ = this.loadingService.loading$;
   error = '';
   userName = '';
 
@@ -34,35 +42,40 @@ export class SuperAdminDashboardComponent implements OnInit {
     this.loadDashboardStats();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   loadUserInfo(): void {
-    this.authService.currentUser$.subscribe(user => {
-      if (user) {
-        this.userName = user.fullName;
-      }
-    });
+    this.authService.currentUser$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(user => {
+        if (user) {
+          this.userName = user.full_name;
+        }
+      });
   }
 
   loadDashboardStats(): void {
-    this.loading = true;
     this.error = '';
 
     this.dashboardService.getDashboardStats()
       .pipe(
-        catchError(error => {
-          this.loading = false;
-          this.error = error.error?.message || 'Failed to load dashboard data';
-          return of(null);
-        })
+        this.loadingService.wrapLoading(),
+        takeUntil(this.destroy$)
       )
-      .subscribe(response => {
-        if (response) {
-          this.loading = false;
-          if (response.success) {
+      .subscribe({
+        next: (response) => {
+          if (response && response.status) {
             this.stats = response.data as SuperAdminDashboard;
-            console.log('Super Admin Dashboard stats loaded', this.stats);
           } else {
-            this.error = response.message || 'Failed to load dashboard data';
+            this.error = response?.message || 'Failed to load dashboard data';
           }
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.error = HttpErrorHandler.getMessage(err, 'Failed to load dashboard data');
           this.cdr.detectChanges();
         }
       });

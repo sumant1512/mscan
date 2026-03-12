@@ -1,8 +1,8 @@
 import { Component, OnInit, ChangeDetectorRef, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil, filter } from 'rxjs/operators';
+import { Subject, combineLatest } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { RewardsService } from '../../services/rewards.service';
 import { VerificationApp } from '../../models/rewards.model';
 import { VerificationAppsFacade } from '../../store/verification-apps';
@@ -24,6 +24,11 @@ export class VerificationAppListComponent implements OnInit, OnDestroy {
   successMessage = '';
   errorMessage = '';
 
+  // App limit tracking
+  appsUsed: number | null = null;
+  appsLimit: number | null = null;
+  isAtLimit = false;
+
   // Permission flags
   canCreateApp = false;
   canEditApp = false;
@@ -42,13 +47,25 @@ export class VerificationAppListComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    // Load verification apps from store
     this.loadApps();
+    this.trackAppLimit();
   }
 
   loadApps() {
     this.verificationAppsFacade.allApps$.pipe(takeUntil(this.destroy$)).subscribe((apps) => {
       this.apps = apps;
+      this.cdr.detectChanges();
+    });
+  }
+
+  trackAppLimit() {
+    combineLatest([
+      this.verificationAppsFacade.appsUsed$,
+      this.verificationAppsFacade.appsLimit$
+    ]).pipe(takeUntil(this.destroy$)).subscribe(([used, limit]) => {
+      this.appsUsed = used;
+      this.appsLimit = limit;
+      this.isAtLimit = used !== null && limit !== null && used >= limit;
       this.cdr.detectChanges();
     });
   }

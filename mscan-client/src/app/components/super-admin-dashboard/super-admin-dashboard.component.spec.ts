@@ -19,7 +19,7 @@ describe('SuperAdminDashboardComponent', () => {
 
   const mockSuperAdmin: User = {
     id: 'super-id',
-    email: 'admin@mscan.com',
+    email: 'sumantmishra511@gmail.com',
     full_name: 'Super Admin',
     role: UserRole.SUPER_ADMIN,
     permissions: ['all'],

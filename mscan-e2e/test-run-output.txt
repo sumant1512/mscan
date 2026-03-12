@@ -8,10 +8,10 @@ Running 117 tests using 1 worker
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 499459
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 499459
 🔢 Entering OTP: 499459
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -23,10 +23,10 @@ Running 117 tests using 1 worker
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 614798
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 614798
 🔢 Entering OTP: 614798
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -99,10 +99,10 @@ Running 117 tests using 1 worker
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 257939
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 257939
 🔢 Entering OTP: 257939
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -174,10 +174,10 @@ Response: {
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 952415
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 952415
 🔢 Entering OTP: 952415
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -187,10 +187,10 @@ Response: {
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 882191
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 882191
 🔢 Entering OTP: 882191
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -200,10 +200,10 @@ Response: {
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 462080
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 462080
 🔢 Entering OTP: 462080
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -213,10 +213,10 @@ Response: {
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 216003
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 216003
 🔢 Entering OTP: 216003
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -226,10 +226,10 @@ Response: {
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 635177
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 635177
 🔢 Entering OTP: 635177
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -239,10 +239,10 @@ Response: {
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 230077
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 230077
 🔢 Entering OTP: 230077
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -252,10 +252,10 @@ Response: {
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 243147
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 243147
 🔢 Entering OTP: 243147
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -265,10 +265,10 @@ Response: {
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 502933
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 502933
 🔢 Entering OTP: 502933
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -278,10 +278,10 @@ Response: {
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 581312
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 581312
 🔢 Entering OTP: 581312
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -291,10 +291,10 @@ Response: {
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 226251
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 226251
 🔢 Entering OTP: 226251
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -304,10 +304,10 @@ Response: {
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 852330
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 852330
 🔢 Entering OTP: 852330
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -317,10 +317,10 @@ Response: {
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 901765
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 901765
 🔢 Entering OTP: 901765
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -330,10 +330,10 @@ Response: {
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 972099
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 972099
 🔢 Entering OTP: 972099
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -343,10 +343,10 @@ Response: {
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 756929
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 756929
 🔢 Entering OTP: 756929
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -356,10 +356,10 @@ Response: {
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 677479
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 677479
 🔢 Entering OTP: 677479
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -369,10 +369,10 @@ Response: {
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 548756
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 548756
 🔢 Entering OTP: 548756
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -382,10 +382,10 @@ Response: {
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 625326
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 625326
 🔢 Entering OTP: 625326
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard
@@ -395,10 +395,10 @@ Response: {
 🔐 Starting Super Admin login...
 ✅ Login page loaded
 ✅ Connected to database
-📧 Entering email: admin@mscan.com
+📧 Entering email: sumantmishra511@gmail.com
 📨 Clicked Send OTP button, waiting for response...
 ✅ OTP input screen appeared
-🔐 Retrieved OTP for admin@mscan.com: 247295
+🔐 Retrieved OTP for sumantmishra511@gmail.com: 247295
 🔢 Entering OTP: 247295
 ✅ Clicked Verify & Login
 ✅ Successfully navigated to dashboard

@@ -1,5 +1,6 @@
 import { Component, inject, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil, filter } from 'rxjs/operators';
@@ -12,7 +13,7 @@ import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
 @Component({
   selector: 'app-tenant-detail',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './tenant-detail.component.html',
   styleUrls: ['./tenant-detail.component.css']
 })
@@ -25,6 +26,13 @@ export class TenantDetailComponent implements OnInit, OnDestroy {
   loading$ = this.loadingService.loading$;
   error = '';
   tenantId!: string;
+
+  // App limit inline edit state
+  editingAppLimit = false;
+  newAppLimit: number = 1;
+  savingAppLimit = false;
+  appLimitError = '';
+  appLimitSuccess = '';
 
   constructor(
     private tenantService: TenantService,
@@ -121,6 +129,51 @@ export class TenantDetailComponent implements OnInit, OnDestroy {
       default:
         return '';
     }
+  }
+
+  startEditAppLimit() {
+    this.newAppLimit = this.tenant?.settings?.max_verification_apps ?? 1;
+    this.editingAppLimit = true;
+    this.appLimitError = '';
+    this.appLimitSuccess = '';
+  }
+
+  cancelEditAppLimit() {
+    this.editingAppLimit = false;
+    this.appLimitError = '';
+  }
+
+  saveAppLimit() {
+    if (!this.tenant || this.newAppLimit < 1) {
+      this.appLimitError = 'Value must be at least 1';
+      return;
+    }
+
+    this.savingAppLimit = true;
+    this.appLimitError = '';
+    this.appLimitSuccess = '';
+
+    this.tenantService.updateTenant(this.tenantId, { max_verification_apps: this.newAppLimit } as any)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          if (this.tenant && this.tenant.settings) {
+            this.tenant.settings.max_verification_apps = this.newAppLimit;
+          } else if (this.tenant) {
+            this.tenant.settings = { max_verification_apps: this.newAppLimit };
+          }
+          this.editingAppLimit = false;
+          this.savingAppLimit = false;
+          this.appLimitSuccess = 'App limit updated successfully';
+          this.cdr.detectChanges();
+          setTimeout(() => { this.appLimitSuccess = ''; this.cdr.detectChanges(); }, 3000);
+        },
+        error: (err) => {
+          this.appLimitError = HttpErrorHandler.getMessage(err, 'Failed to update app limit');
+          this.savingAppLimit = false;
+          this.cdr.detectChanges();
+        }
+      });
   }
 
 }

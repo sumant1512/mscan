@@ -43,7 +43,7 @@ export class TenantFormComponent implements OnInit, OnDestroy {
     this.tenantForm = this.fb.group({
       tenant_name: ['', [Validators.required, Validators.minLength(2)]],
       subdomain_slug: ['', [
-        Validators.required, 
+        Validators.required,
         Validators.minLength(3),
         Validators.maxLength(50),
         Validators.pattern(/^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/)
@@ -51,7 +51,8 @@ export class TenantFormComponent implements OnInit, OnDestroy {
       contact_person: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
       phone: ['', [Validators.pattern(/^\+?[\d\s-()]+$/)]],
-      address: ['']
+      address: [''],
+      max_verification_apps: [1, [Validators.required, Validators.min(1), Validators.pattern(/^\d+$/)]]
     });
   }
 
@@ -183,7 +184,8 @@ export class TenantFormComponent implements OnInit, OnDestroy {
               email: tenant.email,
               phone: tenant.phone,
               address: tenant.address,
-              subdomain_slug: tenant.subdomain_slug
+              subdomain_slug: tenant.subdomain_slug,
+              max_verification_apps: tenant.settings?.max_verification_apps ?? 1
             });
           }
         }
@@ -241,9 +243,15 @@ export class TenantFormComponent implements OnInit, OnDestroy {
     if (control?.hasError('maxlength')) {
       return `Maximum ${control.errors?.['maxlength'].requiredLength} characters allowed`;
     }
+    if (control?.hasError('min')) {
+      return 'Minimum value is 1';
+    }
     if (control?.hasError('pattern')) {
       if (field === 'subdomain_slug') {
         return 'Only lowercase letters, numbers, and hyphens. Must start and end with letter or number.';
+      }
+      if (field === 'max_verification_apps') {
+        return 'Must be a whole number';
       }
       return 'Invalid format';
     }

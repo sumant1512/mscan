@@ -1,10 +1,20 @@
 <div class="verification-app-container">
   <div class="header">
     <h1>Verification Apps</h1>
-    <button *ngIf="canCreateApp" class="btn-primary" (click)="configureApp()">
-      <span class="material-icons">add</span>
-      Create New App
-    </button>
+    <div class="header-actions">
+      <span *ngIf="appsLimit !== null" class="app-usage-badge" [class.at-limit]="isAtLimit">
+        {{ appsUsed }} of {{ appsLimit }} apps used
+      </span>
+      <button
+        *ngIf="canCreateApp"
+        class="btn-primary"
+        (click)="configureApp()"
+        [disabled]="isAtLimit"
+        [title]="isAtLimit ? 'Contact your administrator to increase the app limit' : ''">
+        <span class="material-icons">add</span>
+        Create New App
+      </button>
+    </div>
   </div>
 
   <div *ngIf="verificationAppsFacade.loading$ | async" class="loading">Loading...</div>
@@ -15,7 +25,12 @@
     <h3>No Verification Apps Yet</h3>
     <p *ngIf="canCreateApp">Create your first verification app to start generating QR codes for your coupons.</p>
     <p *ngIf="!canCreateApp">Contact your administrator to create verification apps.</p>
-    <button *ngIf="canCreateApp" class="btn-primary" (click)="configureApp()">
+    <button
+      *ngIf="canCreateApp"
+      class="btn-primary"
+      (click)="configureApp()"
+      [disabled]="isAtLimit"
+      [title]="isAtLimit ? 'Contact your administrator to increase the app limit' : ''">
       <span class="material-icons">add</span>
       Create Verification App
     </button>

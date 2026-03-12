@@ -60,7 +60,7 @@ npx playwright install
 ### Database Setup
 
 Ensure your test database has:
-- Super admin user: `admin@mscan.com`
+- Super admin users: `sumantmishra511@gmail.com`, `kumarbhaskar419@gmail.com`
 - Test tenant 1: subdomain `harsh`, email `admin@harsh.com`
 - Test tenant 2: subdomain `test-tenant`, email `admin@test-tenant.com`
 

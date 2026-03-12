@@ -6,37 +6,49 @@ import { AuthService } from '../services/auth.service';
 import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 
 describe('SubdomainGuard', () => {
-  let subdomainService: jasmine.SpyObj<SubdomainService>;
-  let authService: jasmine.SpyObj<AuthService>;
-  let router: jasmine.SpyObj<Router>;
+  let subdomainService: {
+    getCurrentSubdomain: jest.Mock;
+    redirectToSubdomain: jest.Mock;
+  };
+  let authService: {
+    isLoggedIn: jest.Mock;
+    getCurrentUser: jest.Mock;
+    getUserType: jest.Mock;
+    getTenantSubdomain: jest.Mock;
+  };
+  let router: { navigate: jest.Mock };
   let routeSnapshot: ActivatedRouteSnapshot;
   let stateSnapshot: RouterStateSnapshot;
 
   beforeEach(() => {
-    const subdomainServiceSpy = jasmine.createSpyObj('SubdomainService', ['getCurrentSubdomain', 'redirectToSubdomain']);
-    const authServiceSpy = jasmine.createSpyObj('AuthService', ['isLoggedIn', 'getCurrentUser', 'getUserType', 'getTenantSubdomain']);
-    const routerSpy = jasmine.createSpyObj('Router', ['navigate']);
+    subdomainService = {
+      getCurrentSubdomain: jest.fn(),
+      redirectToSubdomain: jest.fn()
+    };
+    authService = {
+      isLoggedIn: jest.fn(),
+      getCurrentUser: jest.fn(),
+      getUserType: jest.fn(),
+      getTenantSubdomain: jest.fn()
+    };
+    router = { navigate: jest.fn() };
 
     TestBed.configureTestingModule({
       providers: [
-        { provide: SubdomainService, useValue: subdomainServiceSpy },
-        { provide: AuthService, useValue: authServiceSpy },
-        { provide: Router, useValue: routerSpy }
+        { provide: SubdomainService, useValue: subdomainService },
+        { provide: AuthService, useValue: authService },
+        { provide: Router, useValue: router }
       ]
     });
 
-    subdomainService = TestBed.inject(SubdomainService) as jasmine.SpyObj<SubdomainService>;
-    authService = TestBed.inject(AuthService) as jasmine.SpyObj<AuthService>;
-    router = TestBed.inject(Router) as jasmine.SpyObj<Router>;
-    
     routeSnapshot = {} as ActivatedRouteSnapshot;
     stateSnapshot = { url: '/tenant/dashboard' } as RouterStateSnapshot;
   });
 
   it('should allow access if not authenticated', () => {
-    authService.isLoggedIn.and.returnValue(false);
-    
-    const result = TestBed.runInInjectionContext(() => 
+    authService.isLoggedIn.mockReturnValue(false);
+
+    const result = TestBed.runInInjectionContext(() =>
       subdomainGuard(routeSnapshot, stateSnapshot)
     );
 
@@ -44,12 +56,12 @@ describe('SubdomainGuard', () => {
   });
 
   it('should allow super admin from any domain', () => {
-    authService.isLoggedIn.and.returnValue(true);
-    authService.getCurrentUser.and.returnValue({ role: 'SUPER_ADMIN' } as any);
-    authService.getUserType.and.returnValue('SUPER_ADMIN');
-    subdomainService.getCurrentSubdomain.and.returnValue(null);
+    authService.isLoggedIn.mockReturnValue(true);
+    authService.getCurrentUser.mockReturnValue({ role: 'SUPER_ADMIN' } as any);
+    authService.getUserType.mockReturnValue('SUPER_ADMIN');
+    subdomainService.getCurrentSubdomain.mockReturnValue(null);
 
-    const result = TestBed.runInInjectionContext(() => 
+    const result = TestBed.runInInjectionContext(() =>
       subdomainGuard(routeSnapshot, stateSnapshot)
     );
 
@@ -57,13 +69,13 @@ describe('SubdomainGuard', () => {
   });
 
   it('should allow tenant user on correct subdomain', () => {
-    authService.isLoggedIn.and.returnValue(true);
-    authService.getCurrentUser.and.returnValue({ role: 'ADMIN' } as any);
-    authService.getUserType.and.returnValue('ADMIN');
-    authService.getTenantSubdomain.and.returnValue('test-tenant');
-    subdomainService.getCurrentSubdomain.and.returnValue('test-tenant');
+    authService.isLoggedIn.mockReturnValue(true);
+    authService.getCurrentUser.mockReturnValue({ role: 'ADMIN' } as any);
+    authService.getUserType.mockReturnValue('ADMIN');
+    authService.getTenantSubdomain.mockReturnValue('test-tenant');
+    subdomainService.getCurrentSubdomain.mockReturnValue('test-tenant');
 
-    const result = TestBed.runInInjectionContext(() => 
+    const result = TestBed.runInInjectionContext(() =>
       subdomainGuard(routeSnapshot, stateSnapshot)
     );
 
@@ -71,13 +83,13 @@ describe('SubdomainGuard', () => {
   });
 
   it('should redirect tenant user to correct subdomain if mismatch', () => {
-    authService.isLoggedIn.and.returnValue(true);
-    authService.getCurrentUser.and.returnValue({ role: 'ADMIN' } as any);
-    authService.getUserType.and.returnValue('ADMIN');
-    authService.getTenantSubdomain.and.returnValue('correct-tenant');
-    subdomainService.getCurrentSubdomain.and.returnValue('wrong-tenant');
+    authService.isLoggedIn.mockReturnValue(true);
+    authService.getCurrentUser.mockReturnValue({ role: 'ADMIN' } as any);
+    authService.getUserType.mockReturnValue('ADMIN');
+    authService.getTenantSubdomain.mockReturnValue('correct-tenant');
+    subdomainService.getCurrentSubdomain.mockReturnValue('wrong-tenant');
 
-    const result = TestBed.runInInjectionContext(() => 
+    const result = TestBed.runInInjectionContext(() =>
       subdomainGuard(routeSnapshot, stateSnapshot)
     );
 
@@ -86,13 +98,13 @@ describe('SubdomainGuard', () => {
   });
 
   it('should redirect to unauthorized if user has no subdomain', () => {
-    authService.isLoggedIn.and.returnValue(true);
-    authService.getCurrentUser.and.returnValue({ role: 'ADMIN' } as any);
-    authService.getUserType.and.returnValue('ADMIN');
-    authService.getTenantSubdomain.and.returnValue(null);
-    subdomainService.getCurrentSubdomain.and.returnValue('some-subdomain');
+    authService.isLoggedIn.mockReturnValue(true);
+    authService.getCurrentUser.mockReturnValue({ role: 'ADMIN' } as any);
+    authService.getUserType.mockReturnValue('ADMIN');
+    authService.getTenantSubdomain.mockReturnValue(null);
+    subdomainService.getCurrentSubdomain.mockReturnValue('some-subdomain');
 
-    const result = TestBed.runInInjectionContext(() => 
+    const result = TestBed.runInInjectionContext(() =>
       subdomainGuard(routeSnapshot, stateSnapshot)
     );
 
@@ -101,13 +113,13 @@ describe('SubdomainGuard', () => {
   });
 
   it('should block tenant user on root domain', () => {
-    authService.isLoggedIn.and.returnValue(true);
-    authService.getCurrentUser.and.returnValue({ role: 'ADMIN' } as any);
-    authService.getUserType.and.returnValue('ADMIN');
-    authService.getTenantSubdomain.and.returnValue('tenant-slug');
-    subdomainService.getCurrentSubdomain.and.returnValue(null);
+    authService.isLoggedIn.mockReturnValue(true);
+    authService.getCurrentUser.mockReturnValue({ role: 'ADMIN' } as any);
+    authService.getUserType.mockReturnValue('ADMIN');
+    authService.getTenantSubdomain.mockReturnValue('tenant-slug');
+    subdomainService.getCurrentSubdomain.mockReturnValue(null);
 
-    const result = TestBed.runInInjectionContext(() => 
+    const result = TestBed.runInInjectionContext(() =>
       subdomainGuard(routeSnapshot, stateSnapshot)
     );
 
@@ -116,13 +128,13 @@ describe('SubdomainGuard', () => {
   });
 
   it('should handle employee role', () => {
-    authService.isLoggedIn.and.returnValue(true);
-    authService.getCurrentUser.and.returnValue({ role: 'EMPLOYEE' } as any);
-    authService.getUserType.and.returnValue('EMPLOYEE');
-    authService.getTenantSubdomain.and.returnValue('employee-tenant');
-    subdomainService.getCurrentSubdomain.and.returnValue('employee-tenant');
+    authService.isLoggedIn.mockReturnValue(true);
+    authService.getCurrentUser.mockReturnValue({ role: 'EMPLOYEE' } as any);
+    authService.getUserType.mockReturnValue('EMPLOYEE');
+    authService.getTenantSubdomain.mockReturnValue('employee-tenant');
+    subdomainService.getCurrentSubdomain.mockReturnValue('employee-tenant');
 
-    const result = TestBed.runInInjectionContext(() => 
+    const result = TestBed.runInInjectionContext(() =>
       subdomainGuard(routeSnapshot, stateSnapshot)
     );
 

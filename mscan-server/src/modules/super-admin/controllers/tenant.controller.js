@@ -25,9 +25,18 @@ class TenantController {
       contact_person,
       email,
       phone,
-      address
+      address,
+      max_verification_apps
     } = req.body;
     const createdBy = req.user.id;
+
+    // Validate max_verification_apps if provided
+    if (max_verification_apps !== undefined) {
+      const limit = parseInt(max_verification_apps, 10);
+      if (isNaN(limit) || limit < 1) {
+        throw new ValidationError('max_verification_apps must be a positive integer');
+      }
+    }
 
     // Validation
     validateRequiredFields(req.body, ['tenant_name', 'email']);
@@ -64,12 +73,18 @@ class TenantController {
 
     // Create tenant in transaction
     const tenant = await executeTransaction(pool, async (client) => {
+      // Build settings JSONB
+      const appLimit = max_verification_apps !== undefined
+        ? parseInt(max_verification_apps, 10)
+        : (parseInt(process.env.DEFAULT_MAX_VERIFICATION_APPS, 10) || 1);
+      const settings = { max_verification_apps: appLimit };
+
       // Create tenant with subdomain
       const result = await client.query(
-        `INSERT INTO tenants (tenant_name, subdomain_slug, email, phone, contact_person, address, created_by, is_active, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `INSERT INTO tenants (tenant_name, subdomain_slug, email, phone, contact_person, address, created_by, settings, is_active, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
          RETURNING *`,
-        [tenant_name, slug, email, phone, contact_person, address, createdBy]
+        [tenant_name, slug, email, phone, contact_person, address, createdBy, JSON.stringify(settings)]
       );
 
       const newTenant = result.rows[0];
@@ -110,6 +125,7 @@ class TenantController {
         contact_person: tenant.contact_person,
         address: tenant.address,
         is_active: tenant.is_active,
+        settings: tenant.settings,
         created_at: tenant.created_at
       },
       subdomain_url: subdomainUrl
@@ -190,7 +206,8 @@ class TenantController {
               u.full_name as created_by_name,
               u.email as created_by_email,
               (SELECT COUNT(*) FROM credit_requests WHERE tenant_id = t.id AND status = 'pending') as pending_credit_requests,
-              (SELECT COUNT(*) FROM coupons WHERE tenant_id = t.id) as total_coupons
+              (SELECT COUNT(*) FROM coupons WHERE tenant_id = t.id) as total_coupons,
+              (SELECT COUNT(*) FROM verification_apps WHERE tenant_id = t.id) as verification_apps_count
        FROM tenants t
        LEFT JOIN tenant_credit_balance tcb ON t.id = tcb.tenant_id
        LEFT JOIN users u ON t.created_by = u.id
@@ -214,12 +231,20 @@ class TenantController {
    */
   updateTenant = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { tenant_name, contact_person, email, phone, address } = req.body;
+    const { tenant_name, contact_person, email, phone, address, max_verification_apps } = req.body;
     const updatedBy = req.user.id;
 
     // Validate email if provided
     if (email) {
       validateEmail(email);
+    }
+
+    // Validate max_verification_apps if provided
+    if (max_verification_apps !== undefined) {
+      const limit = parseInt(max_verification_apps, 10);
+      if (isNaN(limit) || limit < 1) {
+        throw new ValidationError('max_verification_apps must be a positive integer');
+      }
     }
 
     const result = await executeTransaction(pool, async (client) => {
@@ -246,6 +271,7 @@ class TenantController {
       }
 
       // Update tenant
+      const appLimit = max_verification_apps !== undefined ? parseInt(max_verification_apps, 10) : null;
       const updateResult = await client.query(
         `UPDATE tenants
          SET tenant_name = COALESCE($1, tenant_name),
@@ -253,10 +279,13 @@ class TenantController {
              phone = COALESCE($3, phone),
              contact_person = COALESCE($4, contact_person),
              address = COALESCE($5, address),
+             settings = CASE WHEN $7::integer IS NOT NULL
+                              THEN jsonb_set(settings, '{max_verification_apps}', to_jsonb($7::integer))
+                              ELSE settings END,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $6
          RETURNING *`,
-        [tenant_name, email, phone, contact_person, address, id]
+        [tenant_name, email, phone, contact_person, address, id, appLimit]
       );
 
       // Log audit

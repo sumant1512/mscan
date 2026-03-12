@@ -1,5 +1,7 @@
 export interface VerificationAppResponse {
   apps: VerificationApp[];
+  apps_used: number;
+  apps_limit: number;
 }
 
 export interface VerificationApp {
@@ -36,4 +38,6 @@ export interface VerificationAppsState {
   lastCreatedAppId: string | null;
   lastUpdatedAppId: string | null;
   lastDeletedAppId: string | null;
+  appsUsed: number | null;
+  appsLimit: number | null;
 }

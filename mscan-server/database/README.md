@@ -61,7 +61,7 @@ node database/db-manager.js setup
 - Creates the database if it doesn't exist
 - Creates all tables
 - Runs all migrations
-- Creates Super Admin user (email: admin@mscan.com)
+- Creates Super Admin users (sumantmishra511@gmail.com, kumarbhaskar419@gmail.com)
 
 **Use this when:**
 - Setting up for the first time
@@ -215,7 +215,7 @@ node database/db-manager.js setup
 ## Default Super Admin
 
 After running `setup`, you get:
-- **Email**: admin@mscan.com
+- **Email**: sumantmishra511@gmail.com, kumarbhaskar419@gmail.com
 - **Role**: SUPER_ADMIN
 - Login with this email using OTP
 

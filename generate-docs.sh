@@ -227,11 +227,11 @@ npm run build
 
 ### Super Admin Credentials
 ```
-Email: superadmin@mscan.com
+Email: sumantmishra511@gmail.com
 ```
 
 1. Navigate to `http://localhost:4200`
-2. Enter email: `superadmin@mscan.com`
+2. Enter email: `sumantmishra511@gmail.com`
 3. Click "Request OTP"
 4. Check email for 6-digit OTP
 5. Enter OTP and login
@@ -395,7 +395,7 @@ The Super Admin dashboard provides a comprehensive overview of the entire platfo
 ### Accessing Dashboard
 
 1. Login at root domain with super admin credentials
-2. Email: `superadmin@mscan.com`
+2. Email: `sumantmishra511@gmail.com`
 3. Request OTP and verify
 4. Dashboard loads automatically
 
@@ -2302,7 +2302,7 @@ POST /api/auth/request-otp
 Content-Type: application/json
 
 {
-  "email": "admin@mscan.com"
+  "email": "sumantmishra511@gmail.com"
 }
 
 # Response
@@ -2319,7 +2319,7 @@ POST /api/auth/verify-otp
 Content-Type: application/json
 
 {
-  "email": "admin@mscan.com",
+  "email": "sumantmishra511@gmail.com",
   "otp": "123456"
 }
 

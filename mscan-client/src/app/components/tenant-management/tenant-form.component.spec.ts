@@ -2,29 +2,58 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { TenantFormComponent } from './tenant-form.component';
 import { TenantService } from '../../services/tenant.service';
+import { TenantsFacade } from '../../store/tenants';
 import { Router, ActivatedRoute } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of, BehaviorSubject } from 'rxjs';
 
 describe('TenantFormComponent - Subdomain Features', () => {
   let component: TenantFormComponent;
   let fixture: ComponentFixture<TenantFormComponent>;
-  let tenantService: jasmine.SpyObj<TenantService>;
-  let router: jasmine.SpyObj<Router>;
+  let tenantService: {
+    checkSubdomainAvailability: jest.Mock;
+    getSubdomainSuggestions: jest.Mock;
+    createTenant: jest.Mock;
+    updateTenant: jest.Mock;
+  };
+  let tenantsFacade: {
+    operationInProgress$: BehaviorSubject<boolean>;
+    error$: BehaviorSubject<string | null>;
+    successMessage$: BehaviorSubject<string | null>;
+    clearSuccess: jest.Mock;
+    clearError: jest.Mock;
+    getTenantById: jest.Mock;
+    createTenant: jest.Mock;
+    updateTenant: jest.Mock;
+  };
+  let router: { navigate: jest.Mock };
 
   beforeEach(async () => {
-    const tenantServiceSpy = jasmine.createSpyObj('TenantService', [
-      'checkSubdomainAvailability',
-      'getSubdomainSuggestions',
-      'createTenant',
-      'updateTenant'
-    ]);
-    const routerSpy = jasmine.createSpyObj('Router', ['navigate']);
+    tenantService = {
+      checkSubdomainAvailability: jest.fn().mockReturnValue(of({ success: true, data: { available: true, message: 'Available' } })),
+      getSubdomainSuggestions: jest.fn().mockReturnValue(of({ success: true, data: { suggestions: [], count: 0 } })),
+      createTenant: jest.fn(),
+      updateTenant: jest.fn()
+    };
+
+    tenantsFacade = {
+      operationInProgress$: new BehaviorSubject<boolean>(false),
+      error$: new BehaviorSubject<string | null>(null),
+      successMessage$: new BehaviorSubject<string | null>(null),
+      clearSuccess: jest.fn(),
+      clearError: jest.fn(),
+      getTenantById: jest.fn().mockReturnValue(of(null)),
+      createTenant: jest.fn(),
+      updateTenant: jest.fn()
+    };
+
+    router = { navigate: jest.fn() };
 
     await TestBed.configureTestingModule({
       imports: [TenantFormComponent, ReactiveFormsModule],
       providers: [
-        { provide: TenantService, useValue: tenantServiceSpy },
-        { provide: Router, useValue: routerSpy },
+        { provide: TenantService, useValue: tenantService },
+        { provide: TenantsFacade, useValue: tenantsFacade },
+        { provide: Router, useValue: router },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: { get: () => null } } }
@@ -32,9 +61,6 @@ describe('TenantFormComponent - Subdomain Features', () => {
       ]
     }).compileComponents();
 
-    tenantService = TestBed.inject(TenantService) as jasmine.SpyObj<TenantService>;
-    router = TestBed.inject(Router) as jasmine.SpyObj<Router>;
-    
     fixture = TestBed.createComponent(TenantFormComponent);
     component = fixture.componentInstance;
   });
@@ -43,20 +69,20 @@ describe('TenantFormComponent - Subdomain Features', () => {
     it('should show subdomain field in create mode', () => {
       component.isEditMode = false;
       fixture.detectChanges();
-      
+
       const compiled = fixture.nativeElement;
       const subdomainField = compiled.querySelector('input[formControlName="subdomain_slug"]');
-      
+
       expect(subdomainField).toBeTruthy();
     });
 
     it('should hide subdomain field in edit mode', () => {
       component.isEditMode = true;
       fixture.detectChanges();
-      
+
       const compiled = fixture.nativeElement;
       const subdomainField = compiled.querySelector('input[formControlName="subdomain_slug"]');
-      
+
       expect(subdomainField).toBeFalsy();
     });
   });
@@ -90,7 +116,7 @@ describe('TenantFormComponent - Subdomain Features', () => {
 
   describe('Real-time Availability Check', () => {
     it('should check availability when subdomain changes', (done) => {
-      tenantService.checkSubdomainAvailability.and.returnValue(
+      tenantService.checkSubdomainAvailability.mockReturnValue(
         of({ success: true, data: { available: true, message: 'Available' } })
       );
 
@@ -107,7 +133,7 @@ describe('TenantFormComponent - Subdomain Features', () => {
     });
 
     it('should mark as unavailable if slug is taken', (done) => {
-      tenantService.checkSubdomainAvailability.and.returnValue(
+      tenantService.checkSubdomainAvailability.mockReturnValue(
         of({ success: true, data: { available: false, message: 'Taken' } })
       );
 
@@ -123,21 +149,23 @@ describe('TenantFormComponent - Subdomain Features', () => {
     });
 
     it('should fetch suggestions for unavailable slug', (done) => {
-      tenantService.checkSubdomainAvailability.and.returnValue(
+      tenantService.checkSubdomainAvailability.mockReturnValue(
         of({ success: true, data: { available: false, message: 'Taken' } })
       );
-      tenantService.getSubdomainSuggestions.and.returnValue(
+      tenantService.getSubdomainSuggestions.mockReturnValue(
         of({ success: true, data: { suggestions: ['alt1', 'alt2', 'alt3'], count: 3 } })
       );
 
       component.isEditMode = false;
       fixture.detectChanges();
 
+      // Set tenant_name silently so the availability handler can find it when slug is checked
+      component.tenantForm.get('tenant_name')?.setValue('Taken Company', { emitEvent: false });
       component.tenantForm.patchValue({ subdomain_slug: 'taken-slug' });
 
       setTimeout(() => {
         expect(tenantService.getSubdomainSuggestions).toHaveBeenCalled();
-        expect(component.subdomainSuggestions.length).toBe(3);
+        expect(component.suggestions.length).toBe(3);
         done();
       }, 600);
     });
@@ -149,7 +177,7 @@ describe('TenantFormComponent - Subdomain Features', () => {
       fixture.detectChanges();
 
       component.tenantForm.patchValue({ subdomain_slug: 'ab' });
-      
+
       const control = component.tenantForm.get('subdomain_slug');
       expect(control?.hasError('minlength')).toBe(true);
     });
@@ -159,7 +187,7 @@ describe('TenantFormComponent - Subdomain Features', () => {
       fixture.detectChanges();
 
       component.tenantForm.patchValue({ subdomain_slug: 'a'.repeat(51) });
-      
+
       const control = component.tenantForm.get('subdomain_slug');
       expect(control?.hasError('maxlength')).toBe(true);
     });
@@ -169,7 +197,7 @@ describe('TenantFormComponent - Subdomain Features', () => {
       fixture.detectChanges();
 
       component.tenantForm.patchValue({ subdomain_slug: 'Invalid_Slug' });
-      
+
       const control = component.tenantForm.get('subdomain_slug');
       expect(control?.hasError('pattern')).toBe(true);
     });
@@ -181,7 +209,7 @@ describe('TenantFormComponent - Subdomain Features', () => {
       fixture.detectChanges();
 
       component.tenantForm.patchValue({ subdomain_slug: 'my-tenant' });
-      
+
       const preview = component.getSubdomainPreview();
       expect(preview).toContain('my-tenant');
       expect(preview).toMatch(/\.(localhost|mscan\.com)/);
@@ -192,7 +220,6 @@ describe('TenantFormComponent - Subdomain Features', () => {
     it('should prevent submission if subdomain unavailable', () => {
       component.isEditMode = false;
       component.subdomainAvailable = false;
-      tenantService.createTenant.and.returnValue(of({ success: true, data: {} }));
       fixture.detectChanges();
 
       component.tenantForm.patchValue({
@@ -204,26 +231,26 @@ describe('TenantFormComponent - Subdomain Features', () => {
 
       component.onSubmit();
 
-      expect(tenantService.createTenant).not.toHaveBeenCalled();
+      expect(tenantsFacade.createTenant).not.toHaveBeenCalled();
     });
 
     it('should allow submission if subdomain available', () => {
       component.isEditMode = false;
       component.subdomainAvailable = true;
-      tenantService.createTenant.and.returnValue(of({ success: true, data: { id: 1 } }));
       fixture.detectChanges();
 
       component.tenantForm.patchValue({
         tenant_name: 'Test',
+        contact_person: 'Test Person',
         email: 'test@test.com',
         phone: '1234567890',
-        subdomain_slug: 'available'
+        subdomain_slug: 'available-slug'
       });
 
       component.onSubmit();
 
-      expect(tenantService.createTenant).toHaveBeenCalledWith(jasmine.objectContaining({
-        subdomain_slug: 'available'
+      expect(tenantsFacade.createTenant).toHaveBeenCalledWith(expect.objectContaining({
+        subdomain_slug: 'available-slug'
       }));
     });
   });
@@ -231,12 +258,45 @@ describe('TenantFormComponent - Subdomain Features', () => {
   describe('Suggestion Selection', () => {
     it('should populate field when suggestion is clicked', () => {
       component.isEditMode = false;
-      component.subdomainSuggestions = ['suggestion-1', 'suggestion-2'];
+      component.suggestions = ['suggestion-1', 'suggestion-2'];
       fixture.detectChanges();
 
       component.selectSuggestion('suggestion-1');
 
       expect(component.tenantForm.get('subdomain_slug')?.value).toBe('suggestion-1');
+    });
+  });
+
+  // ── Task 8.1: max_verification_apps field ──────────────────────────────────
+  describe('Max Verification Apps field', () => {
+    it('should have max_verification_apps control in the form', () => {
+      const control = component.tenantForm.get('max_verification_apps');
+      expect(control).not.toBeNull();
+    });
+
+    it('should default max_verification_apps to 1', () => {
+      const control = component.tenantForm.get('max_verification_apps');
+      expect(control?.value).toBe(1);
+    });
+
+    it('should be invalid when max_verification_apps is 0', () => {
+      const control = component.tenantForm.get('max_verification_apps');
+      control?.setValue(0);
+      expect(control?.valid).toBe(false);
+      expect(control?.hasError('min')).toBe(true);
+    });
+
+    it('should be invalid when max_verification_apps is empty', () => {
+      const control = component.tenantForm.get('max_verification_apps');
+      control?.setValue(null);
+      expect(control?.valid).toBe(false);
+      expect(control?.hasError('required')).toBe(true);
+    });
+
+    it('should be valid when max_verification_apps is a positive integer', () => {
+      const control = component.tenantForm.get('max_verification_apps');
+      control?.setValue(5);
+      expect(control?.valid).toBe(true);
     });
   });
 });

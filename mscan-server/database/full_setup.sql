@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS tenants (
     contact_person VARCHAR(255),
     created_by UUID, -- References the SUPER_ADMIN user who created this tenant
     subdomain_slug VARCHAR(100) NOT NULL,
+    settings JSONB NOT NULL DEFAULT '{"max_verification_apps": 1}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_subdomain_slug_format CHECK (subdomain_slug IS NULL OR subdomain_slug ~ '^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$'),
@@ -530,7 +531,7 @@ CREATE TABLE IF NOT EXISTS coupons (
   batch_quantity INTEGER,
   code_type VARCHAR(20) DEFAULT 'random' CHECK (code_type IN ('random', 'sequential')),
   code_prefix VARCHAR(20),
-  coupon_reference VARCHAR(20) UNIQUE,
+  coupon_reference VARCHAR(20),
   product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
   serial_number INTEGER,
   campaign_id UUID REFERENCES reward_campaigns(id) ON DELETE SET NULL,
@@ -549,7 +550,8 @@ CREATE TABLE IF NOT EXISTS coupons (
   CONSTRAINT chk_buy_get_consistency CHECK (
     (discount_type = 'BUY_X_GET_Y' AND buy_quantity IS NOT NULL AND get_quantity IS NOT NULL) OR
     (discount_type != 'BUY_X_GET_Y' AND buy_quantity IS NULL AND get_quantity IS NULL)
-  )
+  ),
+  CONSTRAINT unique_tenant_coupon_reference UNIQUE (tenant_id, coupon_reference)
 );
 
 CREATE INDEX IF NOT EXISTS idx_coupons_tenant ON coupons(tenant_id);
@@ -643,31 +645,22 @@ BEFORE UPDATE ON coupons
 FOR EACH ROW
 EXECUTE FUNCTION update_coupon_status();
 
--- Function to generate next sequential coupon reference per tenant
+-- Function to generate next sequential coupon reference per tenant.
+-- Uses coupon_code_sequences for atomic, race-condition-free incrementing.
+-- Each tenant has its own independent CP sequence starting from CP-001.
 CREATE OR REPLACE FUNCTION get_next_coupon_reference(p_tenant_id UUID)
 RETURNS VARCHAR(20) AS $$
 DECLARE
-    v_max_num INTEGER;
-    v_next_ref VARCHAR(20);
+    v_next_num INTEGER;
 BEGIN
-    -- Find the maximum reference number for this tenant
-    SELECT COALESCE(
-        MAX(
-            CASE
-                WHEN coupon_reference ~ '^CP-[0-9]+$'
-                THEN CAST(SUBSTRING(coupon_reference FROM 4) AS INTEGER)
-                ELSE 0
-            END
-        ),
-        0
-    ) INTO v_max_num
-    FROM coupons
-    WHERE tenant_id = p_tenant_id;
+    INSERT INTO coupon_code_sequences (tenant_id, prefix, last_sequence_number)
+    VALUES (p_tenant_id, 'CP', 1)
+    ON CONFLICT (tenant_id, prefix) DO UPDATE
+        SET last_sequence_number = coupon_code_sequences.last_sequence_number + 1,
+            updated_at = CURRENT_TIMESTAMP
+    RETURNING last_sequence_number INTO v_next_num;
 
-    -- Generate next reference with zero-padding
-    v_next_ref := 'CP-' || LPAD((v_max_num + 1)::TEXT, 3, '0');
-
-    RETURN v_next_ref;
+    RETURN 'CP-' || LPAD(v_next_num::TEXT, 3, '0');
 END;
 $$ LANGUAGE plpgsql;
 
@@ -1251,9 +1244,13 @@ CREATE INDEX IF NOT EXISTS idx_templates_custom ON product_templates(tenant_id) 
 -- SEED DATA
 -- ============================================
 
--- Super Admin User
+-- Super Admin Users
 INSERT INTO users (email, full_name, role, is_active)
-VALUES ('admin@mscan.com', 'Super Admin', 'SUPER_ADMIN', true)
+VALUES ('sumantmishra511@gmail.com', 'Super Admin', 'SUPER_ADMIN', true)
+ON CONFLICT (email) DO NOTHING;
+
+INSERT INTO users (email, full_name, role, is_active)
+VALUES ('kumarbhaskar419@gmail.com', 'Super Admin', 'SUPER_ADMIN', true)
 ON CONFLICT (email) DO NOTHING;
 
 -- Initialize credit balance for all tenants (if any exist)

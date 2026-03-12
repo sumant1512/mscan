@@ -2,6 +2,11 @@
  * Tenant Admin Management Models
  */
 
+export interface TenantSettings {
+  max_verification_apps: number;
+  [key: string]: unknown;
+}
+
 export interface Tenant {
   id: string;
   tenant_name: string;
@@ -10,6 +15,7 @@ export interface Tenant {
   phone?: string;
   address?: string;
   status: 'active' | 'inactive' | 'suspended';
+  settings?: TenantSettings;
   created_at: string;
   updated_at: string;
   created_by?: string; // UUID of the super admin who created this tenant

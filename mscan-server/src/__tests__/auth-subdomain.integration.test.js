@@ -88,7 +88,7 @@ describe('Authentication Subdomain Integration Tests', () => {
       const res = await request(app)
         .post('/api/auth/request-otp')
         .set('Host', 'localhost')
-        .send({ email: 'superadmin@mscan.com' });
+        .send({ email: 'sumantmishra511@gmail.com' });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);

@@ -94,7 +94,7 @@ test.describe('Environment Checks', () => {
     try {
       const response = await request.post('http://localhost:3000/api/auth/request-otp', {
         data: {
-          email: 'admin@mscan.com'
+          email: 'sumantmishra511@gmail.com'
         }
       });
       

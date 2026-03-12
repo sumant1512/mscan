@@ -8,7 +8,7 @@ export const loadVerificationApps = createAction(
 
 export const loadVerificationAppsSuccess = createAction(
   '[Verification Apps] Load Verification Apps Success',
-  props<{ apps: VerificationApp[] }>()
+  props<{ apps: VerificationApp[]; appsUsed: number; appsLimit: number }>()
 );
 
 export const loadVerificationAppsFailure = createAction(

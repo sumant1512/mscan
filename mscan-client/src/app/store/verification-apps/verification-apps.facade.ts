@@ -94,6 +94,16 @@ export class VerificationAppsFacade {
     VerificationAppsSelectors.selectLastDeletedAppId
   );
 
+  /** Number of verification apps currently created by the tenant */
+  readonly appsUsed$: Observable<number | null> = this.store.select(
+    VerificationAppsSelectors.selectAppsUsed
+  );
+
+  /** Maximum number of verification apps allowed for the tenant */
+  readonly appsLimit$: Observable<number | null> = this.store.select(
+    VerificationAppsSelectors.selectAppsLimit
+  );
+
   // Action dispatchers
 
   /**

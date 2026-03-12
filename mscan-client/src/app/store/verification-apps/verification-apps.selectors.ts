@@ -67,3 +67,13 @@ export const selectLastDeletedAppId = createSelector(
   selectVerificationAppsState,
   (state) => state.lastDeletedAppId
 );
+
+export const selectAppsUsed = createSelector(
+  selectVerificationAppsState,
+  (state) => state.appsUsed
+);
+
+export const selectAppsLimit = createSelector(
+  selectVerificationAppsState,
+  (state) => state.appsLimit
+);

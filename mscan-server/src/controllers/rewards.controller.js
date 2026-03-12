@@ -11,6 +11,7 @@ const creditCalculator = require('../services/credit-calculator.service');
 const couponGenerator = require('../services/coupon-generator.service');
 const { asyncHandler } = require('../modules/common/middleware/errorHandler.middleware');
 const {
+  AppError,
   ValidationError,
   NotFoundError,
   PaymentRequiredError
@@ -47,6 +48,28 @@ exports.createVerificationApp = asyncHandler(async (req, res) => {
   } = req.body;
 
   validateRequiredFields(req.body, ['app_name', 'template_id']);
+
+  // Enforce per-tenant verification app limit
+  const tenantResult = await db.query(
+    'SELECT settings FROM tenants WHERE id = $1',
+    [tenantId]
+  );
+  const settings = tenantResult.rows[0]?.settings || {};
+  const appLimit = settings.max_verification_apps ?? (parseInt(process.env.DEFAULT_MAX_VERIFICATION_APPS, 10) || 1);
+
+  const countResult = await db.query(
+    'SELECT COUNT(*) FROM verification_apps WHERE tenant_id = $1',
+    [tenantId]
+  );
+  const currentCount = parseInt(countResult.rows[0].count, 10);
+
+  if (currentCount >= appLimit) {
+    throw new AppError(
+      'Verification app limit reached. Contact your administrator to increase the limit.',
+      422,
+      'APP_LIMIT_REACHED'
+    );
+  }
 
   // Validate template exists and belongs to tenant
   const templateCheck = await db.query(
@@ -103,38 +126,45 @@ exports.createVerificationApp = asyncHandler(async (req, res) => {
 exports.getVerificationApps = asyncHandler(async (req, res) => {
   const tenantId = req.user.tenant_id;
 
-  const result = await db.query(
-    `SELECT va.id AS verification_app_id,
-            va.app_name,
-            va.code,
-            va.description,
-            va.logo_url,
-            va.primary_color,
-            va.secondary_color,
-            va.welcome_message,
-            va.scan_success_message,
-            va.scan_failure_message,
-            va.post_scan_redirect_url,
-            va.is_active,
-            va.tenant_id,
-            va.template_id,
-            va.currency,
-            pt.template_name,
-            va.created_at,
-            va.updated_at,
-            COUNT(DISTINCT c.id) as total_coupons,
-            COUNT(DISTINCT s.id) as total_scans
-     FROM verification_apps va
-     LEFT JOIN coupons c ON va.id = c.verification_app_id
-     LEFT JOIN scans s ON c.id = s.coupon_id
-     LEFT JOIN product_templates pt ON va.template_id = pt.id
-     WHERE va.tenant_id = $1
-     GROUP BY va.id, pt.id, pt.template_name
-     ORDER BY va.created_at DESC`,
-    [tenantId]
-  );
+  const [appsResult, tenantResult] = await Promise.all([
+    db.query(
+      `SELECT va.id AS verification_app_id,
+              va.app_name,
+              va.code,
+              va.description,
+              va.logo_url,
+              va.primary_color,
+              va.secondary_color,
+              va.welcome_message,
+              va.scan_success_message,
+              va.scan_failure_message,
+              va.post_scan_redirect_url,
+              va.is_active,
+              va.tenant_id,
+              va.template_id,
+              va.currency,
+              pt.template_name,
+              va.created_at,
+              va.updated_at,
+              COUNT(DISTINCT c.id) as total_coupons,
+              COUNT(DISTINCT s.id) as total_scans
+       FROM verification_apps va
+       LEFT JOIN coupons c ON va.id = c.verification_app_id
+       LEFT JOIN scans s ON c.id = s.coupon_id
+       LEFT JOIN product_templates pt ON va.template_id = pt.id
+       WHERE va.tenant_id = $1
+       GROUP BY va.id, pt.id, pt.template_name
+       ORDER BY va.created_at DESC`,
+      [tenantId]
+    ),
+    db.query('SELECT settings FROM tenants WHERE id = $1', [tenantId])
+  ]);
 
-  return sendSuccess(res, { apps: result.rows });
+  const settings = tenantResult.rows[0]?.settings || {};
+  const appsLimit = settings.max_verification_apps ?? (parseInt(process.env.DEFAULT_MAX_VERIFICATION_APPS, 10) || 1);
+  const appsUsed = appsResult.rows.length;
+
+  return sendSuccess(res, { apps: appsResult.rows, apps_used: appsUsed, apps_limit: appsLimit });
 });
 
 /**

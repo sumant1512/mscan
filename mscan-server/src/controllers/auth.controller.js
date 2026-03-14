@@ -74,12 +74,20 @@ const requestOTP = asyncHandler(async (req, res) => {
   // Generate and store OTP
   const otp = await otpService.createOTP(email);
 
-  // Send OTP via email
-  try {
-    await emailService.sendOTPEmail(email, "Your Login OTP", otp);
-  } catch (emailError) {
-    console.error('Email sending failed:', emailError);
-    throw new Error('Failed to send OTP. Please try again later');
+  // 🔐 DEBUG: Log OTP to console to support local development / debugging
+  console.log(`Generated OTP for ${email}: ${otp}`);
+
+  // Send OTP via email (may be skipped in local/dev if email not configured)
+  const emailResult = await emailService.sendOTPEmail(email, "Your Login OTP", otp);
+  if (emailResult?.skipped) {
+    console.warn('OTP email skipped:', emailResult.reason);
+    return sendSuccess(
+      res,
+      {
+        expiresIn: parseInt(process.env.OTP_EXPIRY_MINUTES) || 5
+      },
+      'OTP generated. Email not sent (check server logs for code).'
+    );
   }
 
   return sendSuccess(res, {

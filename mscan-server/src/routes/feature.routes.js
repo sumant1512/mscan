@@ -80,14 +80,14 @@ router.post(
 );
 
 /**
- * DELETE /api/tenants/:tenantId/features/:featureId
- * Disable feature for tenant
- * Requires: SUPER_ADMIN role
+ * PATCH /api/tenants/:tenantId/features/:featureId
+ * Toggle feature for tenant (enable/disable)
+ * Requires: SUPER_ADMIN or TENANT_ADMIN (own tenant, only if assigned)
  */
-router.delete(
+router.patch(
   '/tenants/:tenantId/features/:featureId',
-  requireRole(['SUPER_ADMIN']),
-  featureController.disableFeatureForTenant
+  requireRole(['SUPER_ADMIN', 'TENANT_ADMIN']),
+  featureController.toggleFeatureForTenant
 );
 
 /**

@@ -25,8 +25,14 @@
           [(ngModel)]="newFeature.code"
           name="code"
           required
+          pattern="^[a-z0-9_-]+$"
+          #codeInput="ngModel"
           placeholder="e.g., advanced-reporting"
         >
+        <div class="validation-error" *ngIf="codeInput.invalid && (codeInput.dirty || codeInput.touched)">
+          <span *ngIf="codeInput.errors?.['required']">Feature code is required.</span>
+          <span *ngIf="codeInput.errors?.['pattern']">Code must be lowercase, alphanumeric, hyphens or underscores only.</span>
+        </div>
       </div>
 
       <div class="form-group">
@@ -50,6 +56,20 @@
           rows="3"
           placeholder="Describe what this feature does"
         ></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="parent_id">Parent Feature (optional):</label>
+        <select
+          id="parent_id"
+          [(ngModel)]="newFeature.parent_id"
+          name="parent_id"
+        >
+          <option value="">No parent (root feature)</option>
+          <option *ngFor="let feature of features" [value]="feature.id">
+            {{ feature.name }} ({{ feature.code }})
+          </option>
+        </select>
       </div>
 
       <div class="form-group">
@@ -114,21 +134,13 @@
     <div class="tenant-features" *ngIf="selectedTenantId && tenantFeatures[selectedTenantId]">
       <h3>Features for {{ getTenantName(selectedTenantId) }}</h3>
 
-      <div class="feature-toggles">
-        <div class="feature-toggle" *ngFor="let tenantFeature of tenantFeatures[selectedTenantId]">
-          <div class="toggle-info">
-            <span class="feature-name">{{ tenantFeature.name }}</span>
-            <span class="feature-code">{{ tenantFeature.code }}</span>
-          </div>
-          <label class="toggle">
-            <input
-              type="checkbox"
-              [checked]="tenantFeature.enabled_for_tenant"
-              (change)="toggleFeatureForTenant(selectedTenantId!, tenantFeature)"
-            >
-            <span class="slider"></span>
-          </label>
-        </div>
+      <div class="feature-tree">
+        <app-feature-tree
+          [features]="buildFeatureTree(tenantFeatures[selectedTenantId])"
+          [tenantId]="selectedTenantId!"
+          [level]="0"
+          (toggleFeature)="onToggleFeature($event)">
+        </app-feature-tree>
       </div>
     </div>
   </div>

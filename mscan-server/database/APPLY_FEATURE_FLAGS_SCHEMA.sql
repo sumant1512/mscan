@@ -1,6 +1,104 @@
 -- Feature Flags Schema Migration
 -- Add feature flags system to existing databases
 
+-- First, create the helper function if it doesn't exist
+DO $$
+DECLARE
+    func_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO func_count
+    FROM information_schema.routines
+    WHERE routine_schema = 'public' AND routine_name = 'is_feature_enabled_for_tenant';
+
+    IF func_count = 0 THEN
+        EXECUTE '
+        CREATE OR REPLACE FUNCTION is_feature_enabled_for_tenant(p_feature_code VARCHAR(100), p_tenant_id UUID)
+        RETURNS BOOLEAN AS $func$
+        DECLARE
+            ancestor_enabled BOOLEAN := true;
+            ancestor_record RECORD;
+        BEGIN
+            -- Check all ancestors (including self) are enabled
+            FOR ancestor_record IN
+                WITH RECURSIVE feature_ancestors AS (
+                    -- Start with the target feature
+                    SELECT id, parent_id, default_enabled
+                    FROM features
+                    WHERE code = p_feature_code AND is_active = true
+                    
+                    UNION ALL
+                    
+                    -- Recursively get parents
+                    SELECT f.id, f.parent_id, f.default_enabled
+                    FROM features f
+                    INNER JOIN feature_ancestors fa ON fa.parent_id = f.id
+                )
+                SELECT id, default_enabled FROM feature_ancestors
+            LOOP
+                -- For each ancestor, check tenant override or default
+                SELECT COALESCE(tf.enabled, ancestor_record.default_enabled) INTO ancestor_enabled
+                FROM (SELECT ancestor_record.id AS feature_id, ancestor_record.default_enabled) AS f
+                LEFT JOIN tenant_features tf ON tf.feature_id = f.feature_id AND tf.tenant_id = p_tenant_id;
+                
+                -- If any ancestor is disabled, return false
+                IF NOT ancestor_enabled THEN
+                    RETURN false;
+                END IF;
+            END LOOP;
+            
+            -- All ancestors enabled
+            RETURN true;
+        END;
+        $func$ LANGUAGE plpgsql;';
+
+        RAISE NOTICE 'Feature check function created successfully';
+    ELSE
+        -- Drop and recreate to update with tree logic
+        EXECUTE ''DROP FUNCTION is_feature_enabled_for_tenant(VARCHAR(100), UUID);'';
+        EXECUTE '
+        CREATE OR REPLACE FUNCTION is_feature_enabled_for_tenant(p_feature_code VARCHAR(100), p_tenant_id UUID)
+        RETURNS BOOLEAN AS $func$
+        DECLARE
+            ancestor_enabled BOOLEAN := true;
+            ancestor_record RECORD;
+        BEGIN
+            -- Check all ancestors (including self) are enabled
+            FOR ancestor_record IN
+                WITH RECURSIVE feature_ancestors AS (
+                    -- Start with the target feature
+                    SELECT id, parent_id, default_enabled
+                    FROM features
+                    WHERE code = p_feature_code AND is_active = true
+                    
+                    UNION ALL
+                    
+                    -- Recursively get parents
+                    SELECT f.id, f.parent_id, f.default_enabled
+                    FROM features f
+                    INNER JOIN feature_ancestors fa ON fa.parent_id = f.id
+                )
+                SELECT id, default_enabled FROM feature_ancestors
+            LOOP
+                -- For each ancestor, check tenant override or default
+                SELECT COALESCE(tf.enabled, ancestor_record.default_enabled) INTO ancestor_enabled
+                FROM (SELECT ancestor_record.id AS feature_id, ancestor_record.default_enabled) AS f
+                LEFT JOIN tenant_features tf ON tf.feature_id = f.feature_id AND tf.tenant_id = p_tenant_id;
+                
+                -- If any ancestor is disabled, return false
+                IF NOT ancestor_enabled THEN
+                    RETURN false;
+                END IF;
+            END LOOP;
+            
+            -- All ancestors enabled
+            RETURN true;
+        END;
+        $func$ LANGUAGE plpgsql;';
+
+        RAISE NOTICE 'Feature check function updated successfully';
+    END IF;
+END $$;
+
 DO $$
 DECLARE
     table_count INTEGER;
@@ -77,49 +175,38 @@ BEGIN
         RAISE NOTICE 'Tenant features table already exists, skipping creation';
     END IF;
 
-    -- Check if function exists
+    -- Check if created_by column exists in features table
     SELECT COUNT(*) INTO table_count
-    FROM information_schema.routines
-    WHERE routine_schema = 'public' AND routine_name = 'is_feature_enabled_for_tenant';
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'features' AND column_name = 'created_by';
 
     IF table_count = 0 THEN
-        RAISE NOTICE 'Creating is_feature_enabled_for_tenant function...';
+        RAISE NOTICE 'Adding created_by column to features table...';
 
-        -- Helper: Check if feature is enabled for tenant
-        CREATE OR REPLACE FUNCTION is_feature_enabled_for_tenant(p_feature_code VARCHAR(100), p_tenant_id UUID)
-        RETURNS BOOLEAN AS $$
-        DECLARE
-            feature_default BOOLEAN;
-            tenant_enabled BOOLEAN;
-        BEGIN
-            -- Get the feature's default setting
-            SELECT default_enabled INTO feature_default
-            FROM features
-            WHERE code = p_feature_code AND is_active = true;
+        ALTER TABLE features ADD COLUMN created_by UUID;
+        ALTER TABLE features ADD CONSTRAINT fk_features_created_by
+            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 
-            -- If feature doesn't exist or is inactive, return false
-            IF NOT FOUND THEN
-                RETURN false;
-            END IF;
-
-            -- Check if tenant has explicit setting
-            SELECT enabled INTO tenant_enabled
-            FROM tenant_features tf
-            INNER JOIN features f ON tf.feature_id = f.id
-            WHERE f.code = p_feature_code AND tf.tenant_id = p_tenant_id;
-
-            -- Return explicit setting if exists, otherwise default
-            IF FOUND THEN
-                RETURN tenant_enabled;
-            ELSE
-                RETURN feature_default;
-            END IF;
-        END;
-        $$ LANGUAGE plpgsql;
-
-        RAISE NOTICE 'Feature check function created successfully';
+        RAISE NOTICE 'created_by column added successfully';
     ELSE
-        RAISE NOTICE 'Feature check function already exists, skipping creation';
+        RAISE NOTICE 'created_by column already exists in features table';
+    END IF;
+
+    -- Check if parent_id column exists in features table
+    SELECT COUNT(*) INTO table_count
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'features' AND column_name = 'parent_id';
+
+    IF table_count = 0 THEN
+        RAISE NOTICE 'Adding parent_id column to features table...';
+
+        ALTER TABLE features ADD COLUMN parent_id UUID;
+        ALTER TABLE features ADD CONSTRAINT fk_features_parent_id
+            FOREIGN KEY (parent_id) REFERENCES features(id) ON DELETE SET NULL;
+
+        RAISE NOTICE 'parent_id column added successfully';
+    ELSE
+        RAISE NOTICE 'parent_id column already exists in features table';
     END IF;
 
     RAISE NOTICE 'Feature Flags Schema Migration completed successfully!';

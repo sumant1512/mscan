@@ -7,17 +7,27 @@ const db = require('../config/database');
 const auditService = require('./audit.service');
 
 /**
- * Create a new feature definition
- * @param {Object} data - Feature data
- * @param {string} data.code - Unique feature code (e.g., 'advanced-reporting')
- * @param {string} data.name - Human-readable name
- * @param {string} data.description - Description of what feature does
- * @param {boolean} data.default_enabled - Whether new tenants get this by default
- * @param {string} actorId - ID of user creating the feature
- * @param {Object} req - Express request object for audit logging
- * @returns {Promise<Object>} Created feature
+ * Check if setting parent_id would create a cycle
+ * @param {string} featureId - Feature ID
+ * @param {string} parentId - Proposed parent ID
+ * @returns {Promise<boolean>} True if cycle would be created
  */
-async function createFeature(data, actorId, req = null) {
+async function wouldCreateCycle(featureId, parentId) {
+  if (!parentId) return false;
+
+  // Walk up from parentId to see if we reach featureId
+  const result = await db.query(`
+    WITH RECURSIVE ancestor_chain AS (
+      SELECT id, parent_id FROM features WHERE id = $1
+      UNION ALL
+      SELECT f.id, f.parent_id FROM features f
+      INNER JOIN ancestor_chain ac ON ac.parent_id = f.id
+    )
+    SELECT id FROM ancestor_chain WHERE id = $2
+  `, [parentId, featureId]);
+
+  return result.rows.length > 0;
+}
   const client = await db.getClient();
 
   try {
@@ -46,10 +56,10 @@ async function createFeature(data, actorId, req = null) {
 
     // Insert feature
     const result = await client.query(
-      `INSERT INTO features (code, name, description, default_enabled, created_by)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO features (code, name, description, default_enabled, parent_id, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [data.code, data.name, data.description || null, data.default_enabled || false, actorId]
+      [data.code, data.name, data.description || null, data.default_enabled || false, data.parent_id || null, actorId]
     );
 
     const feature = result.rows[0];
@@ -172,6 +182,27 @@ async function updateFeature(id, data, actorId, req = null) {
     if (data.default_enabled !== undefined) {
       updates.push(`default_enabled = $${paramIndex++}`);
       values.push(data.default_enabled);
+    }
+
+    if (data.parent_id !== undefined) {
+      // Check for cycle
+      if (await wouldCreateCycle(id, data.parent_id)) {
+        throw new Error('Setting this parent would create a cycle in the feature tree');
+      }
+
+      // Ensure parent exists if provided
+      if (data.parent_id) {
+        const parentCheck = await client.query(
+          'SELECT id FROM features WHERE id = $1',
+          [data.parent_id]
+        );
+        if (parentCheck.rows.length === 0) {
+          throw new Error('Parent feature not found');
+        }
+      }
+
+      updates.push(`parent_id = $${paramIndex++}`);
+      values.push(data.parent_id);
     }
 
     if (updates.length === 0) {
@@ -383,22 +414,143 @@ async function isFeatureEnabledForTenant(featureCode, tenantId) {
 /**
  * Get all features for a tenant with their enabled status
  * @param {string} tenantId - Tenant ID
+ * @param {string} userRole - Role of the requesting user
  * @returns {Promise<Array>} List of features with tenant status
  */
-async function getTenantFeatures(tenantId) {
-  const result = await db.query(
-    `SELECT
-       f.*,
-       COALESCE(tf.enabled, f.default_enabled) as enabled_for_tenant,
-       tf.enabled_at,
-       tf.enabled_by
-     FROM features f
-     LEFT JOIN tenant_features tf ON f.id = tf.feature_id AND tf.tenant_id = $1
-     WHERE f.is_active = true
-     ORDER BY f.created_at DESC`,
-    [tenantId]
-  );
+async function getTenantFeatures(tenantId, userRole = null) {
+  let query;
+  let params = [tenantId];
+
+  if (userRole === 'TENANT_ADMIN') {
+    // Tenant-admin sees only assigned features
+    query = `
+      SELECT
+         f.*,
+         tf.enabled as enabled_for_tenant,
+         tf.enabled_at,
+         tf.enabled_by
+       FROM features f
+       INNER JOIN tenant_features tf ON f.id = tf.feature_id AND tf.tenant_id = $1
+       WHERE f.is_active = true
+       ORDER BY f.created_at DESC
+    `;
+  } else {
+    // Super-admin sees all features with their status
+    query = `
+      SELECT
+         f.*,
+         COALESCE(tf.enabled, f.default_enabled) as enabled_for_tenant,
+         tf.enabled_at,
+         tf.enabled_by
+       FROM features f
+       LEFT JOIN tenant_features tf ON f.id = tf.feature_id AND tf.tenant_id = $1
+       WHERE f.is_active = true
+       ORDER BY f.created_at DESC
+    `;
+  }
+
+  const result = await db.query(query, params);
   return result.rows;
+}
+
+/**
+ * Toggle feature for tenant (enable/disable)
+ * @param {string} featureId - Feature ID
+ * @param {string} tenantId - Tenant ID
+ * @param {string} actorId - User toggling the feature
+ * @param {string} actorRole - Role of the user
+ * @param {boolean} enabled - Desired state
+ * @param {Object} req - Express request
+ * @returns {Promise<Object>} Tenant feature record
+ */
+async function toggleFeatureForTenant(featureId, tenantId, actorId, actorRole, enabled, req = null) {
+  const client = await db.getClient();
+
+  try {
+    await client.query('BEGIN');
+
+    // Verify feature exists
+    const feature = await client.query(
+      'SELECT * FROM features WHERE id = $1 AND is_active = true',
+      [featureId]
+    );
+
+    if (feature.rows.length === 0) {
+      throw new Error('Feature not found or inactive');
+    }
+
+    // Check if tenant_features record exists
+    const existing = await client.query(
+      'SELECT * FROM tenant_features WHERE tenant_id = $1 AND feature_id = $2',
+      [tenantId, featureId]
+    );
+
+    const isAssigned = existing.rows.length > 0;
+
+    // For tenant-admin, must be already assigned
+    if (actorRole === 'TENANT_ADMIN' && !isAssigned) {
+      throw new Error('Feature not assigned to this tenant');
+    }
+
+    // For enabling, ensure ancestors are enabled (strict inheritance)
+    if (enabled) {
+      // Get all ancestors and enable them if not already
+      const ancestors = await client.query(`
+        WITH RECURSIVE feature_ancestors AS (
+          SELECT id, parent_id FROM features WHERE id = $1
+          UNION ALL
+          SELECT f.id, f.parent_id FROM features f
+          INNER JOIN feature_ancestors fa ON fa.parent_id = f.id
+        )
+        SELECT id FROM feature_ancestors WHERE id != $1
+      `, [featureId]);
+
+      for (const ancestor of ancestors.rows) {
+        await client.query(`
+          INSERT INTO tenant_features (tenant_id, feature_id, enabled, enabled_by)
+          VALUES ($1, $2, true, $3)
+          ON CONFLICT (tenant_id, feature_id)
+          DO UPDATE SET
+            enabled = true,
+            enabled_at = CURRENT_TIMESTAMP,
+            enabled_by = $3
+        `, [tenantId, ancestor.id, actorId]);
+      }
+    }
+
+    // Upsert tenant feature
+    const result = await client.query(
+      `INSERT INTO tenant_features (tenant_id, feature_id, enabled, enabled_by)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (tenant_id, feature_id)
+       DO UPDATE SET
+         enabled = $3,
+         enabled_at = CURRENT_TIMESTAMP,
+         enabled_by = $4
+       RETURNING *`,
+      [tenantId, featureId, enabled, actorId]
+    );
+
+    const tenantFeature = result.rows[0];
+
+    // Log audit entry
+    if (req) {
+      await auditService.logFeatureToggle(tenantFeature.id, actorId, {
+        feature_code: feature.rows[0].code,
+        tenant_id: tenantId,
+        enabled: enabled
+      }, req, client);
+    }
+
+    await client.query('COMMIT');
+
+    return tenantFeature;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 module.exports = {
@@ -410,6 +562,7 @@ module.exports = {
   deleteFeature,
   enableFeatureForTenant,
   disableFeatureForTenant,
+  toggleFeatureForTenant,
   isFeatureEnabledForTenant,
   getTenantFeatures
 };

@@ -277,6 +277,18 @@ async function logFeatureDisable(featureId, actorId, metadata, req, client = nul
   return logAction('DISABLE_FEATURE', actorId, 'feature', featureId, metadata, req, client);
 }
 
+/**
+ * Log feature toggle action
+ * @param {string} tenantFeatureId - Tenant feature ID
+ * @param {string} actorId - User performing the action
+ * @param {Object} metadata - Additional metadata
+ * @param {Object} req - Express request
+ * @param {Object} client - Database client (optional)
+ */
+async function logFeatureToggle(tenantFeatureId, actorId, metadata, req, client = null) {
+  return logAction('TOGGLE_FEATURE', actorId, 'tenant_feature', tenantFeatureId, metadata, req, client);
+}
+
 module.exports = {
   logPermissionCreation,
   logUserCreation,
@@ -287,6 +299,7 @@ module.exports = {
   logFeatureDeletion,
   logFeatureEnable,
   logFeatureDisable,
+  logFeatureToggle,
   logAction,
   logFailedOperation,
   queryAuditLogs

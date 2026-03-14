@@ -189,7 +189,7 @@ const disableFeatureForTenant = asyncHandler(async (req, res) => {
 const getTenantFeatures = asyncHandler(async (req, res) => {
   const { tenantId } = req.params;
 
-  const features = await featureService.getTenantFeatures(tenantId);
+  const features = await featureService.getTenantFeatures(tenantId, req.user.role);
 
   return sendSuccess(res, { features });
 });
@@ -206,6 +206,43 @@ const checkFeatureForTenant = asyncHandler(async (req, res) => {
   return sendSuccess(res, { enabled });
 });
 
+/**
+ * Toggle feature for tenant (enable/disable)
+ * PATCH /api/tenants/:tenantId/features/:featureId
+ * Requires: SUPER_ADMIN or TENANT_ADMIN (own tenant, only if assigned)
+ */
+const toggleFeatureForTenant = asyncHandler(async (req, res) => {
+  const { tenantId, featureId } = req.params;
+  const { enabled } = req.body;
+
+  // Validate enabled is boolean
+  if (typeof enabled !== 'boolean') {
+    throw new ValidationError('enabled must be a boolean', 'INVALID_TOGGLE_DATA');
+  }
+
+  try {
+    const result = await featureService.toggleFeatureForTenant(
+      featureId,
+      tenantId,
+      req.user.id,
+      req.user.role,
+      enabled,
+      req
+    );
+
+    return sendSuccess(res, { feature: result }, `Feature ${enabled ? 'enabled' : 'disabled'} successfully`);
+
+  } catch (error) {
+    if (error.message.includes('not assigned')) {
+      throw new ValidationError(error.message, 'FEATURE_NOT_ASSIGNED');
+    }
+    if (error.message.includes('not found')) {
+      throw new NotFoundError(error.message);
+    }
+    throw error;
+  }
+});
+
 module.exports = {
   createFeature,
   listFeatures,
@@ -214,6 +251,7 @@ module.exports = {
   deleteFeature,
   enableFeatureForTenant,
   disableFeatureForTenant,
+  toggleFeatureForTenant,
   getTenantFeatures,
   checkFeatureForTenant
 };

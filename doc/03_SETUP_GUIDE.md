@@ -370,7 +370,7 @@ After starting the application, you need to create the first Super Admin user.
 curl -X POST http://localhost:3000/api/auth/request-otp \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "superadmin@mscan.com",
+    "email": "sumantmishra511@gmail.com",
     "userType": "SUPER_ADMIN"
   }'
 
@@ -380,7 +380,7 @@ curl -X POST http://localhost:3000/api/auth/request-otp \
 curl -X POST http://localhost:3000/api/auth/verify-otp \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "superadmin@mscan.com",
+    "email": "sumantmishra511@gmail.com",
     "otp": "123456"
   }'
 ```
@@ -401,7 +401,7 @@ INSERT INTO users (
   created_at
 ) VALUES (
   gen_random_uuid(),
-  'superadmin@mscan.com',
+  'sumantmishra511@gmail.com',
   'SUPER_ADMIN',
   true,
   true,
@@ -415,7 +415,7 @@ SELECT
   '123456',
   NOW() + INTERVAL '5 minutes'
 FROM users
-WHERE email = 'superadmin@mscan.com';
+WHERE email = 'sumantmishra511@gmail.com';
 ```
 
 ### 2. Create First Tenant

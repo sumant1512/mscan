@@ -14,12 +14,12 @@ describe('Tenant Subdomain Integration Tests', () => {
     // Note: This assumes you have a test database with a super admin user
     const loginRes = await request(app)
       .post('/api/auth/request-otp')
-      .send({ email: 'superadmin@mscan.com' });
-    
+      .send({ email: 'sumantmishra511@gmail.com' });
+
     // In real tests, you'd verify OTP from database or use a test OTP
     const otpRes = await request(app)
       .post('/api/auth/verify-otp')
-      .send({ email: 'superadmin@mscan.com', otp: '123456' });
+      .send({ email: 'sumantmishra511@gmail.com', otp: '123456' });
     
     superAdminToken = otpRes.body.data.accessToken;
   });

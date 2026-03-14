@@ -10,7 +10,7 @@ export const TEST_CONFIG = {
 
   // Super Admin Credentials
   superAdmin: {
-    email: 'admin@mscan.com',
+    email: 'sumantmishra511@gmail.com',
     expectedRole: 'SUPER_ADMIN',
     baseUrl: 'http://localhost:4200'
   },

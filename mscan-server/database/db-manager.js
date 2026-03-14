@@ -128,7 +128,8 @@ async function setupDatabase() {
     log('   ✓ Database created', 'green');
     log('   ✓ All tables created', 'green');
     log('   ✓ Migrations applied', 'green');
-    log('   ✓ Super Admin user: admin@mscan.com', 'green');
+    log('   ✓ Super Admin user: sumantmishra511@gmail.com', 'green');
+    log('   ✓ Super Admin user: kumarbhaskar419@gmail.com', 'green');
     log('\n💡 Next: Start your server and login!\n', 'cyan');
 
   } catch (err) {

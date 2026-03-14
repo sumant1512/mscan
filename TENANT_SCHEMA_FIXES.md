@@ -236,7 +236,7 @@ ALTER TABLE tenants ADD CONSTRAINT fk_tenants_created_by
     "contact_person": "Sumant Mishra",
     "created_by": "123e4567-e89b-12d3-a456-426614174000", // ✅ Super admin UUID
     "created_by_name": "John Doe", // ✅ Creator name
-    "created_by_email": "admin@mscan.com", // ✅ Creator email
+    "created_by_email": "sumantmishra511@gmail.com", // ✅ Creator email
     "email": "sumant@mscan.com",
     ...
   }

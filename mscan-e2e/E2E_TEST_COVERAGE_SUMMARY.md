@@ -262,7 +262,7 @@ npm run report
 - [ ] Frontend server running (`http://localhost:4200`)
 - [ ] Database seeded with test data
 - [ ] Test tenant created (subdomain: `testenant`)
-- [ ] Super admin user exists (`superadmin@mscan.com`)
+- [ ] Super admin user exists (`sumantmishra511@gmail.com`)
 
 ### Test Data Setup
 ```bash

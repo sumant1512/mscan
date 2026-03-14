@@ -40,7 +40,7 @@ echo "1. Logging in as Super Admin..."
 LOGIN_RESPONSE=$(curl -s -X POST "$BASE_URL/auth/login" \
   -H "$CONTENT_TYPE" \
   -d '{
-    "email": "superadmin@mscan.com",
+    "email": "sumantmishra511@gmail.com",
     "password": "Admin@123"
   }')
 

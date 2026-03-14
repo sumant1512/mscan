@@ -7,33 +7,35 @@ import { SubdomainService } from './subdomain.service';
 describe('AuthService Subdomain Tests', () => {
   let service: AuthService;
   let httpMock: HttpTestingController;
-  let router: jasmine.SpyObj<Router>;
-  let subdomainService: jasmine.SpyObj<SubdomainService>;
+  let router: { navigate: jest.Mock };
+  let subdomainService: {
+    getApiBaseUrl: jest.Mock;
+    getCurrentSubdomain: jest.Mock;
+    redirectToSubdomain: jest.Mock;
+    redirectToRootDomain: jest.Mock;
+  };
 
   beforeEach(() => {
-    const routerSpy = jasmine.createSpyObj('Router', ['navigate']);
-    const subdomainServiceSpy = jasmine.createSpyObj('SubdomainService', [
-      'getApiBaseUrl', 
-      'getCurrentSubdomain', 
-      'redirectToSubdomain',
-      'redirectToRootDomain'
-    ]);
-    subdomainServiceSpy.getApiBaseUrl.and.returnValue('http://test-tenant.localhost:3000/api');
+    router = { navigate: jest.fn() };
+    subdomainService = {
+      getApiBaseUrl: jest.fn().mockReturnValue('http://test-tenant.localhost:3000/api'),
+      getCurrentSubdomain: jest.fn(),
+      redirectToSubdomain: jest.fn(),
+      redirectToRootDomain: jest.fn()
+    };
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
       providers: [
         AuthService,
-        { provide: Router, useValue: routerSpy },
-        { provide: SubdomainService, useValue: subdomainServiceSpy }
+        { provide: Router, useValue: router },
+        { provide: SubdomainService, useValue: subdomainService }
       ]
     });
 
     service = TestBed.inject(AuthService);
     httpMock = TestBed.inject(HttpTestingController);
-    router = TestBed.inject(Router) as jasmine.SpyObj<Router>;
-    subdomainService = TestBed.inject(SubdomainService) as jasmine.SpyObj<SubdomainService>;
-    
+
     // Clear localStorage
     localStorage.clear();
   });
@@ -55,7 +57,7 @@ describe('AuthService Subdomain Tests', () => {
         }
       };
 
-      subdomainService.getCurrentSubdomain.and.returnValue(null);
+      subdomainService.getCurrentSubdomain.mockReturnValue(null);
 
       service.verifyOTP('test@example.com', '123456').subscribe(() => {
         expect(subdomainService.redirectToSubdomain).toHaveBeenCalledWith('test-tenant', '/tenant/dashboard');
@@ -77,7 +79,7 @@ describe('AuthService Subdomain Tests', () => {
         }
       };
 
-      subdomainService.getCurrentSubdomain.and.returnValue('test-tenant');
+      subdomainService.getCurrentSubdomain.mockReturnValue('test-tenant');
 
       service.verifyOTP('test@example.com', '123456').subscribe(() => {
         expect(subdomainService.redirectToSubdomain).not.toHaveBeenCalled();
@@ -119,7 +121,7 @@ describe('AuthService Subdomain Tests', () => {
         }
       };
 
-      subdomainService.getCurrentSubdomain.and.returnValue('test-tenant');
+      subdomainService.getCurrentSubdomain.mockReturnValue('test-tenant');
 
       service.verifyOTP('test@example.com', '123456').subscribe(() => {
         expect(localStorage.getItem('tms_tenant_subdomain')).toBe('test-tenant');
@@ -135,7 +137,7 @@ describe('AuthService Subdomain Tests', () => {
     it('should redirect to root domain if on subdomain', () => {
       localStorage.setItem('tms_tenant_subdomain', 'test-tenant');
       localStorage.setItem('tms_refresh_token', 'test-refresh-token');
-      subdomainService.getCurrentSubdomain.and.returnValue('test-tenant');
+      subdomainService.getCurrentSubdomain.mockReturnValue('test-tenant');
 
       service.logout();
 
@@ -144,7 +146,7 @@ describe('AuthService Subdomain Tests', () => {
 
     it('should navigate normally if on root domain', () => {
       localStorage.setItem('tms_refresh_token', 'test-refresh-token');
-      subdomainService.getCurrentSubdomain.and.returnValue(null);
+      subdomainService.getCurrentSubdomain.mockReturnValue(null);
 
       service.logout();
 
@@ -155,7 +157,7 @@ describe('AuthService Subdomain Tests', () => {
     it('should clear subdomain from localStorage', () => {
       localStorage.setItem('tms_tenant_subdomain', 'test-tenant');
       localStorage.setItem('tms_refresh_token', 'test-refresh-token');
-      subdomainService.getCurrentSubdomain.and.returnValue(null);
+      subdomainService.getCurrentSubdomain.mockReturnValue(null);
 
       service.logout();
 
@@ -167,20 +169,20 @@ describe('AuthService Subdomain Tests', () => {
     it('should redirect if subdomain mismatch detected', () => {
       localStorage.setItem('tms_access_token', 'test-token');
       localStorage.setItem('tms_tenant_subdomain', 'correct-tenant');
-      subdomainService.getCurrentSubdomain.and.returnValue('wrong-tenant');
+      subdomainService.getCurrentSubdomain.mockReturnValue('wrong-tenant');
 
       // Create new service instance to trigger constructor
-      const newService = new AuthService(TestBed.inject(HttpClientTestingModule) as any, router, subdomainService);
+      const newService = new AuthService(TestBed.inject(HttpClientTestingModule) as any, router as any, subdomainService as any);
 
-      expect(subdomainService.redirectToSubdomain).toHaveBeenCalledWith('correct-tenant', jasmine.any(String));
+      expect(subdomainService.redirectToSubdomain).toHaveBeenCalledWith('correct-tenant', expect.any(String));
     });
 
     it('should not redirect if subdomains match', () => {
       localStorage.setItem('tms_access_token', 'test-token');
       localStorage.setItem('tms_tenant_subdomain', 'test-tenant');
-      subdomainService.getCurrentSubdomain.and.returnValue('test-tenant');
+      subdomainService.getCurrentSubdomain.mockReturnValue('test-tenant');
 
-      const newService = new AuthService(TestBed.inject(HttpClientTestingModule) as any, router, subdomainService);
+      const newService = new AuthService(TestBed.inject(HttpClientTestingModule) as any, router as any, subdomainService as any);
 
       expect(subdomainService.redirectToSubdomain).not.toHaveBeenCalled();
     });
@@ -189,15 +191,15 @@ describe('AuthService Subdomain Tests', () => {
   describe('getTenantSubdomain', () => {
     it('should return subdomain from localStorage', () => {
       localStorage.setItem('tms_tenant_subdomain', 'my-tenant');
-      
+
       const subdomain = service.getTenantSubdomain();
-      
+
       expect(subdomain).toBe('my-tenant');
     });
 
     it('should return null if no subdomain stored', () => {
       const subdomain = service.getTenantSubdomain();
-      
+
       expect(subdomain).toBeNull();
     });
   });

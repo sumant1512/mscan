@@ -58,7 +58,7 @@ POST /auth/request-otp
 Content-Type: application/json
 
 {
-  "email": "admin@mscan.com"
+  "email": "sumantmishra511@gmail.com"
 }
 
 Response:
@@ -77,7 +77,7 @@ POST /auth/verify-otp
 Content-Type: application/json
 
 {
-  "email": "admin@mscan.com",
+  "email": "sumantmishra511@gmail.com",
   "otp": "123456"
 }
 
@@ -122,7 +122,7 @@ Response:
   "success": true,
   "data": {
     "id": "uuid",
-    "email": "admin@mscan.com",
+    "email": "sumantmishra511@gmail.com",
     "fullName": "System Administrator",
     "role": "SUPER_ADMIN",
     "permissions": [
@@ -359,7 +359,7 @@ Response:
   "success": true,
   "data": {
     "id": "uuid",
-    "email": "admin@mscan.com",
+    "email": "sumantmishra511@gmail.com",
     "fullName": "System Administrator",
     "phone": null,
     "role": "SUPER_ADMIN",
@@ -386,7 +386,7 @@ Response:
   "message": "Profile updated successfully",
   "data": {
     "id": "uuid",
-    "email": "admin@mscan.com",
+    "email": "sumantmishra511@gmail.com",
     "fullName": "Updated Name",
     "phone": "+9876543210",
     "role": "SUPER_ADMIN"
@@ -1333,7 +1333,7 @@ Response:
 ## Default Users
 
 ### Super Admin
-- **Email:** admin@mscan.com
+- **Email:** sumantmishra511@gmail.com
 - **Login:** Use OTP authentication
 
 ### Test Tenant Admin (after creating customer)
@@ -1355,7 +1355,7 @@ Response:
 # Full login flow
 OTP_RESPONSE=$(curl -s -X POST http://localhost:3000/api/auth/request-otp \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@mscan.com"}')
+  -d '{"email":"sumantmishra511@gmail.com"}')
 
 # Check logs for OTP
 tail -1 mscan-server/server.log
@@ -1363,7 +1363,7 @@ tail -1 mscan-server/server.log
 # Verify OTP (replace 123456 with actual OTP)
 LOGIN_RESPONSE=$(curl -s -X POST http://localhost:3000/api/auth/verify-otp \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@mscan.com","otp":"123456"}')
+  -d '{"email":"sumantmishra511@gmail.com","otp":"123456"}')
 
 # Extract token
 TOKEN=$(echo $LOGIN_RESPONSE | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)

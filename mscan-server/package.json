@@ -28,7 +28,7 @@
 
     "test:integration": "jest --testPathPattern=integration.test.js",
     "test:unit": "jest --testPathPattern=\\.test\\.js$ --testPathIgnorePatterns=e2e.test.js,integration.test.js",
-
+    
     "db": "node database/db-manager.js",
     "db:setup": "node database/db-manager.js setup",
     "db:clean-tenant": "node database/db-manager.js clean-tenant",
@@ -57,6 +57,11 @@
     "logistics",
     "backend"
   ],
+  "engines": {
+    "node": "22.22.0",
+    "npm": ">=10.9.4"
+  },
+  "packageManager": "npm@10.9.4",
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -66,6 +71,7 @@
     "exceljs": "^4.4.0",
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
+    "googleapis": "^171.4.0",
     "helmet": "^7.1.0",
     "joi": "^17.11.0",
     "jsonwebtoken": "^9.0.2",

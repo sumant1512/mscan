@@ -207,3 +207,95 @@
   font-size: 0.8750rem;
   color: #6b7280;
 }
+
+/* App limit card */
+.stat-limit-of {
+  font-size: 1.25rem;
+  color: #9ca3af;
+  margin: 0 0.25rem;
+  font-weight: 400;
+}
+
+.app-limit-actions {
+  margin-top: 0.75rem;
+}
+
+.btn-edit-limit {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  background: transparent;
+  border: 1px solid #2563eb;
+  color: #2563eb;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-edit-limit:hover {
+  background: #2563eb;
+  color: white;
+}
+
+.app-limit-edit {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.limit-input {
+  width: 5rem;
+  text-align: center;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
+  font-size: 1rem;
+}
+
+.limit-edit-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-save-limit {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.btn-save-limit:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.btn-cancel-limit {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  background: white;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.alert-inline {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.alert-success-inline {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.alert-error-inline {
+  background: #fee2e2;
+  color: #991b1b;
+}

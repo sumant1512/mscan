@@ -20,6 +20,8 @@ export class VerificationAppsEffects {
           map((response) =>
             VerificationAppsActions.loadVerificationAppsSuccess({
               apps: response?.data?.apps || [],
+              appsUsed: response?.data?.apps_used ?? 0,
+              appsLimit: response?.data?.apps_limit ?? 1,
             }),
           ),
           catchError((error) =>

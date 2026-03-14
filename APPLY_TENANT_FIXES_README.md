@@ -61,7 +61,7 @@ Use this if you have existing data (tenants, users, coupons, etc.) that you want
      "contact_person": "Hemant Mishra",  // ✅ Only contact_person
      "created_by": "uuid-of-super-admin", // ✅ Populated
      "created_by_name": "Super Admin",    // ✅ Populated
-     "created_by_email": "admin@mscan.com" // ✅ Populated
+     "created_by_email": "sumantmishra511@gmail.com" // ✅ Populated
    }
    ```
 
@@ -216,7 +216,7 @@ After running the migration, verify:
   "contact_person": "Hemant Mishra",  // ✅ Single field
   "created_by": "abc-123-uuid",       // ✅ Super admin UUID
   "created_by_name": "Admin Name",    // ✅ Super admin name
-  "created_by_email": "admin@mscan.com" // ✅ Super admin email
+  "created_by_email": "sumantmishra511@gmail.com" // ✅ Super admin email
 }
 ```
 

@@ -114,7 +114,7 @@ npm run db:reset
 - Creates database (if not exists)
 - Creates all tables
 - Runs migrations
-- Creates Super Admin (admin@mscan.com)
+- Creates Super Admins (sumantmishra511@gmail.com, kumarbhaskar419@gmail.com)
 
 ### `npm run db:clean-tenant`
 - **DELETES**: All tenant users, products, coupons, scans

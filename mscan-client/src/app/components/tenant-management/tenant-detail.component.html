@@ -105,10 +105,38 @@
         <div class="stat-label">All Time</div>
       </div>
 
-      <div class="card stats-card">
+      <div class="card stats-card app-limit-card">
         <h3>Verification Apps</h3>
-        <div class="stat-value">{{ tenant.verification_apps_count || 0 }}</div>
-        <div class="stat-label">Configured Apps</div>
+        <div class="stat-value">
+          {{ tenant.verification_apps_count || 0 }}
+          <span class="stat-limit-of">of</span>
+          {{ tenant.settings?.max_verification_apps ?? 1 }}
+        </div>
+        <div class="stat-label">Apps Used / Limit</div>
+
+        <div *ngIf="appLimitSuccess" class="alert-inline alert-success-inline">{{ appLimitSuccess }}</div>
+        <div *ngIf="appLimitError" class="alert-inline alert-error-inline">{{ appLimitError }}</div>
+
+        <div *ngIf="!editingAppLimit" class="app-limit-actions">
+          <button class="btn-edit-limit" (click)="startEditAppLimit()">Edit Limit</button>
+        </div>
+
+        <div *ngIf="editingAppLimit" class="app-limit-edit">
+          <input
+            type="number"
+            [(ngModel)]="newAppLimit"
+            min="1"
+            step="1"
+            class="limit-input">
+          <div class="limit-edit-buttons">
+            <button class="btn-save-limit" (click)="saveAppLimit()" [disabled]="savingAppLimit">
+              {{ savingAppLimit ? 'Saving...' : 'Save' }}
+            </button>
+            <button class="btn-cancel-limit" (click)="cancelEditAppLimit()" [disabled]="savingAppLimit">
+              Cancel
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

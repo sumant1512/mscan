@@ -55,7 +55,7 @@ const requestOTP = asyncHandler(async (req, res) => {
     );
 
     if (userResult.rows.length === 0) {
-      throw new NotFoundError('User');
+      throw new NotFoundError('User not found. Please check your email or contact your administrator.');
     }
   }
 
@@ -76,7 +76,7 @@ const requestOTP = asyncHandler(async (req, res) => {
 
   // Send OTP via email
   try {
-    await emailService.sendOTPEmail(email, otp);
+    await emailService.sendOTPEmail(email, "Your Login OTP", otp);
   } catch (emailError) {
     console.error('Email sending failed:', emailError);
     throw new Error('Failed to send OTP. Please try again later');

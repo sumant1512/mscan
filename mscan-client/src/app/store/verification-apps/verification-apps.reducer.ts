@@ -12,7 +12,9 @@ export const initialState: VerificationAppsState = {
   successMessage: null,
   lastCreatedAppId: null,
   lastUpdatedAppId: null,
-  lastDeletedAppId: null
+  lastDeletedAppId: null,
+  appsUsed: null,
+  appsLimit: null
 };
 
 export const verificationAppsReducer = createReducer(
@@ -25,12 +27,14 @@ export const verificationAppsReducer = createReducer(
     error: null
   })),
 
-  on(VerificationAppsActions.loadVerificationAppsSuccess, (state, { apps }) => ({
+  on(VerificationAppsActions.loadVerificationAppsSuccess, (state, { apps, appsUsed, appsLimit }) => ({
     ...state,
     apps,
     loading: false,
     loaded: true,
-    error: null
+    error: null,
+    appsUsed,
+    appsLimit
   })),
 
   on(VerificationAppsActions.loadVerificationAppsFailure, (state, { error }) => ({

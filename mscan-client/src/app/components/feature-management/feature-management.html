@@ -1,0 +1,140 @@
+<div class="feature-management">
+  <h1>Feature Management</h1>
+
+  <!-- Error Message -->
+  <div class="error-message" *ngIf="error">
+    {{ error }}
+  </div>
+
+  <!-- Create Feature Button -->
+  <div class="actions">
+    <button class="btn-primary" (click)="showCreateForm = !showCreateForm">
+      {{ showCreateForm ? 'Cancel' : 'Create New Feature' }}
+    </button>
+  </div>
+
+  <!-- Create Feature Form -->
+  <div class="create-form" *ngIf="showCreateForm">
+    <h3>Create New Feature</h3>
+    <form (ngSubmit)="createFeature()" #featureForm="ngForm">
+      <div class="form-group">
+        <label for="code">Feature Code:</label>
+        <input
+          type="text"
+          id="code"
+          [(ngModel)]="newFeature.code"
+          name="code"
+          required
+          placeholder="e.g., advanced-reporting"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="name">Feature Name:</label>
+        <input
+          type="text"
+          id="name"
+          [(ngModel)]="newFeature.name"
+          name="name"
+          required
+          placeholder="e.g., Advanced Reporting"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="description">Description:</label>
+        <textarea
+          id="description"
+          [(ngModel)]="newFeature.description"
+          name="description"
+          rows="3"
+          placeholder="Describe what this feature does"
+        ></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <input
+            type="checkbox"
+            [(ngModel)]="newFeature.default_enabled"
+            name="default_enabled"
+          >
+          Enable by default for new tenants
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn-primary" [disabled]="!featureForm.valid">Create Feature</button>
+        <button type="button" class="btn-secondary" (click)="showCreateForm = false">Cancel</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Features List -->
+  <div class="features-section" *ngIf="!loading">
+    <h2>Features ({{ features.length }})</h2>
+
+    <div class="features-grid">
+      <div class="feature-card" *ngFor="let feature of features">
+        <div class="feature-header">
+          <h3>{{ feature.name }}</h3>
+          <span class="feature-code">{{ feature.code }}</span>
+        </div>
+
+        <p class="feature-description" *ngIf="feature.description">{{ feature.description }}</p>
+
+        <div class="feature-meta">
+          <span class="status" [class.active]="feature.is_active">
+            {{ feature.is_active ? 'Active' : 'Inactive' }}
+          </span>
+          <span class="default" *ngIf="feature.default_enabled">Default: On</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tenant Feature Assignment -->
+  <div class="tenant-section">
+    <h2>Tenant Feature Assignment</h2>
+
+    <div class="tenant-selector">
+      <label for="tenant-select">Select Tenant:</label>
+      <select
+        id="tenant-select"
+        [(ngModel)]="selectedTenantId"
+        (change)="selectTenant(selectedTenantId!)"
+      >
+        <option value="">Choose a tenant...</option>
+        <option *ngFor="let tenant of tenants" [value]="tenant.id">
+          {{ tenant.tenant_name }} ({{ tenant.subdomain_slug }})
+        </option>
+      </select>
+    </div>
+
+    <div class="tenant-features" *ngIf="selectedTenantId && tenantFeatures[selectedTenantId]">
+      <h3>Features for {{ getTenantName(selectedTenantId) }}</h3>
+
+      <div class="feature-toggles">
+        <div class="feature-toggle" *ngFor="let tenantFeature of tenantFeatures[selectedTenantId]">
+          <div class="toggle-info">
+            <span class="feature-name">{{ tenantFeature.name }}</span>
+            <span class="feature-code">{{ tenantFeature.code }}</span>
+          </div>
+          <label class="toggle">
+            <input
+              type="checkbox"
+              [checked]="tenantFeature.enabled_for_tenant"
+              (change)="toggleFeatureForTenant(selectedTenantId!, tenantFeature)"
+            >
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" *ngIf="loading">
+    Loading features...
+  </div>
+</div>

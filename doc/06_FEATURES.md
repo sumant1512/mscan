@@ -1,6 +1,7 @@
 # MScan Features Guide
 
 ## Table of Contents
+
 1. [Overview](#overview)
 2. [User Roles](#user-roles)
 3. [Super Admin Features](#super-admin-features)
@@ -19,6 +20,7 @@ MScan is a multi-tenant SaaS platform that provides different feature sets based
 ### Platform Purpose
 
 MScan enables businesses to:
+
 - Manage product catalogs with flexible templates
 - Generate and distribute QR code coupons
 - Track coupon redemption through multiple verification apps
@@ -31,6 +33,7 @@ MScan enables businesses to:
 ## User Roles
 
 ### 1. Super Admin
+
 **Platform Administrator**
 
 - Manages the entire MScan platform
@@ -44,6 +47,7 @@ MScan enables businesses to:
 ---
 
 ### 2. Tenant Admin
+
 **Business Owner/Manager**
 
 - Manages their own tenant account
@@ -57,6 +61,7 @@ MScan enables businesses to:
 ---
 
 ### 3. Tenant User
+
 **Employee with Limited Access**
 
 - Limited access within their tenant
@@ -75,6 +80,7 @@ Super Admins have platform-level access to manage the MScan system.
 ### 1. Tenant Management
 
 **Create New Tenants**
+
 - **What:** Onboard new business accounts to the platform
 - **How:**
   - Navigate to Super Admin > Tenants > Create New
@@ -88,6 +94,7 @@ Super Admins have platform-level access to manage the MScan system.
   - Submit to create tenant and send invitation email
 
 **View All Tenants**
+
 - **What:** See list of all business accounts
 - **Features:**
   - Search by tenant name or subdomain
@@ -96,6 +103,7 @@ Super Admins have platform-level access to manage the MScan system.
   - Pagination for large tenant lists
 
 **Edit Tenant Details**
+
 - **What:** Modify tenant information and settings
 - **Capabilities:**
   - Update tenant name and contact information
@@ -104,6 +112,7 @@ Super Admins have platform-level access to manage the MScan system.
   - Change subdomain (requires system migration)
 
 **View Tenant Details**
+
 - **What:** Detailed view of a specific tenant
 - **Information Displayed:**
   - Tenant profile information
@@ -115,6 +124,7 @@ Super Admins have platform-level access to manage the MScan system.
   - Analytics summary
 
 **Activate/Deactivate Tenants**
+
 - **What:** Control tenant access to the platform
 - **Use Cases:**
   - Suspend accounts for non-payment
@@ -122,6 +132,7 @@ Super Admins have platform-level access to manage the MScan system.
   - Reactivate after issue resolution
 
 **Delete Tenants**
+
 - **What:** Permanently remove tenant accounts
 - **Warnings:** Cannot be undone, all tenant data is deleted
 - **Prerequisites:** Tenant must have no active coupons or pending transactions
@@ -131,6 +142,7 @@ Super Admins have platform-level access to manage the MScan system.
 ### 2. Tenant Admin Management
 
 **Create Tenant Admins**
+
 - **What:** Add admin users to existing tenants
 - **Process:**
   - Select tenant from dropdown
@@ -139,6 +151,7 @@ Super Admins have platform-level access to manage the MScan system.
   - Sends OTP invitation email automatically
 
 **View Tenant Admins**
+
 - **What:** List all Tenant Admin users
 - **Filters:**
   - Filter by tenant
@@ -146,6 +159,7 @@ Super Admins have platform-level access to manage the MScan system.
   - View last login and activity status
 
 **View Tenant Admin Details**
+
 - **What:** Detailed information about a Tenant Admin
 - **Information:**
   - Admin profile
@@ -155,6 +169,7 @@ Super Admins have platform-level access to manage the MScan system.
   - Last login timestamp
 
 **Deactivate/Activate Tenant Admins**
+
 - **What:** Control Tenant Admin access
 - **Use Cases:**
   - Temporary suspension
@@ -166,6 +181,7 @@ Super Admins have platform-level access to manage the MScan system.
 ### 3. Credit Management System
 
 **View All Credit Requests**
+
 - **What:** See pending credit requests from all tenants
 - **Display:**
   - Request amount
@@ -175,10 +191,12 @@ Super Admins have platform-level access to manage the MScan system.
   - Current tenant credit balance
 
 **Filter Credit Requests**
+
 - **What:** Filter pending requests by tenant
 - **Purpose:** Focus on specific tenant's requests
 
 **Approve Credit Requests**
+
 - **What:** Grant credits to requesting tenants
 - **Process:**
   - Review request details and justification
@@ -188,6 +206,7 @@ Super Admins have platform-level access to manage the MScan system.
   - Transaction recorded in audit log
 
 **Reject Credit Requests**
+
 - **What:** Deny credit requests with reason
 - **Process:**
   - Click "Reject" button
@@ -196,6 +215,7 @@ Super Admins have platform-level access to manage the MScan system.
   - Request archived with status "REJECTED"
 
 **View Credit Transaction History**
+
 - **What:** Complete audit trail of all credit transactions
 - **Information:**
   - Transaction type (CREDIT, DEBIT, PENDING)
@@ -214,6 +234,7 @@ Super Admins have platform-level access to manage the MScan system.
 ### 4. System Analytics
 
 **System-Wide Statistics**
+
 - **What:** High-level metrics across all tenants
 - **Metrics:**
   - Total tenants (active/inactive)
@@ -224,6 +245,7 @@ Super Admins have platform-level access to manage the MScan system.
   - Platform revenue metrics
 
 **Tenant Performance Comparison**
+
 - **What:** Compare tenant activity and usage
 - **Metrics:**
   - Coupons generated per tenant
@@ -232,6 +254,7 @@ Super Admins have platform-level access to manage the MScan system.
   - Most active tenants
 
 **System Health Monitoring**
+
 - **What:** Monitor platform performance
 - **Metrics:**
   - API response times
@@ -244,6 +267,7 @@ Super Admins have platform-level access to manage the MScan system.
 ### 5. User Management
 
 **View All Users**
+
 - **What:** Platform-wide user list
 - **Capabilities:**
   - Filter by tenant
@@ -252,6 +276,7 @@ Super Admins have platform-level access to manage the MScan system.
   - View user activity
 
 **User Activity Monitoring**
+
 - **What:** Track user actions across the platform
 - **Information:**
   - Last login timestamps
@@ -264,6 +289,7 @@ Super Admins have platform-level access to manage the MScan system.
 ### Super Admin Dashboard
 
 **Key Metrics Displayed:**
+
 - Total Tenants
 - Active Tenants
 - Pending Credit Requests
@@ -272,10 +298,77 @@ Super Admins have platform-level access to manage the MScan system.
 - Recent Activity Feed
 
 **Quick Actions:**
+
 - Create New Tenant
 - View Pending Credit Requests
 - View All Tenants
 - View System Analytics
+
+### 6. Feature Management
+
+**Overview**
+
+- **What:** Control feature availability across tenants for phased rollouts and premium features
+- **Purpose:** Enable controlled release of new functionality, manage premium features, and customize tenant experiences
+- **Access:** Super Admin only
+
+**Create New Features**
+
+- **What:** Define globally available features that can be enabled per tenant
+- **Process:**
+  1. Navigate to Super Admin > Features > Create Feature
+  2. Enter feature details:
+     - **Feature Code**: Unique identifier (e.g., `advanced-reporting`, `bulk-operations`)
+     - **Name**: Human-readable name (e.g., "Advanced Reporting")
+     - **Description**: Detailed explanation of what the feature provides
+     - **Default Enabled**: Whether new tenants automatically get this feature
+  3. Save to create the feature definition
+
+**Manage Feature List**
+
+- **What:** View and manage all defined features
+- **Capabilities:**
+  - Search features by code or name
+  - Filter by status (Active/Inactive)
+  - Edit feature details (name, description, default enabled status)
+  - Activate/deactivate features globally
+  - View which tenants have each feature enabled
+
+**Enable Features for Tenants**
+
+- **What:** Grant specific tenants access to features
+- **Process:**
+  1. Navigate to Super Admin > Features > Tenant Assignment
+  2. Select a tenant from the list
+  3. View all available features with current status
+  4. Toggle features on/off for the selected tenant
+  5. Changes apply immediately
+
+**Bulk Feature Operations**
+
+- **What:** Enable/disable features for multiple tenants at once
+- **Use Cases:**
+  - Roll out new features to beta tenants
+  - Enable premium features for paying customers
+  - Disable features during maintenance
+  - Gradual feature rollout across tenant base
+
+**Feature Analytics**
+
+- **What:** Monitor feature adoption and usage
+- **Metrics:**
+  - Number of tenants with each feature enabled
+  - Feature enablement over time
+  - Most/least used features
+  - Feature request patterns
+
+**Best Practices**
+
+- **Phased Rollouts**: Enable new features for power users first, then gradually expand
+- **Premium Features**: Set `default_enabled: false` and manually enable for subscribers
+- **Testing**: Always test features in disabled state to ensure graceful degradation
+- **Communication**: Notify tenants when new features become available
+- **Monitoring**: Watch for issues after feature enablement
 
 ---
 
@@ -286,6 +379,7 @@ Tenant Admins manage their business account including products, coupons, users, 
 ### 1. Product Catalog Management
 
 **Create Products**
+
 - **What:** Add new products to the catalog
 - **Process:**
   1. Select product template (defines structure)
@@ -305,6 +399,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   6. Save product
 
 **View Products**
+
 - **What:** List all products in the catalog
 - **Features:**
   - Search by product name
@@ -316,6 +411,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - Quick actions (Edit, Delete, View Details)
 
 **Edit Products**
+
 - **What:** Modify existing products
 - **Capabilities:**
   - Update product information
@@ -325,6 +421,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - Change category/tags
 
 **Delete Products**
+
 - **What:** Remove products from catalog
 - **Restrictions:** Cannot delete if product has:
   - Active coupons
@@ -333,6 +430,7 @@ Tenant Admins manage their business account including products, coupons, users, 
 - **Warning:** Deletion cannot be undone
 
 **Product Templates**
+
 - **What:** Define reusable product structures
 - **Purpose:** Standardize product creation with predefined attributes
 - **Components:**
@@ -345,6 +443,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - "Retail Product" template with attributes: Brand, Material, Dimensions, Weight
 
 **Manage Categories**
+
 - **What:** Organize products into categories
 - **Features:**
   - Create/edit/delete categories
@@ -352,6 +451,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - Nested categories (subcategories)
 
 **Manage Tags**
+
 - **What:** Label products with tags for organization
 - **Features:**
   - Create/edit/delete tags
@@ -364,6 +464,7 @@ Tenant Admins manage their business account including products, coupons, users, 
 ### 2. Coupon Generation & Management
 
 **Generate Single Coupon**
+
 - **What:** Create one coupon for a product
 - **Process:**
   1. Select product
@@ -377,6 +478,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   6. Deducts 1 credit from tenant balance
 
 **Generate Batch Coupons**
+
 - **What:** Create multiple coupons at once (up to 10,000)
 - **Process:**
   1. Select product(s)
@@ -390,6 +492,7 @@ Tenant Admins manage their business account including products, coupons, users, 
 **Credit Cost:** 1 credit = 1 coupon
 
 **View All Coupons**
+
 - **What:** List all generated coupons
 - **Features:**
   - Search by coupon code
@@ -401,6 +504,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - Bulk selection for batch operations
 
 **Coupon Status Management**
+
 - **Statuses:**
   - **DRAFT** - Generated but not yet distributed
   - **PRINTED** - Marked as printed/distributed
@@ -415,6 +519,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - ACTIVE → EXPIRED (automatic when past expiration date)
 
 **Batch Activate Coupons**
+
 - **What:** Activate multiple coupons at once
 - **Process:**
   1. Filter coupons by status (DRAFT or PRINTED)
@@ -424,6 +529,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   5. Ready for scanning
 
 **Export Coupons**
+
 - **What:** Export coupon list to CSV or PDF
 - **Formats:**
   - **CSV** - Spreadsheet with coupon data
@@ -431,6 +537,7 @@ Tenant Admins manage their business account including products, coupons, users, 
 - **Filters Applied:** Export respects current search/filter criteria
 
 **Preview QR Codes**
+
 - **What:** View coupon QR codes
 - **Use Cases:**
   - Verify QR code generation
@@ -442,12 +549,14 @@ Tenant Admins manage their business account including products, coupons, users, 
 ### 3. Verification App Management
 
 **What are Verification Apps?**
+
 - Separate application instances that scan coupons
 - Examples: Mobile app, kiosk system, POS terminal, website
 - Each app has its own API key and configuration
 - Allows tracking of scans by source
 
 **Create Verification App**
+
 - **Process:**
   1. Navigate to Verification Apps > Configure New
   2. Fill in app details:
@@ -464,6 +573,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   5. System generates unique API key
 
 **View Verification Apps**
+
 - **What:** List all configured verification apps
 - **Display:**
   - App name and type
@@ -474,6 +584,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - Actions (Edit, View API Config, Regenerate Key, Delete)
 
 **Edit Verification App**
+
 - **What:** Modify app configuration
 - **Capabilities:**
   - Update app name and description
@@ -482,6 +593,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - Activate/deactivate app
 
 **View API Configuration**
+
 - **What:** Get integration details for developers
 - **Information Provided:**
   - API base URL
@@ -492,6 +604,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - Webhook payload format
 
 **Regenerate API Key**
+
 - **What:** Generate new API key for security
 - **Process:**
   - Click "Regenerate API Key"
@@ -500,6 +613,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - Update external applications with new key
 
 **Delete Verification App**
+
 - **What:** Remove verification app
 - **Restrictions:** Cannot delete if app has:
   - Active scans in progress
@@ -511,10 +625,12 @@ Tenant Admins manage their business account including products, coupons, users, 
 ### 4. Credit Management
 
 **View Credit Balance**
+
 - **What:** See current available credits
 - **Display:** Credit balance prominently shown in header and dashboard
 
 **Request Credits**
+
 - **What:** Submit request to Super Admin for more credits
 - **Process:**
   1. Navigate to Credits > Request Credits
@@ -528,6 +644,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   6. Receive email notification when approved/rejected
 
 **View Credit Transaction History**
+
 - **What:** Audit trail of credit usage
 - **Transaction Types:**
   - **CREDIT** - Credits added (approved requests)
@@ -545,6 +662,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - Date range filter
 
 **Credit Usage Tracking**
+
 - **What:** Monitor credit consumption
 - **Insights:**
   - Credits used this month
@@ -557,6 +675,7 @@ Tenant Admins manage their business account including products, coupons, users, 
 ### 5. User Management
 
 **Create Tenant Users**
+
 - **What:** Add employees to the tenant account
 - **Process:**
   1. Navigate to Users > Create User
@@ -569,6 +688,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   6. System sends OTP invitation email
 
 **View Tenant Users**
+
 - **What:** List all users in the tenant
 - **Features:**
   - Search by email
@@ -578,6 +698,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - View last login
 
 **Edit Tenant Users**
+
 - **What:** Modify user details
 - **Capabilities:**
   - Change user role
@@ -586,6 +707,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - Reset authentication (send new OTP)
 
 **Manage User Permissions**
+
 - **What:** Grant or revoke specific permissions
 - **Permission Categories:**
   - **Products:** VIEW_PRODUCTS, CREATE_PRODUCTS, EDIT_PRODUCTS, DELETE_PRODUCTS
@@ -602,6 +724,7 @@ Tenant Admins manage their business account including products, coupons, users, 
 - **Real-time Updates:** Changes take effect immediately
 
 **Delete Tenant Users**
+
 - **What:** Remove users from the tenant
 - **Restrictions:** Cannot delete:
   - Your own account (must be done by another admin)
@@ -609,6 +732,7 @@ Tenant Admins manage their business account including products, coupons, users, 
 - **Warning:** Cannot be undone, user loses access immediately
 
 **User Roles:**
+
 - **TENANT_ADMIN:** Full access to all tenant features, cannot be restricted by permissions
 - **TENANT_USER:** Limited access, permissions explicitly granted
 
@@ -617,6 +741,7 @@ Tenant Admins manage their business account including products, coupons, users, 
 ### 6. Analytics & Reporting
 
 **Tenant Analytics Dashboard**
+
 - **Key Metrics:**
   - Total Products
   - Total Coupons Generated
@@ -626,6 +751,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - Credit Balance and Usage Trend
 
 **Coupon Performance Analytics**
+
 - **Charts:**
   - Coupons generated over time (line chart)
   - Scans per day (bar chart)
@@ -633,6 +759,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - Top performing products (table)
 
 **Product Analytics**
+
 - **Metrics:**
   - Most popular products (by coupons generated)
   - Products with highest redemption rates
@@ -640,6 +767,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - Product category breakdown
 
 **Scan Analytics**
+
 - **Metrics:**
   - Scans by verification app
   - Scans by time of day
@@ -647,6 +775,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - Geographic distribution (if available)
 
 **Date Range Selection**
+
 - **What:** Filter analytics by time period
 - **Options:**
   - Last 7 days
@@ -656,6 +785,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - Custom date range
 
 **Export Reports**
+
 - **What:** Download analytics data
 - **Formats:**
   - CSV (raw data)
@@ -671,6 +801,7 @@ Tenant Admins manage their business account including products, coupons, users, 
 ### 7. Scan History
 
 **View All Scans**
+
 - **What:** List of all coupon scans
 - **Information:**
   - Scan timestamp
@@ -687,6 +818,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - Search by coupon code
 
 **Scan Details**
+
 - **What:** Detailed information about a specific scan
 - **Information:**
   - Full scan record
@@ -700,6 +832,7 @@ Tenant Admins manage their business account including products, coupons, users, 
 ### 8. Profile & Settings
 
 **Update Profile**
+
 - **What:** Manage personal account settings
 - **Editable Fields:**
   - Full name
@@ -708,6 +841,7 @@ Tenant Admins manage their business account including products, coupons, users, 
   - Notification preferences
 
 **Tenant Settings**
+
 - **What:** Configure tenant-level settings
 - **Settings Available:**
   - Tenant name
@@ -717,10 +851,12 @@ Tenant Admins manage their business account including products, coupons, users, 
   - Default coupon expiration period
   - Email notification preferences
 
-**Change Password** *(Not applicable - OTP-based auth)*
+**Change Password** _(Not applicable - OTP-based auth)_
+
 - MScan uses OTP-based authentication, no passwords required
 
 **Notification Preferences**
+
 - **What:** Control email notifications
 - **Options:**
   - Credit balance low warning
@@ -734,6 +870,7 @@ Tenant Admins manage their business account including products, coupons, users, 
 ### Tenant Admin Dashboard
 
 **Key Metrics Displayed:**
+
 - Credit Balance
 - Total Products
 - Total Coupons Generated
@@ -743,6 +880,7 @@ Tenant Admins manage their business account including products, coupons, users, 
 - Active Verification Apps
 
 **Quick Actions:**
+
 - Create Product
 - Generate Coupons
 - Request Credits
@@ -750,6 +888,7 @@ Tenant Admins manage their business account including products, coupons, users, 
 - Manage Users
 
 **Recent Activity:**
+
 - Latest scans
 - Recent coupon activations
 - New users added
@@ -766,6 +905,7 @@ Tenant Users have restricted access based on permissions granted by Tenant Admin
 **Typical Tenant User Roles:**
 
 **1. Product Manager**
+
 - **Permissions:**
   - VIEW_PRODUCTS
   - CREATE_PRODUCTS
@@ -777,6 +917,7 @@ Tenant Users have restricted access based on permissions granted by Tenant Admin
   - Cannot delete products or manage users
 
 **2. Coupon Coordinator**
+
 - **Permissions:**
   - VIEW_COUPONS
   - CREATE_COUPONS
@@ -788,6 +929,7 @@ Tenant Users have restricted access based on permissions granted by Tenant Admin
   - Cannot delete coupons or modify users
 
 **3. Analyst**
+
 - **Permissions:**
   - VIEW_ANALYTICS
   - EXPORT_REPORTS
@@ -800,6 +942,7 @@ Tenant Users have restricted access based on permissions granted by Tenant Admin
   - Cannot create or modify anything
 
 **4. Store Manager**
+
 - **Permissions:**
   - VIEW_PRODUCTS
   - VIEW_COUPONS
@@ -812,24 +955,28 @@ Tenant Users have restricted access based on permissions granted by Tenant Admin
 
 ### Common Tenant User Actions
 
-**View Products** *(with VIEW_PRODUCTS permission)*
+**View Products** _(with VIEW_PRODUCTS permission)_
+
 - Access product list
 - Search and filter products
 - View product details
 - Cannot create, edit, or delete
 
-**View Coupons** *(with VIEW_COUPONS permission)*
+**View Coupons** _(with VIEW_COUPONS permission)_
+
 - Access coupon list
 - Search and filter coupons
 - View coupon details and QR codes
 - Cannot generate or activate coupons
 
-**View Analytics** *(with VIEW_ANALYTICS permission)*
+**View Analytics** _(with VIEW_ANALYTICS permission)_
+
 - Access analytics dashboard
 - View metrics and charts
 - Cannot export reports (unless EXPORT_REPORTS granted)
 
-**Request Credits** *(with REQUEST_CREDITS permission)*
+**Request Credits** _(with REQUEST_CREDITS permission)_
+
 - Submit credit requests
 - View request status
 - Cannot approve requests
@@ -838,47 +985,48 @@ Tenant Users have restricted access based on permissions granted by Tenant Admin
 
 ## Feature Comparison Matrix
 
-| Feature | Super Admin | Tenant Admin | Tenant User |
-|---------|-------------|--------------|-------------|
-| **Tenant Management** |
-| Create Tenants | ✅ | ❌ | ❌ |
-| Edit Tenants | ✅ | Own Only | ❌ |
-| View All Tenants | ✅ | Own Only | ❌ |
-| Delete Tenants | ✅ | ❌ | ❌ |
-| **Credit Management** |
-| Approve Credit Requests | ✅ | ❌ | ❌ |
-| Request Credits | ❌ | ✅ | Permission-Based |
-| View Credit History | All Tenants | Own Only | Permission-Based |
-| **Product Management** |
-| Create Products | ❌ | ✅ | Permission-Based |
-| Edit Products | ❌ | ✅ | Permission-Based |
-| Delete Products | ❌ | ✅ | ❌ |
-| View Products | ❌ | ✅ | Permission-Based |
-| Manage Templates | ❌ | ✅ | Permission-Based |
-| Manage Categories | ❌ | ✅ | Permission-Based |
-| **Coupon Management** |
-| Generate Coupons | ❌ | ✅ | Permission-Based |
-| Activate Coupons | ❌ | ✅ | Permission-Based |
-| Delete Coupons | ❌ | ✅ | ❌ |
-| View Coupons | ❌ | ✅ | Permission-Based |
-| Export Coupons | ❌ | ✅ | Permission-Based |
-| **User Management** |
-| Create Tenant Admins | ✅ | ❌ | ❌ |
-| Create Tenant Users | ❌ | ✅ | Permission-Based |
-| Assign Permissions | ❌ | ✅ | ❌ |
-| Deactivate Users | ✅ | Own Tenant | ❌ |
-| **Verification Apps** |
-| Create Apps | ❌ | ✅ | Permission-Based |
-| Generate API Keys | ❌ | ✅ | ❌ |
-| View Apps | ❌ | ✅ | Permission-Based |
-| **Analytics** |
-| System-Wide Analytics | ✅ | ❌ | ❌ |
-| Tenant Analytics | All Tenants | Own Only | Permission-Based |
-| Export Reports | ✅ | ✅ | Permission-Based |
-| **Scan History** |
-| View All Scans | All Tenants | Own Only | Permission-Based |
+| Feature                 | Super Admin | Tenant Admin | Tenant User      |
+| ----------------------- | ----------- | ------------ | ---------------- |
+| **Tenant Management**   |
+| Create Tenants          | ✅          | ❌           | ❌               |
+| Edit Tenants            | ✅          | Own Only     | ❌               |
+| View All Tenants        | ✅          | Own Only     | ❌               |
+| Delete Tenants          | ✅          | ❌           | ❌               |
+| **Credit Management**   |
+| Approve Credit Requests | ✅          | ❌           | ❌               |
+| Request Credits         | ❌          | ✅           | Permission-Based |
+| View Credit History     | All Tenants | Own Only     | Permission-Based |
+| **Product Management**  |
+| Create Products         | ❌          | ✅           | Permission-Based |
+| Edit Products           | ❌          | ✅           | Permission-Based |
+| Delete Products         | ❌          | ✅           | ❌               |
+| View Products           | ❌          | ✅           | Permission-Based |
+| Manage Templates        | ❌          | ✅           | Permission-Based |
+| Manage Categories       | ❌          | ✅           | Permission-Based |
+| **Coupon Management**   |
+| Generate Coupons        | ❌          | ✅           | Permission-Based |
+| Activate Coupons        | ❌          | ✅           | Permission-Based |
+| Delete Coupons          | ❌          | ✅           | ❌               |
+| View Coupons            | ❌          | ✅           | Permission-Based |
+| Export Coupons          | ❌          | ✅           | Permission-Based |
+| **User Management**     |
+| Create Tenant Admins    | ✅          | ❌           | ❌               |
+| Create Tenant Users     | ❌          | ✅           | Permission-Based |
+| Assign Permissions      | ❌          | ✅           | ❌               |
+| Deactivate Users        | ✅          | Own Tenant   | ❌               |
+| **Verification Apps**   |
+| Create Apps             | ❌          | ✅           | Permission-Based |
+| Generate API Keys       | ❌          | ✅           | ❌               |
+| View Apps               | ❌          | ✅           | Permission-Based |
+| **Analytics**           |
+| System-Wide Analytics   | ✅          | ❌           | ❌               |
+| Tenant Analytics        | All Tenants | Own Only     | Permission-Based |
+| Export Reports          | ✅          | ✅           | Permission-Based |
+| **Scan History**        |
+| View All Scans          | All Tenants | Own Only     | Permission-Based |
 
 **Legend:**
+
 - ✅ Full Access
 - ❌ No Access
 - Permission-Based: Access controlled by Tenant Admin via permission assignments
@@ -980,6 +1128,7 @@ Tenant Users have restricted access based on permissions granted by Tenant Admin
    - Can now generate coupons
 
 **Alternative: Rejection**
+
 - Super Admin clicks "Reject"
 - Provides rejection reason
 - Tenant Admin receives email with reason
@@ -1070,6 +1219,7 @@ Tenant Users have restricted access based on permissions granted by Tenant Admin
 **Permission-Based Authorization** controls what Tenant Users can access.
 
 **Key Concepts:**
+
 - **Super Admins** have all permissions automatically
 - **Tenant Admins** have all permissions within their tenant
 - **Tenant Users** must be explicitly granted permissions
@@ -1079,6 +1229,7 @@ Tenant Users have restricted access based on permissions granted by Tenant Admin
 ### Available Permissions
 
 **Product Management:**
+
 ```
 VIEW_PRODUCTS          - View product list and details
 CREATE_PRODUCTS        - Create new products
@@ -1087,6 +1238,7 @@ DELETE_PRODUCTS        - Delete products
 ```
 
 **Template Management:**
+
 ```
 VIEW_TEMPLATES         - View template list
 CREATE_TEMPLATES       - Create new templates
@@ -1095,12 +1247,14 @@ DELETE_TEMPLATES       - Delete templates
 ```
 
 **Category & Tag Management:**
+
 ```
 MANAGE_CATEGORIES      - Create/edit/delete categories
 MANAGE_TAGS            - Create/edit/delete tags
 ```
 
 **Coupon Management:**
+
 ```
 VIEW_COUPONS           - View coupon list and details
 CREATE_COUPONS         - Generate coupons
@@ -1110,6 +1264,7 @@ EXPORT_COUPONS         - Export coupon data
 ```
 
 **Verification Apps:**
+
 ```
 VIEW_APPS              - View verification app list
 MANAGE_APPS            - Create/edit/delete apps
@@ -1117,6 +1272,7 @@ REGENERATE_API_KEYS    - Regenerate API keys
 ```
 
 **User Management:**
+
 ```
 VIEW_TENANT_USERS      - View user list
 MANAGE_TENANT_USERS    - Create/edit/delete users
@@ -1124,18 +1280,21 @@ ASSIGN_PERMISSIONS     - Assign/revoke permissions
 ```
 
 **Credit Management:**
+
 ```
 VIEW_CREDITS           - View credit balance and history
 REQUEST_CREDITS        - Submit credit requests
 ```
 
 **Analytics:**
+
 ```
 VIEW_ANALYTICS         - View analytics dashboard
 EXPORT_REPORTS         - Export analytics reports
 ```
 
 **Scan History:**
+
 ```
 VIEW_SCANS             - View scan history
 EXPORT_SCANS           - Export scan data
@@ -1144,18 +1303,21 @@ EXPORT_SCANS           - Export scan data
 ### Permission Enforcement
 
 **Frontend Enforcement:**
+
 - Menu items hidden if user lacks permission
 - Action buttons disabled/hidden
 - Route guards prevent unauthorized access
 - Components check permissions before rendering features
 
 **Backend Enforcement:**
+
 - Middleware validates permissions before processing requests
 - API returns 403 Forbidden if permission missing
 - Database queries filtered by user permissions
 - Audit logs track permission-based access
 
 **Example Permission Check:**
+
 ```typescript
 // Frontend (Component)
 hasCreatePermission(): boolean {
@@ -1199,12 +1361,14 @@ router.post('/products',
 ## Summary
 
 ### Super Admin: Platform Management
+
 - Onboard and manage tenants
 - Approve credit requests
 - Monitor system-wide activity
 - Create tenant admins
 
 ### Tenant Admin: Business Management
+
 - Manage product catalog with templates
 - Generate and distribute coupons
 - Configure verification apps
@@ -1213,6 +1377,7 @@ router.post('/products',
 - View analytics
 
 ### Tenant User: Task-Specific Access
+
 - Permission-based access to features
 - Typically view-only or specific tasks
 - Cannot manage users or settings

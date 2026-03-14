@@ -116,3 +116,49 @@ export * from './permissions.model';
  * Export Template Models
  */
 export * from './templates.model';
+
+/**
+ * Export Tenant Model
+ */
+export type { Tenant };
+
+/**
+ * Feature Models
+ */
+export interface Feature {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  is_active: boolean;
+  default_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TenantFeature {
+  id: string;
+  tenant_id: string;
+  feature_id: string;
+  enabled: boolean;
+  enabled_at?: string;
+  enabled_by?: string;
+  code: string;
+  name: string;
+  description?: string;
+  enabled_for_tenant: boolean;
+}
+
+export interface CreateFeatureRequest {
+  code: string;
+  name: string;
+  description?: string;
+  default_enabled?: boolean;
+}
+
+export interface UpdateFeatureRequest {
+  name?: string;
+  description?: string;
+  is_active?: boolean;
+  default_enabled?: boolean;
+}

@@ -37,6 +37,7 @@
     "db:reset": "node database/db-manager.js drop --yes && node database/db-manager.js setup",
     "db:fix-tenants": "node database/apply-tenant-fixes.js",
     "db:apply-fixes": "node database/apply-schema-fixes.js",
+    "db:apply-feature-flags": "node database/apply-feature-flags-schema.js",
     "db:seed": "node database/seed-templates.js",
     "db:seed:force": "node database/seed-templates.js --force",
     "db:check": "node check-template-column.js",

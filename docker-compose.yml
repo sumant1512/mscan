@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   db:
     image: postgres:15
@@ -12,6 +11,7 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./mscan-server/database/full_setup.sql:/docker-entrypoint-initdb.d/01_full_setup.sql:ro
+      - ./mscan-server/database/APPLY_FEATURE_FLAGS_SCHEMA.sql:/docker-entrypoint-initdb.d/03_feature_flags.sql:ro
       - ./mscan-server/database/seeds/001_create_sample_templates.sql:/docker-entrypoint-initdb.d/02_create_sample_templates.sql:ro
 
   mscan-client:

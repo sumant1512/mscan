@@ -28,6 +28,9 @@
     "npm": ">=10.9.4"
   },
   "packageManager": "npm@10.9.4",
+  "resolutions": {
+    "esbuild": "^0.27.3"
+  },
   "dependencies": {
     "@angular/animations": "^21.0.6",
     "@angular/cdk": "^21.0.5",

@@ -1,20 +1,32 @@
 const { google } = require("googleapis");
 
-// Load OAuth2 credentials
-const credentials = JSON.parse(process.env.GOOGLE_OAUTH_CREDENTIALS);
-const token = JSON.parse(process.env.GOOGLE_OAUTH_TOKEN);
+// Google OAuth2 email client (optional)
+let oAuth2Client = null;
+let gmail = null;
 
-const { client_id, client_secret, redirect_uris } = credentials.web;
+if (process.env.GOOGLE_OAUTH_CREDENTIALS && process.env.GOOGLE_OAUTH_TOKEN) {
+  try {
+    const credentials = JSON.parse(process.env.GOOGLE_OAUTH_CREDENTIALS);
+    const token = JSON.parse(process.env.GOOGLE_OAUTH_TOKEN);
 
-const oAuth2Client = new google.auth.OAuth2(
-  client_id,
-  client_secret,
-  redirect_uris[0],
-);
+    const { client_id, client_secret, redirect_uris } = credentials.web;
 
-oAuth2Client.setCredentials(token);
+    oAuth2Client = new google.auth.OAuth2(
+      client_id,
+      client_secret,
+      redirect_uris[0],
+    );
 
-const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
+    oAuth2Client.setCredentials(token);
+    gmail = google.gmail({ version: "v1", auth: oAuth2Client });
+  } catch (err) {
+    console.warn('Failed to initialize Google OAuth client:', err.message);
+    oAuth2Client = null;
+    gmail = null;
+  }
+} else {
+  console.warn('Google OAuth credentials not configured. Email service will be disabled.');
+}
 
 function makeEmail(to, subject, html) {
   const messageParts = [
@@ -38,6 +50,12 @@ function makeEmail(to, subject, html) {
  * Send OTP email
  */
 const sendOTPEmail = async (to, subject = "Your Login OTP", otp) => {
+  // If OAuth isn't configured, skip email sending (local/dev mode)
+  if (!gmail) {
+    console.warn('OAuth email not configured; skipping OTP send.');
+    return { skipped: true, reason: 'OAuth email not configured' };
+  }
+
   const mailContent = `
       <!DOCTYPE html>
       <html>
@@ -91,6 +109,19 @@ const sendOTPEmail = async (to, subject = "Your Login OTP", otp) => {
 
     return res.data;
   } catch (error) {
+    // Common issue: Google OAuth token invalid/expired (invalid_grant)
+    // Gaxios wraps errors and can nest response data under `cause`.
+    const gaxiosError = error?.response ? error : error?.cause || error;
+    const errorCode =
+      gaxiosError?.response?.data?.error ||
+      gaxiosError?.code ||
+      (typeof gaxiosError?.message === 'string' && gaxiosError.message.includes('invalid_grant') ? 'invalid_grant' : null);
+
+    if (errorCode === 'invalid_grant') {
+      console.warn('OTP email not sent: OAuth token invalid/expired.');
+      return { skipped: true, reason: 'OAuth token invalid or expired' };
+    }
+
     console.error("❌ Error sending OTP email:", error);
     throw error;
   }

@@ -217,11 +217,89 @@ async function queryAuditLogs(filters = {}) {
   };
 }
 
+/**
+ * Log feature creation
+ * @param {string} featureId - ID of created feature
+ * @param {string} actorId - ID of user who created it
+ * @param {Object} metadata - Additional context
+ * @param {Object} req - Express request object
+ * @param {Object} client - Database client (optional, for transactions)
+ */
+async function logFeatureCreation(featureId, actorId, metadata, req, client = null) {
+  return logAction('CREATE_FEATURE', actorId, 'feature', featureId, metadata, req, client);
+}
+
+/**
+ * Log feature update
+ * @param {string} featureId - ID of updated feature
+ * @param {string} actorId - ID of user who updated it
+ * @param {Object} metadata - Additional context
+ * @param {Object} req - Express request object
+ * @param {Object} client - Database client (optional, for transactions)
+ */
+async function logFeatureUpdate(featureId, actorId, metadata, req, client = null) {
+  return logAction('UPDATE_FEATURE', actorId, 'feature', featureId, metadata, req, client);
+}
+
+/**
+ * Log feature deletion
+ * @param {string} featureId - ID of deleted feature
+ * @param {string} actorId - ID of user who deleted it
+ * @param {Object} metadata - Additional context
+ * @param {Object} req - Express request object
+ * @param {Object} client - Database client (optional, for transactions)
+ */
+async function logFeatureDeletion(featureId, actorId, metadata, req, client = null) {
+  return logAction('DELETE_FEATURE', actorId, 'feature', featureId, metadata, req, client);
+}
+
+/**
+ * Log feature enable for tenant
+ * @param {string} tenantFeatureId - ID of tenant feature record
+ * @param {string} actorId - ID of user who enabled it
+ * @param {Object} metadata - Additional context
+ * @param {Object} req - Express request object
+ * @param {Object} client - Database client (optional, for transactions)
+ */
+async function logFeatureEnable(tenantFeatureId, actorId, metadata, req, client = null) {
+  return logAction('ENABLE_FEATURE', actorId, 'tenant_feature', tenantFeatureId, metadata, req, client);
+}
+
+/**
+ * Log feature disable for tenant
+ * @param {string} featureId - ID of feature
+ * @param {string} actorId - ID of user who disabled it
+ * @param {Object} metadata - Additional context
+ * @param {Object} req - Express request object
+ * @param {Object} client - Database client (optional, for transactions)
+ */
+async function logFeatureDisable(featureId, actorId, metadata, req, client = null) {
+  return logAction('DISABLE_FEATURE', actorId, 'feature', featureId, metadata, req, client);
+}
+
+/**
+ * Log feature toggle action
+ * @param {string} tenantFeatureId - Tenant feature ID
+ * @param {string} actorId - User performing the action
+ * @param {Object} metadata - Additional metadata
+ * @param {Object} req - Express request
+ * @param {Object} client - Database client (optional)
+ */
+async function logFeatureToggle(tenantFeatureId, actorId, metadata, req, client = null) {
+  return logAction('TOGGLE_FEATURE', actorId, 'tenant_feature', tenantFeatureId, metadata, req, client);
+}
+
 module.exports = {
   logPermissionCreation,
   logUserCreation,
   logUserDeletion,
   logPermissionAssignment,
+  logFeatureCreation,
+  logFeatureUpdate,
+  logFeatureDeletion,
+  logFeatureEnable,
+  logFeatureDisable,
+  logFeatureToggle,
   logAction,
   logFailedOperation,
   queryAuditLogs

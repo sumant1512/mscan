@@ -27,6 +27,7 @@ const inventoryRoutes = require('./routes/inventory.routes');
 const webhooksRoutes = require('./routes/webhooks.routes');
 const mobileApiV2Routes = require('./routes/mobileApiV2.routes');
 const ecommerceApiRoutes = require('./routes/ecommerceApi.routes');
+const featureRoutes = require('./routes/feature.routes');
 // Import middleware
 const errorHandler = require('./middleware/error.middleware');
 const { subdomainMiddleware } = require('./middleware/subdomain.middleware');
@@ -161,6 +162,7 @@ app.use('/api/verification-apps', apiConfigRoutes);
 app.use('/api', inventoryRoutes);
 app.use('/api', webhooksRoutes);
 app.use('/api', userCreditsRoutes);
+app.use('/api/features', featureRoutes);
 app.use('/api/app', externalAppRoutes); // External app routes - scoped to /api/app/* to prevent intercepting other routes
 
 // ============================================

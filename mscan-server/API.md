@@ -1,6 +1,7 @@
 # TMS Backend API Documentation
 
 ## Base URL
+
 ```
 Development: http://localhost:3000
 Production: https://api.mscan.com
@@ -12,33 +13,41 @@ Subdomain: https://api.{tenant-slug}.mscan.com (if tenant-specific API endpoint)
 The TMS system supports subdomain-based tenant routing. Each tenant has a unique subdomain:
 
 **Examples:**
+
 - Root domain: `https://mscan.com` (Super Admin)
 - Tenant A: `https://acme.mscan.com`
 - Tenant B: `https://global-transport.mscan.com`
 
 **Local Development:**
+
 - Root: `http://localhost:4200`
 - Tenant: `http://tenant-slug.localhost:4200`
 
 **Authentication:**
+
 - JWT tokens include `subdomainSlug` field for tenant identification
 - After OTP verification, users are redirected to their tenant's subdomain
 - Subdomain validation ensures users can only access their tenant's data
 
 ## Authentication Flow
+
 ## Public Scan API
 
 ### Rate Limits
+
 - `POST /api/public/scan/start`: 60 requests per 10 minutes per `(coupon_code, device_id, ip)`
 - `POST /api/public/scan/:sessionId/mobile`: 10 requests per 24 hours per `mobile_e164` (falls back to IP)
 - `POST /api/public/scan/:sessionId/verify-otp`: 20 requests per 10 minutes per `sessionId` (per-session)
 - All endpoints also have a generic IP limiter (120 req/min). On limit, returns:
+
 ```json
 { "success": false, "error": "rate_limited*", "retry_after": "timestamp" }
 ```
 
 ### Telemetry Events
+
 The system records structured events to `scan_events` (or logs if table not present):
+
 - `scan_started`: `{ tenant_id, session_id, coupon_code, device_id }`
 - `otp_sent`: `{ tenant_id, session_id, mobile_e164 (masked) }`
 - `otp_failed`: `{ tenant_id, session_id, coupon_code, attempts }`
@@ -47,12 +56,13 @@ The system records structured events to `scan_events` (or logs if table not pres
 - `coupon_redeemed`: `{ tenant_id, session_id, coupon_code }`
 
 ### Flow
+
 1. `POST /api/public/scan/start` → validates `coupon_code` is `active` and creates session.
 2. `POST /api/public/scan/:sessionId/mobile` → captures `mobile_e164`, generates OTP.
 3. `POST /api/public/scan/:sessionId/verify-otp` → verifies OTP, awards `coupon_points`, updates ledger, and marks coupon `used`.
 
-
 ### 1. Request OTP
+
 ```bash
 POST /auth/request-otp
 Content-Type: application/json
@@ -72,6 +82,7 @@ Response:
 **Note:** Check `mscan-server/server.log` for the OTP code in development.
 
 ### 2. Verify OTP & Login
+
 ```bash
 POST /auth/verify-otp
 Content-Type: application/json
@@ -95,12 +106,13 @@ Response:
 ```
 
 **JWT Token Payload:**
+
 ```json
 {
   "userId": "uuid",
   "role": "TENANT_ADMIN",
   "tenantId": "tenant-uuid",
-  "subdomainSlug": "acme-logistics",  // Tenant's subdomain
+  "subdomainSlug": "acme-logistics", // Tenant's subdomain
   "jti": "unique-token-id",
   "type": "access",
   "iat": 1234567890,
@@ -109,10 +121,12 @@ Response:
 ```
 
 **Subdomain Redirect:**
+
 - Super Admin: Remains on root domain (`mscan.com`)
 - Tenant Users: Redirected to tenant subdomain after login (`acme-logistics.mscan.com`)
 
 ### 3. Get User Context
+
 ```bash
 GET /auth/context
 Authorization: Bearer {accessToken}
@@ -137,6 +151,7 @@ Response:
 ```
 
 ### 4. Refresh Token
+
 ```bash
 POST /auth/refresh
 Content-Type: application/json
@@ -157,6 +172,7 @@ Response:
 ```
 
 ### 5. Logout
+
 ```bash
 POST /auth/logout
 Authorization: Bearer {accessToken}
@@ -198,7 +214,7 @@ User permissions are included in the JWT token payload:
     "delete_app",
     "view_apps",
     "create_coupon",
-    "edit_coupon",
+    "edit_coupon"
     // ... more permissions
   ]
 }
@@ -223,12 +239,14 @@ When a user lacks required permission, endpoints return:
 ### Common Permissions
 
 #### Verification App Permissions
+
 - `create_app` - Create verification apps
 - `edit_app` - Modify verification apps
 - `delete_app` - Delete verification apps
 - `view_apps` - View verification apps (read-only)
 
 #### Coupon Permissions
+
 - `create_coupon` - Create coupons
 - `edit_coupon` - Modify/activate/deactivate coupons
 - `delete_coupon` - Delete coupons
@@ -238,19 +256,23 @@ When a user lacks required permission, endpoints return:
 - `view_batches` - View batches
 
 #### Product & Category Permissions
+
 - `create_product` / `edit_product` / `delete_product` / `view_products`
 - `create_category` / `edit_category` / `delete_category` / `view_categories`
 
 #### Credit Permissions
+
 - `request_credits` - Request credit top-ups (TENANT_ADMIN only)
 - `view_credit_balance` - View credit balance
 - `view_credit_transactions` - View credit history
 
 #### Analytics Permissions
+
 - `view_analytics` - Access analytics dashboard
 - `view_scans` - View scan history
 
 #### User Management Permissions
+
 - `create_tenant_user` / `edit_tenant_user` / `delete_tenant_user`
 - `assign_permissions` - Assign permissions to users
 - `view_tenant_users` / `view_permissions` - View users and permissions
@@ -278,9 +300,152 @@ Response:
 }
 ```
 
+## Feature Flags (Super Admin Only)
+
+Feature flags allow controlled rollout of new features to specific tenants. Features are defined globally and can be enabled/disabled per tenant.
+
+### Create Feature
+
+```bash
+POST /api/features
+Authorization: Bearer {superAdminAccessToken}
+Content-Type: application/json
+
+{
+  "code": "advanced-reporting",
+  "name": "Advanced Reporting",
+  "description": "Enhanced analytics and reporting features",
+  "default_enabled": false
+}
+
+Response:
+{
+  "status": true,
+  "message": "Feature created successfully",
+  "data": {
+    "feature": {
+      "id": "uuid",
+      "code": "advanced-reporting",
+      "name": "Advanced Reporting",
+      "description": "Enhanced analytics and reporting features",
+      "is_active": true,
+      "default_enabled": false,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  }
+}
+```
+
+### List Features
+
+```bash
+GET /api/features
+Authorization: Bearer {superAdminAccessToken}
+
+Response:
+{
+  "status": true,
+  "data": {
+    "features": [
+      {
+        "id": "uuid",
+        "code": "advanced-reporting",
+        "name": "Advanced Reporting",
+        "description": "Enhanced analytics and reporting features",
+        "is_active": true,
+        "default_enabled": false,
+        "created_at": "2024-01-01T00:00:00Z",
+        "updated_at": "2024-01-01T00:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+### Enable Feature for Tenant
+
+```bash
+POST /api/features/tenants/{tenantId}/features/{featureId}
+Authorization: Bearer {superAdminAccessToken}
+
+Response:
+{
+  "status": true,
+  "message": "Feature enabled for tenant",
+  "data": {
+    "tenant_feature": {
+      "id": "uuid",
+      "tenant_id": "{tenantId}",
+      "feature_id": "{featureId}",
+      "enabled": true,
+      "enabled_at": "2024-01-01T00:00:00Z",
+      "enabled_by": "uuid"
+    }
+  }
+}
+```
+
+### Disable Feature for Tenant
+
+```bash
+DELETE /api/features/tenants/{tenantId}/features/{featureId}
+Authorization: Bearer {superAdminAccessToken}
+
+Response:
+{
+  "status": true,
+  "message": "Feature disabled for tenant"
+}
+```
+
+### Get Tenant Features
+
+```bash
+GET /api/features/tenants/{tenantId}/features
+Authorization: Bearer {accessToken}
+
+Response:
+{
+  "status": true,
+  "data": {
+    "features": [
+      {
+        "id": "uuid",
+        "tenant_id": "{tenantId}",
+        "feature_id": "uuid",
+        "enabled": true,
+        "enabled_at": "2024-01-01T00:00:00Z",
+        "enabled_by": "uuid",
+        "code": "advanced-reporting",
+        "name": "Advanced Reporting",
+        "description": "Enhanced analytics and reporting features",
+        "enabled_for_tenant": true
+      }
+    ]
+  }
+}
+```
+
+### Check Feature Status
+
+```bash
+GET /api/features/tenants/{tenantId}/features/{featureCode}/check
+Authorization: Bearer {accessToken}
+
+Response:
+{
+  "status": true,
+  "data": {
+    "enabled": true
+  }
+}
+```
+
 ## User Management (Super Admin Only)
 
 ### Create Customer (Tenant)
+
 ```bash
 POST /users/customers
 Authorization: Bearer {superAdminAccessToken}
@@ -317,6 +482,7 @@ Response:
 ```
 
 **Subdomain Slug Rules:**
+
 - 3-50 characters
 - Lowercase alphanumeric and hyphens only
 - Cannot use reserved subdomains (www, api, admin, app, etc.)
@@ -324,6 +490,7 @@ Response:
 - Auto-generated from company name if not provided
 
 ### Get All Customers
+
 ```bash
 GET /users/customers
 Authorization: Bearer {superAdminAccessToken}
@@ -350,6 +517,7 @@ Response:
 ## User Profile
 
 ### Get Profile
+
 ```bash
 GET /users/profile
 Authorization: Bearer {accessToken}
@@ -370,6 +538,7 @@ Response:
 ```
 
 ### Update Profile
+
 ```bash
 PUT /users/profile
 Authorization: Bearer {accessToken}
@@ -397,6 +566,7 @@ Response:
 ## Dashboard
 
 ### Get Dashboard Stats
+
 ```bash
 GET /dashboard/stats
 Authorization: Bearer {accessToken}
@@ -459,6 +629,7 @@ Response:
 ## Error Responses
 
 ### 400 Bad Request
+
 ```json
 {
   "success": false,
@@ -467,6 +638,7 @@ Response:
 ```
 
 ### 401 Unauthorized
+
 ```json
 {
   "success": false,
@@ -475,6 +647,7 @@ Response:
 ```
 
 ### 403 Forbidden
+
 ```json
 {
   "success": false,
@@ -483,6 +656,7 @@ Response:
 ```
 
 ### 404 Not Found
+
 ```json
 {
   "success": false,
@@ -491,6 +665,7 @@ Response:
 ```
 
 ### 409 Conflict
+
 ```json
 {
   "success": false,
@@ -499,6 +674,7 @@ Response:
 ```
 
 ### 429 Too Many Requests
+
 ```json
 {
   "success": false,
@@ -507,6 +683,7 @@ Response:
 ```
 
 ### 500 Internal Server Error
+
 ```json
 {
   "success": false,
@@ -519,6 +696,7 @@ Response:
 ## Tenant Subdomain Management
 
 ### Check Subdomain Availability
+
 Real-time availability checker for tenant subdomain registration.
 
 ```bash
@@ -569,11 +747,13 @@ Response (Reserved):
 ```
 
 **Reserved Subdomains:**
+
 - System: `www`, `api`, `admin`, `app`, `mail`, `ftp`, `smtp`, `pop`, `imap`
 - DNS: `ns1`, `ns2`, `localhost`
 - Environments: `staging`, `dev`, `test`, `demo`
 
 ### Get Subdomain Suggestions
+
 Generate alternative subdomain slugs based on tenant name.
 
 ```bash
@@ -597,6 +777,7 @@ Response:
 ```
 
 **Slug Generation Rules:**
+
 - Convert to lowercase
 - Replace spaces with hyphens
 - Remove special characters
@@ -606,6 +787,7 @@ Response:
 - Verify uniqueness in database
 
 ### Create Tenant with Custom Subdomain
+
 ```bash
 POST /tenants
 Authorization: Bearer {superAdminAccessToken}
@@ -646,6 +828,7 @@ Response (Conflict):
 ```
 
 ### Get Tenant by Subdomain
+
 ```bash
 GET /tenants/by-subdomain/:slug
 Authorization: Bearer {accessToken}
@@ -668,6 +851,7 @@ Response:
 ```
 
 ### Subdomain Validation in Authentication
+
 When a tenant user logs in, the system validates that they're accessing from the correct subdomain:
 
 ```bash
@@ -706,9 +890,11 @@ Response (Subdomain Mismatch):
 ## Multi-App Architecture (Verification Apps)
 
 ### Overview
+
 Tenants can create multiple verification applications (mobile apps, web apps) with isolated data but shared user credits. Each app gets a unique API key for external integration.
 
 **Key Features:**
+
 - Isolated categories, products, and coupons per app
 - Shared user credits across all tenant apps
 - Secure API key authentication for external apps
@@ -717,6 +903,7 @@ Tenants can create multiple verification applications (mobile apps, web apps) wi
 ### Internal APIs (Tenant Dashboard)
 
 #### Get Verification Apps
+
 ```bash
 GET /api/rewards/verification-apps
 Authorization: Bearer {accessToken}
@@ -738,6 +925,7 @@ Response:
 ```
 
 #### Create Verification App
+
 **Required Permission:** `create_app`
 
 ```bash
@@ -764,6 +952,7 @@ Response:
 ```
 
 #### Regenerate API Key
+
 **Required Permission:** `edit_app`
 
 ```bash
@@ -782,6 +971,7 @@ Response:
 ```
 
 #### Toggle App Status
+
 **Required Permission:** `edit_app`
 
 ```bash
@@ -800,6 +990,7 @@ Response:
 ```
 
 #### Delete Verification App
+
 **Required Permission:** `delete_app`
 
 ```bash
@@ -820,6 +1011,7 @@ Response:
 ```
 
 #### Get Categories (App-Filtered)
+
 ```bash
 GET /api/categories?app_id=1
 Authorization: Bearer {accessToken}
@@ -842,6 +1034,7 @@ Response:
 ```
 
 #### Get Products (App-Filtered)
+
 ```bash
 GET /api/products?app_id=1
 Authorization: Bearer {accessToken}
@@ -864,6 +1057,7 @@ Response:
 ### User Credits API (Internal)
 
 #### Get User Credits
+
 ```bash
 GET /api/user-credits/:userId
 Authorization: Bearer {accessToken}
@@ -881,6 +1075,7 @@ Response:
 ```
 
 #### Add Credits (Admin)
+
 ```bash
 POST /api/user-credits/:userId/add
 Authorization: Bearer {accessToken}
@@ -906,6 +1101,7 @@ Response:
 ```
 
 #### Deduct Credits (Admin)
+
 ```bash
 POST /api/user-credits/:userId/deduct
 Authorization: Bearer {accessToken}
@@ -931,6 +1127,7 @@ Response:
 ```
 
 #### Adjust Credits (Admin)
+
 ```bash
 POST /api/user-credits/:userId/adjust
 Authorization: Bearer {accessToken}
@@ -956,6 +1153,7 @@ Response:
 ```
 
 #### Get Credit Transactions
+
 ```bash
 GET /api/user-credits/:userId/transactions?limit=50&offset=0
 Authorization: Bearer {accessToken}
@@ -984,6 +1182,7 @@ Response:
 ```
 
 #### Get Credit Stats
+
 ```bash
 GET /api/user-credits/:userId/stats
 Authorization: Bearer {accessToken}
@@ -1018,6 +1217,7 @@ Authorization: Bearer {api_key}
 For complete external API documentation, see [EXTERNAL_APP_API.md](./EXTERNAL_APP_API.md)
 
 #### External Endpoints Summary
+
 - `GET /api/app/:appCode/categories` - Get app categories
 - `GET /api/app/:appCode/products` - Get app products
 - `GET /api/app/:appCode/users/:userId/credits` - Get user balance
@@ -1026,6 +1226,7 @@ For complete external API documentation, see [EXTERNAL_APP_API.md](./EXTERNAL_AP
 - `POST /api/app/:appCode/redeem` - Redeem credits for product
 
 **Example External Request:**
+
 ```bash
 curl -X GET \
   "https://tenant.mscan.com/api/app/mobile-app-1/categories" \
@@ -1039,6 +1240,7 @@ curl -X GET \
 ### Verification Apps Management (Internal - Tenant Admin)
 
 #### Create Verification App
+
 ```bash
 POST /api/rewards/verification-apps
 Authorization: Bearer {tenant_jwt}
@@ -1066,6 +1268,7 @@ Response:
 ```
 
 #### List Verification Apps
+
 ```bash
 GET /api/rewards/verification-apps
 Authorization: Bearer {tenant_jwt}
@@ -1087,6 +1290,7 @@ Response:
 ```
 
 #### Update Verification App
+
 ```bash
 PUT /api/rewards/verification-apps/:id
 Authorization: Bearer {tenant_jwt}
@@ -1106,6 +1310,7 @@ Response:
 ```
 
 #### Regenerate API Key
+
 ```bash
 POST /api/rewards/verification-apps/:id/regenerate-key
 Authorization: Bearer {tenant_jwt}
@@ -1118,6 +1323,7 @@ Response:
 ```
 
 #### Toggle App Status
+
 ```bash
 PATCH /api/rewards/verification-apps/:id/toggle
 Authorization: Bearer {tenant_jwt}
@@ -1130,6 +1336,7 @@ Response:
 ```
 
 #### Delete Verification App
+
 ```bash
 DELETE /api/rewards/verification-apps/:id
 Authorization: Bearer {tenant_jwt}
@@ -1144,6 +1351,7 @@ Response:
 ### User Credits Management
 
 #### Get User Credits
+
 ```bash
 GET /api/user-credits/:userId
 Authorization: Bearer {tenant_jwt}
@@ -1163,6 +1371,7 @@ Response:
 ```
 
 #### Get Credit Transactions
+
 ```bash
 GET /api/user-credits/:userId/transactions?page=1&limit=20
 Authorization: Bearer {tenant_jwt}
@@ -1193,6 +1402,7 @@ Response:
 ```
 
 #### Add Credits (Admin)
+
 ```bash
 POST /api/user-credits/:userId/add
 Authorization: Bearer {tenant_jwt}
@@ -1214,6 +1424,7 @@ Response:
 ```
 
 #### Deduct Credits (Admin)
+
 ```bash
 POST /api/user-credits/:userId/deduct
 Authorization: Bearer {tenant_jwt}
@@ -1235,6 +1446,7 @@ Response:
 ```
 
 #### Adjust Credits (Admin)
+
 ```bash
 POST /api/user-credits/:userId/adjust
 Authorization: Bearer {tenant_jwt}
@@ -1256,6 +1468,7 @@ Response:
 ```
 
 #### Get Credit Stats
+
 ```bash
 GET /api/user-credits/:userId/stats
 Authorization: Bearer {tenant_jwt}
@@ -1278,6 +1491,7 @@ Response:
 All categories and products APIs now support filtering by app:
 
 #### Get Categories (with app filter)
+
 ```bash
 GET /api/categories?app_id=uuid
 GET /api/categories?app_id=all  # Show all apps
@@ -1303,6 +1517,7 @@ Response:
 ```
 
 #### Get Products (with app filter)
+
 ```bash
 GET /api/products?app_id=uuid
 GET /api/products?app_id=all  # Show all apps
@@ -1333,10 +1548,12 @@ Response:
 ## Default Users
 
 ### Super Admin
+
 - **Email:** sumantmishra511@gmail.com
 - **Login:** Use OTP authentication
 
 ### Test Tenant Admin (after creating customer)
+
 - **Email:** admin@testtransport.com
 - **Login:** Use OTP authentication
 
@@ -1380,12 +1597,15 @@ curl -s http://localhost:3000/api/dashboard/stats \
 The Analytics API provides comprehensive insights into tenant scan activity, customer behavior, geographic trends, and campaign performance.
 
 ### Base Path
+
 ```
 /api/v1/tenants/:tenantId/analytics
 ```
 
 ### Authentication
+
 All analytics endpoints require authentication with one of the following roles:
+
 - `SUPER_ADMIN`
 - `TENANT_ADMIN`
 - `TENANT_USER`
@@ -1401,10 +1621,12 @@ Get high-level statistics for the tenant dashboard.
 **Endpoint:** `GET /api/v1/tenants/:tenantId/analytics/overview`
 
 **Query Parameters:**
+
 - `dateFrom` (optional): ISO 8601 date string (e.g., "2026-01-01T00:00:00Z")
 - `dateTo` (optional): ISO 8601 date string
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -1424,6 +1646,7 @@ Get high-level statistics for the tenant dashboard.
 ```
 
 **Example:**
+
 ```bash
 curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/overview?dateFrom=2026-01-01T00:00:00Z&dateTo=2026-01-17T23:59:59Z" \
   -H "Authorization: Bearer $TOKEN"
@@ -1438,11 +1661,13 @@ Get time-series data for scan trends visualization (line charts).
 **Endpoint:** `GET /api/v1/tenants/:tenantId/analytics/trends`
 
 **Query Parameters:**
+
 - `dateFrom` (optional): ISO 8601 date string (default: 30 days ago)
 - `dateTo` (optional): ISO 8601 date string (default: now)
 - `interval` (optional): `hour`, `day`, or `week` (default: `day`)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -1468,6 +1693,7 @@ Get time-series data for scan trends visualization (line charts).
 ```
 
 **Example:**
+
 ```bash
 curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/trends?interval=day" \
   -H "Authorization: Bearer $TOKEN"
@@ -1482,9 +1708,11 @@ Get geographic insights showing top performing cities.
 **Endpoint:** `GET /api/v1/tenants/:tenantId/analytics/top-cities`
 
 **Query Parameters:**
+
 - `limit` (optional): Number of cities to return (default: 10, max: 50)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -1518,6 +1746,7 @@ Get paginated scan history with advanced filtering.
 **Endpoint:** `GET /api/v1/tenants/:tenantId/analytics/scans`
 
 **Query Parameters:**
+
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Items per page (default: 50, max: 100)
 - `status` (optional): Filter by scan status (`success` or `failed`)
@@ -1529,6 +1758,7 @@ Get paginated scan history with advanced filtering.
 - `campaignId` (optional): Filter by specific campaign UUID
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -1563,6 +1793,7 @@ Get paginated scan history with advanced filtering.
 ```
 
 **Example:**
+
 ```bash
 curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/scans?page=1&limit=50&status=success&city=Mumbai" \
   -H "Authorization: Bearer $TOKEN"
@@ -1577,6 +1808,7 @@ Download scan history as Excel file (.xlsx).
 **Endpoint:** `GET /api/v1/tenants/:tenantId/analytics/scans/export`
 
 **Query Parameters:** (Same as scan history filters)
+
 - `status`, `city`, `dateFrom`, `dateTo`, `customerId`, `productId`, `campaignId`
 
 **Response:** Excel file download (Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet)
@@ -1584,6 +1816,7 @@ Download scan history as Excel file (.xlsx).
 **Note:** Export is limited to 10,000 records. Requires `SUPER_ADMIN` or `TENANT_ADMIN` role.
 
 **Example:**
+
 ```bash
 curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/scans/export?dateFrom=2026-01-01T00:00:00Z" \
   -H "Authorization: Bearer $TOKEN" \
@@ -1599,6 +1832,7 @@ Get customer insights with ranking and behavior metrics.
 **Endpoint:** `GET /api/v1/tenants/:tenantId/analytics/customers`
 
 **Query Parameters:**
+
 - `page` (optional): Page number (default: 1)
 - `limit` (optional): Items per page (default: 50, max: 100)
 - `sortBy` (optional): Sort column - `total_rewards_won`, `total_codes_redeemed`, `avg_reward_per_scan`, `member_since` (default: `total_rewards_won`)
@@ -1606,6 +1840,7 @@ Get customer insights with ranking and behavior metrics.
 - `minScans` (optional): Minimum number of scans to include customer (default: 0)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -1640,6 +1875,7 @@ Get customer insights with ranking and behavior metrics.
 ```
 
 **Example:**
+
 ```bash
 curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/customers?sortBy=total_rewards_won&sortOrder=DESC&minScans=10" \
   -H "Authorization: Bearer $TOKEN"
@@ -1654,11 +1890,13 @@ Get location data for map-based visualization.
 **Endpoint:** `GET /api/v1/tenants/:tenantId/analytics/map`
 
 **Query Parameters:**
+
 - `dateFrom` (optional): ISO 8601 date string
 - `dateTo` (optional): ISO 8601 date string
 - `limit` (optional): Maximum locations to return (default: 1000, max: 5000)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -1678,6 +1916,7 @@ Get location data for map-based visualization.
 ```
 
 **Example:**
+
 ```bash
 curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/map?limit=500" \
   -H "Authorization: Bearer $TOKEN"
@@ -1696,6 +1935,7 @@ Get performance metrics for reward campaigns.
 `GET /api/v1/tenants/:tenantId/analytics/campaigns/:campaignId`
 
 **Response (all campaigns):**
+
 ```json
 {
   "success": true,
@@ -1718,6 +1958,7 @@ Get performance metrics for reward campaigns.
 ```
 
 **Response (single campaign):**
+
 ```json
 {
   "success": true,
@@ -1738,6 +1979,7 @@ Get performance metrics for reward campaigns.
 ```
 
 **Example:**
+
 ```bash
 # Get all campaigns
 curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/campaigns" \
@@ -1763,6 +2005,7 @@ All analytics endpoints follow the standard error response format:
 ```
 
 **Common HTTP Status Codes:**
+
 - `200 OK`: Success
 - `403 Forbidden`: User doesn't have access to this tenant
 - `404 Not Found`: Campaign/resource not found
@@ -1794,4 +2037,3 @@ All analytics endpoints follow the standard error response format:
 - `products`: Product catalog
 - `product_categories`: Product categorization
 - `customers`: Customer profiles
-

@@ -71,6 +71,9 @@ import { TenantAdminDashboardComponent } from './components/super-admin/tenant-a
 import { AddTenantAdminComponent } from './components/super-admin/tenant-admins/add-tenant-admin.component';
 import { TenantAdminDetailComponent } from './components/super-admin/tenant-admins/tenant-admin-detail.component';
 
+// Feature Management
+import { FeatureManagement } from './components/feature-management/feature-management';
+
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
@@ -95,6 +98,7 @@ export const routes: Routes = [
       { path: 'credits/requests', component: CreditRequestListComponent },
       { path: 'credits/history', component: CreditTransactionHistoryComponent },
       { path: 'customers', component: CustomerRegistrationComponent },
+      { path: 'features', component: FeatureManagement },
       { path: 'settings', component: SettingsComponent },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]

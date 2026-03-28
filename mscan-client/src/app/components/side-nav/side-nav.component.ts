@@ -124,6 +124,14 @@ export class SideNavComponent implements OnInit, OnDestroy {
       ],
     },
     {
+      label: 'Dealers',
+      icon: 'storefront',
+      children: [
+        { label: 'Add Dealer', icon: 'person_add', route: '/tenant/dealers/create' },
+        { label: 'View Dealers', icon: 'list', route: '/tenant/dealers' },
+      ],
+    },
+    {
       label: 'User Management',
       icon: 'people',
       children: [

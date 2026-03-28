@@ -59,7 +59,8 @@
       "Bash(ps:*)",
       "Bash(E2E_TESTS_ENABLED=true npx jest:*)",
       "Bash(npx jest:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(npx openspec:*)"
     ]
   }
 }

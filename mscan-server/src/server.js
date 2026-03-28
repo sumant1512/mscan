@@ -28,6 +28,11 @@ const webhooksRoutes = require('./routes/webhooks.routes');
 const mobileApiV2Routes = require('./routes/mobileApiV2.routes');
 const ecommerceApiRoutes = require('./routes/ecommerceApi.routes');
 const featureRoutes = require('./routes/feature.routes');
+const dealerRoutes = require('./routes/dealer.routes');
+const dealerMobileRoutes = require('./routes/dealerMobile.routes');
+const cashbackMobileRoutes = require('./routes/cashbackMobile.routes');
+const publicCashbackRoutes = require('./routes/publicCashback.routes');
+const ecommerceMobileRoutes = require('./routes/ecommerceMobile.routes');
 // Import middleware
 const errorHandler = require('./middleware/error.middleware');
 const { subdomainMiddleware } = require('./middleware/subdomain.middleware');
@@ -165,6 +170,21 @@ app.use('/api', userCreditsRoutes);
 app.use('/api/features', featureRoutes);
 app.use('/api/app', externalAppRoutes); // External app routes - scoped to /api/app/* to prevent intercepting other routes
 
+// New: Dealer management (Tenant Admin)
+app.use('/api/v1/tenants/:tenantId/dealers', dealerRoutes);
+
+// New: Dealer mobile API
+app.use('/api/mobile/v1/dealer', dealerMobileRoutes);
+
+// New: Customer cashback mobile API
+app.use('/api/mobile/v1/cashback', cashbackMobileRoutes);
+
+// New: Public cashback (no app required)
+app.use('/api/public/cashback', publicCashbackRoutes);
+
+// New: Ecommerce mobile API (customer catalog + profile)
+app.use('/api/mobile/v1/ecommerce', ecommerceMobileRoutes);
+
 // ============================================
 // Error Handling
 // ============================================
@@ -222,46 +242,6 @@ app.use('*', (req, res) => {
   });
 });
 
-
-// ============================================
-// Start Server
-// ============================================
-// Public QR landing route
-app.get('/scan/:coupon_code', async (req, res) => {
-  try {
-    const { coupon_code } = req.params;
-    const tenantId = req.tenant ? req.tenant.id : null;
-    const result = await db.query(
-      'SELECT id, tenant_id, coupon_code, status FROM coupons WHERE coupon_code = $1 AND ($2::uuid IS NULL OR tenant_id = $2::uuid) LIMIT 1',
-      [coupon_code, tenantId]
-    );
-    if (result.rows.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'invalid_or_redeemed_coupon',
-        message: 'Invalid or redeemed coupon. Please contact support.'
-      });
-    }
-    const coupon = result.rows[0];
-    if (coupon.status !== 'active') {
-      return res.status(400).json({
-        success: false,
-        error: 'invalid_or_redeemed_coupon',
-        message: 'Coupon is not active.'
-      });
-    }
-    res.set('Cache-Control', 'no-store');
-    return res.json({
-      success: true,
-      message: 'Login to get award',
-      coupon_code,
-      status: 'pending-verification'
-    });
-  } catch (err) {
-    console.error('Landing route error:', err);
-    return res.status(500).json({ status: false, error: 'server_error' });
-  }
-});
 
 // ============================================
 // Start Server (with Database Health Check)

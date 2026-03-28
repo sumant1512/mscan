@@ -74,6 +74,11 @@ import { TenantAdminDetailComponent } from './components/super-admin/tenant-admi
 // Feature Management
 import { FeatureManagement } from './components/feature-management/feature-management';
 
+// Dealer Management
+import { DealerListComponent } from './components/dealers/dealer-list.component';
+import { DealerFormComponent } from './components/dealers/dealer-form.component';
+import { DealerDetailComponent } from './components/dealers/dealer-detail.component';
+
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
@@ -218,6 +223,21 @@ export const routes: Routes = [
         canActivate: [PermissionGuard],
         data: { requiredPermission: 'assign_permissions' }
       },
+      // Dealer Management
+      { path: 'dealers', component: DealerListComponent },
+      {
+        path: 'dealers/create',
+        component: DealerFormComponent,
+        canActivate: [PermissionGuard],
+        data: { requiredPermission: 'manage_dealers' }
+      },
+      {
+        path: 'dealers/edit/:id',
+        component: DealerFormComponent,
+        canActivate: [PermissionGuard],
+        data: { requiredPermission: 'manage_dealers' }
+      },
+      { path: 'dealers/:id', component: DealerDetailComponent },
       { path: 'profile', component: ProfileComponent },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]

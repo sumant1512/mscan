@@ -1,0 +1,370 @@
+.detail-container {
+  padding: 1.2500rem;
+  max-width: 62.5000rem;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5000rem;
+}
+
+.btn-back {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5000rem;
+  color: #495057;
+  font-size: 0.8750rem;
+  padding: 0.5000rem;
+  border-radius: 0.2500rem;
+}
+
+.btn-back:hover {
+  background: #e9ecef;
+}
+
+/* Alerts */
+.alert {
+  padding: 0.7500rem 1rem;
+  border-radius: 0.2500rem;
+  margin-bottom: 1rem;
+}
+
+.alert-error {
+  background: #f8d7da;
+  border: 0.0625rem solid #f5c6cb;
+  color: #721c24;
+}
+
+/* Loading */
+.loading {
+  text-align: center;
+  padding: 3.7500rem 1.2500rem;
+  color: #666;
+}
+
+.loading-small {
+  text-align: center;
+  padding: 1.2500rem;
+  color: #666;
+  font-size: 0.8750rem;
+}
+
+/* Detail Content */
+.detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5000rem;
+}
+
+/* Info Card */
+.info-card {
+  background: white;
+  border-radius: 0.5000rem;
+  box-shadow: 0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.1);
+  padding: 1.5000rem;
+}
+
+.info-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5000rem;
+  padding-bottom: 1rem;
+  border-bottom: 0.0625rem solid #e9ecef;
+}
+
+.info-card-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.3750rem;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15.0000rem, 1fr));
+  gap: 1.2500rem;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2500rem;
+}
+
+.info-label {
+  font-size: 0.7500rem;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.0313rem;
+  font-weight: 600;
+}
+
+.info-value {
+  font-size: 0.9375rem;
+  color: #212529;
+}
+
+.info-value.code {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  background: #e9ecef;
+  display: inline-block;
+  padding: 0.1250rem 0.5000rem;
+  border-radius: 0.2500rem;
+  width: fit-content;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-block;
+  padding: 0.2500rem 0.7500rem;
+  border-radius: 0.7500rem;
+  font-size: 0.7500rem;
+  font-weight: 600;
+}
+
+.status-badge.active {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.inactive {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* Points Card */
+.points-card {
+  background: white;
+  border-radius: 0.5000rem;
+  box-shadow: 0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.1);
+  padding: 1.5000rem;
+}
+
+.points-header {
+  margin-bottom: 1rem;
+}
+
+.points-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.1250rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5000rem;
+}
+
+.points-header .material-icons {
+  color: #ffc107;
+}
+
+.points-value {
+  font-size: 2.5000rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.points-unit {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #6c757d;
+  margin-left: 0.5000rem;
+}
+
+/* Transactions Card */
+.transactions-card {
+  background: white;
+  border-radius: 0.5000rem;
+  box-shadow: 0 0.0625rem 0.1875rem rgba(0, 0, 0, 0.1);
+  padding: 1.5000rem;
+}
+
+.transactions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.transactions-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.1250rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5000rem;
+}
+
+.tx-count {
+  font-size: 0.8750rem;
+  color: #6c757d;
+}
+
+.empty-transactions {
+  text-align: center;
+  padding: 2.5000rem;
+  color: #999;
+}
+
+.empty-transactions .material-icons {
+  font-size: 3rem;
+  color: #ccc;
+  display: block;
+  margin-bottom: 0.5000rem;
+}
+
+/* Transaction Table */
+.tx-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tx-table thead {
+  background: #f8f9fa;
+}
+
+.tx-table th {
+  padding: 0.7500rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #495057;
+  border-bottom: 0.1250rem solid #dee2e6;
+  font-size: 0.8125rem;
+}
+
+.tx-table td {
+  padding: 0.7500rem 1rem;
+  border-bottom: 0.0625rem solid #dee2e6;
+  font-size: 0.8750rem;
+  color: #212529;
+}
+
+.tx-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.type-badge {
+  display: inline-block;
+  padding: 0.1250rem 0.5000rem;
+  border-radius: 0.2500rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.type-badge.credit {
+  background: #d4edda;
+  color: #155724;
+}
+
+.type-badge.debit {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.amount {
+  font-weight: 600;
+}
+
+.amount.credit {
+  color: #28a745;
+}
+
+.amount.debit {
+  color: #dc3545;
+}
+
+/* Transaction Pagination */
+.tx-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0 0;
+  margin-top: 1rem;
+  border-top: 0.0625rem solid #dee2e6;
+}
+
+.page-info {
+  font-size: 0.8750rem;
+  color: #495057;
+}
+
+/* Buttons */
+.btn-primary {
+  padding: 0.6250rem 1.2500rem;
+  border: none;
+  border-radius: 0.2500rem;
+  cursor: pointer;
+  font-size: 0.8750rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5000rem;
+  transition: background-color 0.2s;
+  background: #007bff;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #0056b3;
+}
+
+.btn-secondary {
+  padding: 0.6250rem 1.2500rem;
+  border: none;
+  border-radius: 0.2500rem;
+  cursor: pointer;
+  font-size: 0.8750rem;
+  font-weight: 500;
+  background: #6c757d;
+  color: white;
+  transition: background-color 0.2s;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #545b62;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-sm {
+  padding: 0.3750rem 0.7500rem;
+  font-size: 0.8125rem;
+}
+
+.btn-primary .material-icons {
+  font-size: 1.1250rem;
+}
+
+/* Responsive */
+@media (max-width: 48rem) {
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.7500rem;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .points-value {
+    font-size: 2rem;
+  }
+
+  .tx-table th,
+  .tx-table td {
+    padding: 0.5000rem;
+    font-size: 0.7500rem;
+  }
+}

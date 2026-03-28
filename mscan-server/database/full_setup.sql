@@ -79,22 +79,31 @@ CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    full_name VARCHAR(255),
     phone VARCHAR(50),
-    role VARCHAR(50) NOT NULL CHECK (role IN ('SUPER_ADMIN', 'TENANT_ADMIN', 'TENANT_USER')),
+    phone_e164 VARCHAR(20),
+    role VARCHAR(50) NOT NULL CHECK (role IN ('SUPER_ADMIN', 'TENANT_ADMIN', 'TENANT_USER', 'DEALER', 'CUSTOMER')),
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_super_admin_no_tenant CHECK (
         (role = 'SUPER_ADMIN' AND tenant_id IS NULL) OR
         (role != 'SUPER_ADMIN' AND tenant_id IS NOT NULL)
+    ),
+    CONSTRAINT check_user_identifier CHECK (
+        email IS NOT NULL OR phone_e164 IS NOT NULL
     )
 );
 
+-- Partial unique index: email must be unique where not null
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users(email) WHERE email IS NOT NULL;
+-- Partial unique index: phone_e164 must be unique per tenant
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_phone_tenant_unique ON users(tenant_id, phone_e164) WHERE phone_e164 IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_phone_e164 ON users(phone_e164);
 
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -541,9 +550,11 @@ CREATE TABLE IF NOT EXISTS coupons (
   product_name VARCHAR(255),
   product_sku VARCHAR(100),
   coupon_points INTEGER,
+  cashback_amount DECIMAL(10,2) DEFAULT 0,
   printed_count INTEGER DEFAULT 0,
   activation_note TEXT,
   deactivation_reason TEXT,
+  scanned_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT chk_expiry_future CHECK (expiry_date > created_at),
@@ -1012,6 +1023,7 @@ CREATE TRIGGER update_customer_devices_updated_at BEFORE UPDATE ON customer_devi
 
 CREATE TABLE IF NOT EXISTS mobile_otps (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
   phone_e164 VARCHAR(20) NOT NULL,
   otp_code VARCHAR(6) NOT NULL,
   expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -1022,23 +1034,34 @@ CREATE TABLE IF NOT EXISTS mobile_otps (
 );
 
 CREATE INDEX IF NOT EXISTS idx_mobile_otps_phone ON mobile_otps(phone_e164);
+CREATE INDEX IF NOT EXISTS idx_mobile_otps_tenant ON mobile_otps(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_mobile_otps_expires_at ON mobile_otps(expires_at);
 CREATE INDEX IF NOT EXISTS idx_mobile_otps_phone_not_used ON mobile_otps(phone_e164, is_used) WHERE is_used = false;
 
 CREATE TABLE IF NOT EXISTS scan_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  session_token VARCHAR(255) UNIQUE NOT NULL,
+  session_token VARCHAR(255) UNIQUE,
   device_id VARCHAR(255),
-  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  coupon_id UUID REFERENCES coupons(id) ON DELETE SET NULL,
+  scanned_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  scan_type VARCHAR(20) DEFAULT 'customer' CHECK (scan_type IN ('customer', 'dealer', 'public')),
+  status VARCHAR(20) DEFAULT 'pending-verification' CHECK (status IN ('pending-verification', 'verified', 'completed', 'expired', 'failed')),
+  metadata JSONB DEFAULT '{}'::jsonb,
+  expires_at TIMESTAMP WITH TIME ZONE,
   is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_scan_sessions_customer ON scan_sessions(customer_id);
 CREATE INDEX IF NOT EXISTS idx_scan_sessions_token ON scan_sessions(session_token);
 CREATE INDEX IF NOT EXISTS idx_scan_sessions_expires_at ON scan_sessions(expires_at);
+CREATE INDEX IF NOT EXISTS idx_scan_sessions_coupon ON scan_sessions(coupon_id);
+CREATE INDEX IF NOT EXISTS idx_scan_sessions_scanned_by ON scan_sessions(scanned_by);
+CREATE INDEX IF NOT EXISTS idx_scan_sessions_scan_type ON scan_sessions(scan_type);
+CREATE INDEX IF NOT EXISTS idx_scan_sessions_status ON scan_sessions(status);
 
 CREATE TABLE IF NOT EXISTS user_points (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1216,6 +1239,7 @@ CREATE TABLE IF NOT EXISTS features (
     code VARCHAR(100) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
+    parent_id UUID REFERENCES features(id) ON DELETE CASCADE,
     is_active BOOLEAN DEFAULT true,
     default_enabled BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -1224,6 +1248,7 @@ CREATE TABLE IF NOT EXISTS features (
 
 CREATE INDEX IF NOT EXISTS idx_features_code ON features(code);
 CREATE INDEX IF NOT EXISTS idx_features_active ON features(is_active);
+CREATE INDEX IF NOT EXISTS idx_features_parent ON features(parent_id);
 
 CREATE TRIGGER update_features_updated_at BEFORE UPDATE ON features
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -1281,6 +1306,123 @@ BEGIN
     END IF;
 END;
 $$ LANGUAGE plpgsql;
+
+-- ============================================
+-- DEALER MANAGEMENT
+-- ============================================
+
+-- Dealers
+CREATE TABLE IF NOT EXISTS dealers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  dealer_code VARCHAR(50) NOT NULL,
+  shop_name VARCHAR(255) NOT NULL,
+  address TEXT NOT NULL,
+  pincode VARCHAR(10) NOT NULL,
+  city VARCHAR(100) NOT NULL,
+  state VARCHAR(100) NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT unique_tenant_dealer_code UNIQUE (tenant_id, dealer_code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_dealers_user ON dealers(user_id);
+CREATE INDEX IF NOT EXISTS idx_dealers_tenant ON dealers(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_dealers_code ON dealers(dealer_code);
+CREATE INDEX IF NOT EXISTS idx_dealers_active ON dealers(is_active);
+CREATE INDEX IF NOT EXISTS idx_dealers_shop_name_trgm ON dealers USING GIN (shop_name gin_trgm_ops);
+
+CREATE TRIGGER update_dealers_updated_at BEFORE UPDATE ON dealers
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Dealer Points (Credit Points Balance)
+CREATE TABLE IF NOT EXISTS dealer_points (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  dealer_id UUID NOT NULL REFERENCES dealers(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  balance INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT unique_dealer_tenant_points UNIQUE (dealer_id, tenant_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_dealer_points_dealer ON dealer_points(dealer_id);
+CREATE INDEX IF NOT EXISTS idx_dealer_points_tenant ON dealer_points(tenant_id);
+
+CREATE TRIGGER update_dealer_points_updated_at BEFORE UPDATE ON dealer_points
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Dealer Point Transactions
+CREATE TABLE IF NOT EXISTS dealer_point_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  dealer_id UUID NOT NULL REFERENCES dealers(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  amount INTEGER NOT NULL,
+  type VARCHAR(10) NOT NULL CHECK (type IN ('CREDIT', 'DEBIT')),
+  reason VARCHAR(255),
+  reference_id UUID,
+  reference_type VARCHAR(50),
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_dealer_point_tx_dealer ON dealer_point_transactions(dealer_id);
+CREATE INDEX IF NOT EXISTS idx_dealer_point_tx_tenant ON dealer_point_transactions(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_dealer_point_tx_type ON dealer_point_transactions(type);
+CREATE INDEX IF NOT EXISTS idx_dealer_point_tx_created ON dealer_point_transactions(created_at);
+
+-- ============================================
+-- CASHBACK SYSTEM
+-- ============================================
+
+-- Cashback Transactions
+CREATE TABLE IF NOT EXISTS cashback_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  scan_session_id UUID,
+  coupon_code VARCHAR(50),
+  amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
+  upi_id VARCHAR(255),
+  status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'REVERSED')),
+  payout_reference VARCHAR(255),
+  failure_reason TEXT,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_cashback_tx_customer ON cashback_transactions(customer_id);
+CREATE INDEX IF NOT EXISTS idx_cashback_tx_tenant ON cashback_transactions(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_cashback_tx_status ON cashback_transactions(status);
+CREATE INDEX IF NOT EXISTS idx_cashback_tx_coupon ON cashback_transactions(coupon_code);
+CREATE INDEX IF NOT EXISTS idx_cashback_tx_created ON cashback_transactions(created_at);
+
+CREATE TRIGGER update_cashback_transactions_updated_at BEFORE UPDATE ON cashback_transactions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Customer UPI Details
+CREATE TABLE IF NOT EXISTS customer_upi_details (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  upi_id VARCHAR(255) NOT NULL,
+  is_verified BOOLEAN DEFAULT false,
+  is_primary BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT unique_customer_tenant_upi UNIQUE (customer_id, tenant_id, upi_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_customer_upi_customer ON customer_upi_details(customer_id);
+CREATE INDEX IF NOT EXISTS idx_customer_upi_tenant ON customer_upi_details(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_customer_upi_primary ON customer_upi_details(customer_id, tenant_id) WHERE is_primary = true;
+
+CREATE TRIGGER update_customer_upi_details_updated_at BEFORE UPDATE ON customer_upi_details
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================
 -- SEED DATA
@@ -1405,6 +1547,41 @@ INSERT INTO permissions (code, name, description, scope, allowed_assigners) VALU
 ('approve_credits', 'Approve Credit Requests', 'Approve or reject credit top-up requests', 'GLOBAL', '{"SUPER_ADMIN"}'),
 ('view_all_data', 'View All System Data', 'Access all system data across tenants', 'GLOBAL', '{"SUPER_ADMIN"}'),
 ('manage_system_settings', 'Manage System Settings', 'System configuration and settings', 'GLOBAL', '{"SUPER_ADMIN"}')
+ON CONFLICT (code) DO NOTHING;
+
+-- ============================================
+-- SEED: Feature Flags for Ecommerce & Cashback
+-- ============================================
+
+-- Ecommerce feature flag
+INSERT INTO features (code, name, description, default_enabled)
+VALUES ('ecommerce', 'Ecommerce Module', 'Enable ecommerce product catalog and customer profile for tenant', false)
+ON CONFLICT (code) DO NOTHING;
+
+-- Coupon cashback parent flag
+INSERT INTO features (code, name, description, default_enabled)
+VALUES ('coupon_cashback', 'Coupon Cashback Module', 'Parent flag for the entire coupon cashback system', false)
+ON CONFLICT (code) DO NOTHING;
+
+-- Coupon cashback child flags
+INSERT INTO features (code, name, description, parent_id, default_enabled)
+VALUES (
+  'coupon_cashback.dealer_scanning',
+  'Dealer Scanning',
+  'Enable dealer-only QR scanning with credit points (app required)',
+  (SELECT id FROM features WHERE code = 'coupon_cashback'),
+  false
+)
+ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO features (code, name, description, parent_id, default_enabled)
+VALUES (
+  'coupon_cashback.open_scanning',
+  'Open Scanning',
+  'Enable open scanning for all users with UPI cashback payout',
+  (SELECT id FROM features WHERE code = 'coupon_cashback'),
+  false
+)
 ON CONFLICT (code) DO NOTHING;
 
 -- ============================================

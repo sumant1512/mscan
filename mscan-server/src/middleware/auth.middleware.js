@@ -44,15 +44,35 @@ const authenticate = async (req, res, next) => {
       permissions: decoded.permissions || [] // Include permissions from JWT
     };
 
-    // For CUSTOMER role, fetch phone_e164 for mobile scanning
+    // For CUSTOMER role, fetch customer context
     if (decoded.role === 'CUSTOMER') {
       const customerResult = await db.query(
-        'SELECT phone_e164 FROM customers WHERE id = $1',
-        [decoded.userId]
+        'SELECT id, phone_e164 FROM customers WHERE id = (SELECT id FROM customers WHERE tenant_id = $1 AND phone_e164 = (SELECT phone_e164 FROM users WHERE id = $2)) OR id = $2 LIMIT 1',
+        [decoded.tenantId, decoded.userId]
       );
       if (customerResult.rows.length > 0) {
-        req.user.customerId = decoded.userId;
+        req.user.customerId = customerResult.rows[0].id;
         req.user.phone_e164 = customerResult.rows[0].phone_e164;
+      }
+    }
+
+    // For DEALER role, fetch dealer context
+    if (decoded.role === 'DEALER') {
+      const dealerResult = await db.query(
+        'SELECT d.id as dealer_id, d.dealer_code, d.shop_name, d.is_active FROM dealers d WHERE d.user_id = $1 AND d.tenant_id = $2',
+        [decoded.userId, decoded.tenantId]
+      );
+      if (dealerResult.rows.length > 0) {
+        const dealer = dealerResult.rows[0];
+        if (!dealer.is_active) {
+          return res.status(403).json({
+            status: false,
+            message: 'Dealer account is deactivated'
+          });
+        }
+        req.user.dealerId = dealer.dealer_id;
+        req.user.dealerCode = dealer.dealer_code;
+        req.user.shopName = dealer.shop_name;
       }
     }
 

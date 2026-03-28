@@ -13,7 +13,6 @@ const {
 } = require('../modules/common/errors/AppError');
 const { validateRequiredFields, validatePhone } = require('../modules/common/validators/common.validator');
 const { sendSuccess } = require('../modules/common/utils/response.util');
-const { executeTransaction } = require('../modules/common/utils/database.util');
 
 const SESSION_EXPIRY_MINUTES = 10;
 
@@ -275,7 +274,9 @@ exports.submitUpi = asyncHandler(async (req, res) => {
 });
 
 /**
- * Step 4b: Confirm cashback
+ * Step 5: Confirm cashback — instant UPI payout.
+ * Marks coupon USED and creates PROCESSING transaction atomically,
+ * then calls the payment gateway. Returns COMPLETED or FAILED.
  */
 exports.confirmCashback = asyncHandler(async (req, res) => {
   const tenant = req.tenant;
@@ -297,34 +298,15 @@ exports.confirmCashback = asyncHandler(async (req, res) => {
     throw new ValidationError('Session is incomplete. UPI and verification required.');
   }
 
-  const result = await executeTransaction(db, async (client) => {
-    // Update coupon status
-    await client.query(
-      `UPDATE coupons SET status = 'used', scanned_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $1`,
-      [session.coupon_id]
-    );
-
-    // Create cashback transaction
-    await client.query(
-      `INSERT INTO cashback_transactions (customer_id, tenant_id, scan_session_id, coupon_code, amount, upi_id, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')`,
-      [customerId, tenant.id, sessionId, couponCode, cashbackAmount, upiId]
-    );
-
-    // Complete session
-    await client.query(
-      `UPDATE scan_sessions SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
-      [sessionId]
-    );
-
-    return {
-      success: true,
-      cashback_amount: parseFloat(cashbackAmount),
-      upi_id: upiId,
-      status: 'PENDING'
-    };
+  const result = await cashbackService.confirmPublicCashback({
+    customerId,
+    tenantId: tenant.id,
+    couponId: session.coupon_id,
+    couponCode,
+    upiId,
+    cashbackAmount,
+    sessionId
   });
 
-  return sendSuccess(res, result);
+  return sendSuccess(res, result, result.success ? 'Cashback paid' : 'Cashback recorded, payout failed');
 });

@@ -8,6 +8,7 @@
 export interface Dealer {
   id: string;
   dealer_code: string;
+  verification_app_id: string;
   full_name: string;
   email: string | null;
   phone_e164: string;
@@ -35,6 +36,7 @@ export interface DealerDetail extends Dealer {
  * Create Dealer Request
  */
 export interface CreateDealerRequest {
+  verification_app_id: string;
   full_name: string;
   email: string;
   phone_e164: string;
@@ -48,15 +50,16 @@ export interface CreateDealerRequest {
 
 /**
  * Update Dealer Request
+ * Only dealer-profile fields. full_name/email are user-level (shared across apps).
+ * verification_app_id is immutable after creation.
  */
 export interface UpdateDealerRequest {
-  full_name?: string;
-  email?: string;
   shop_name?: string;
   address?: string;
   pincode?: string;
   city?: string;
   state?: string;
+  dealer_code?: string;
 }
 
 /**
@@ -88,6 +91,7 @@ export interface ListDealersFilters {
   search?: string;
   page?: number;
   limit?: number;
+  app_id?: string;
 }
 
 /**

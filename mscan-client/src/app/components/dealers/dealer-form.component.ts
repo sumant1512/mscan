@@ -13,6 +13,8 @@ import { AuthService } from '../../services/auth.service';
 import { CreateDealerRequest } from '../../models';
 import { LoadingService } from '../../shared/services/loading.service';
 import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
+import { VerificationAppService } from '../../store/verification-apps/verification-app.service';
+import { VerificationApp } from '../../store/verification-apps/verification-apps.models';
 
 @Component({
   selector: 'app-dealer-form',
@@ -31,7 +33,11 @@ export class DealerFormComponent implements OnInit, OnDestroy {
   saving = false;
   error = '';
 
+  availableApps: VerificationApp[] = [];
+  appsLoading = false;
+
   formData: CreateDealerRequest = {
+    verification_app_id: '',
     full_name: '',
     email: '',
     phone_e164: '',
@@ -45,12 +51,15 @@ export class DealerFormComponent implements OnInit, OnDestroy {
   constructor(
     private dealerService: DealerService,
     private authService: AuthService,
+    private verificationAppService: VerificationAppService,
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
+    this.loadApps();
+
     this.route.params
       .pipe(takeUntil(this.destroy$))
       .subscribe(params => {
@@ -65,6 +74,23 @@ export class DealerFormComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  loadApps() {
+    this.appsLoading = true;
+    this.verificationAppService.getVerificationApps()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.availableApps = response.data?.apps || [];
+          this.appsLoading = false;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.appsLoading = false;
+          this.cdr.detectChanges();
+        }
+      });
   }
 
   loadDealer() {
@@ -86,6 +112,7 @@ export class DealerFormComponent implements OnInit, OnDestroy {
           if (response.status && response.data) {
             const dealer = response.data;
             this.formData = {
+              verification_app_id: dealer.verification_app_id || '',
               full_name: dealer.full_name || '',
               email: dealer.email || '',
               phone_e164: dealer.phone_e164 || '',
@@ -118,7 +145,8 @@ export class DealerFormComponent implements OnInit, OnDestroy {
     this.saving = true;
 
     if (this.isEditMode && this.dealerId) {
-      this.dealerService.updateDealer(currentUser.tenant.id, this.dealerId, this.formData)
+      const { verification_app_id, full_name, email, phone_e164, ...updateData } = this.formData;
+      this.dealerService.updateDealer(currentUser.tenant.id, this.dealerId, updateData)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (response) => {
@@ -153,20 +181,23 @@ export class DealerFormComponent implements OnInit, OnDestroy {
   }
 
   validateForm(): boolean {
+    if (!this.isEditMode && !this.formData.verification_app_id) {
+      this.error = 'Please select a verification app';
+      return false;
+    }
+
     if (!this.formData.full_name || !this.formData.phone_e164 || !this.formData.shop_name ||
         !this.formData.address || !this.formData.pincode || !this.formData.city || !this.formData.state) {
       this.error = 'Please fill in all required fields';
       return false;
     }
 
-    // Phone validation (E.164 format)
-    const phoneRegex = /^\+[1-9]\d{6,14}$/;
+    const phoneRegex = /^\d{10}$/;
     if (!phoneRegex.test(this.formData.phone_e164)) {
       this.error = 'Please enter a valid phone number in E.164 format (e.g., +919876543210)';
       return false;
     }
 
-    // Email validation (optional but must be valid if provided)
     if (this.formData.email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(this.formData.email)) {
@@ -175,7 +206,6 @@ export class DealerFormComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Pincode validation
     const pincodeRegex = /^\d{6}$/;
     if (!pincodeRegex.test(this.formData.pincode)) {
       this.error = 'Please enter a valid 6-digit pincode';

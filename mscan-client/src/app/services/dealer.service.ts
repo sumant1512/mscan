@@ -62,6 +62,9 @@ export class DealerService {
     if (filters?.limit) {
       params = params.set('limit', filters.limit.toString());
     }
+    if (filters?.app_id) {
+      params = params.set('app_id', filters.app_id);
+    }
 
     return this.http.get<DealersListResponse>(
       `${this.apiUrl}/${tenantId}/dealers`,

@@ -26,7 +26,8 @@ async function getCustomerId(userId, tenantId) {
 }
 
 /**
- * Scan a coupon for cashback
+ * Scan a coupon for cashback — instant UPI payout.
+ * Returns COMPLETED or FAILED — never throws on gateway failure.
  */
 exports.scan = asyncHandler(async (req, res) => {
   const { id, tenant_id } = req.user;
@@ -34,7 +35,30 @@ exports.scan = asyncHandler(async (req, res) => {
 
   const customerId = await getCustomerId(id, tenant_id);
   const result = await cashbackService.scanCoupon(customerId, tenant_id, req.body.coupon_code);
-  return sendSuccess(res, result, 'Scan successful');
+
+  // Surface the action hint when UPI is missing (ValidationError with action='ADD_UPI'
+  // is already handled by the error middleware, but guard here for clarity)
+  return sendSuccess(res, result, result.success ? 'Scan successful' : 'Scan recorded, payout failed');
+});
+
+/**
+ * Retry a FAILED cashback payout.
+ * Coupon is already USED — only the payout is retried.
+ * Optionally accepts a new upi_id in the request body.
+ */
+exports.retry = asyncHandler(async (req, res) => {
+  const { id, tenant_id } = req.user;
+  const { transactionId } = req.params;
+
+  const customerId = await getCustomerId(id, tenant_id);
+  const result = await cashbackService.retryCashback(
+    transactionId,
+    customerId,
+    tenant_id,
+    req.body.upi_id || null
+  );
+
+  return sendSuccess(res, result, result.success ? 'Payout successful' : 'Payout failed');
 });
 
 /**
@@ -58,17 +82,6 @@ exports.getUpi = asyncHandler(async (req, res) => {
   const customerId = await getCustomerId(id, tenant_id);
   const upiDetails = await cashbackService.getUpiDetails(customerId, tenant_id);
   return sendSuccess(res, { upi_details: upiDetails });
-});
-
-/**
- * Claim pending cashback
- */
-exports.claim = asyncHandler(async (req, res) => {
-  const { id, tenant_id } = req.user;
-
-  const customerId = await getCustomerId(id, tenant_id);
-  const result = await cashbackService.claimCashback(customerId, tenant_id);
-  return sendSuccess(res, result, 'Cashback claim submitted');
 });
 
 /**

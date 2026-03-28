@@ -10,6 +10,27 @@
   </div>
 
   <form *ngIf="!(loading$ | async)" (ngSubmit)="onSubmit()" class="dealer-form">
+    <!-- Verification App (create only) -->
+    <div class="form-section" *ngIf="!isEditMode">
+      <h3>Verification App</h3>
+      <div class="form-group">
+        <label for="verification_app_id">App <span class="required">*</span></label>
+        <select
+          id="verification_app_id"
+          [(ngModel)]="formData.verification_app_id"
+          name="verification_app_id"
+          [disabled]="appsLoading"
+          required
+        >
+          <option value="">{{ appsLoading ? 'Loading apps...' : '-- Select App --' }}</option>
+          <option *ngFor="let app of availableApps" [value]="app.verification_app_id">
+            {{ app.app_name }}
+          </option>
+        </select>
+        <small class="help-text">The dealer's points and data will be scoped to this app. Cannot be changed after creation.</small>
+      </div>
+    </div>
+
     <!-- Personal Information -->
     <div class="form-section">
       <h3>Personal Information</h3>

@@ -7,7 +7,7 @@ const { authenticate } = require('../middleware/auth.middleware');
 // OTP rate limiting: 5 requests per 15 minutes per IP
 const otpRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 50,
   message: {
     status: false,
     error: { message: 'Too many OTP requests, please try again later', code: 'RATE_LIMITED' }

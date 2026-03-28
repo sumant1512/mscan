@@ -60,7 +60,12 @@
       "Bash(E2E_TESTS_ENABLED=true npx jest:*)",
       "Bash(npx jest:*)",
       "Bash(wc:*)",
-      "Bash(npx openspec:*)"
+      "Bash(npx openspec:*)",
+      "Bash(DB_HOST=localhost DB_PORT=5432 DB_NAME=mscan_db DB_USER=postgres DB_PASSWORD=admin node:*)",
+      "Bash(DB_HOST=localhost DB_PORT=5432 DB_NAME=mscan_db DB_USER=postgres DB_PASSWORD=admin npx jest src/__tests__/cashback.service.test.js --no-coverage)",
+      "Bash(DB_HOST=localhost DB_PORT=5432 DB_NAME=mscan_db DB_USER=postgres DB_PASSWORD=admin npx jest --no-coverage --testPathIgnorePatterns='e2e.test.js|public-scan.test.js|publicScan.integration.test.js|auth.integration.test.js|mobileAuth.integration.test.js|tenant-subdomain|auth-subdomain|permission.integration|verification-app-e2e|tenant-admin-e2e|template-e2e|product-e2e|category-e2e|user.integration|catalogue.test|batch-coupons|verification-app-limit')",
+      "Bash(ADMIN_TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJlMDAzNDczOS1iYzk3LTRlMGEtYTM4OC0yZGIxOTViODVkMDMiLCJyb2xlIjoiVEVOQU5UX0FETUlOIiwidGVuYW50SWQiOiJkNDNjNGJkMy1mMzcyLTRiZTctODNmNS00NTBmM2Y4MDg0ZjgiLCJzdWJkb21haW5TbHVnIjoicGFsc3BhaW50IiwicGVybWlzc2lvbnMiOltdLCJqdGkiOiIwZmJjNmVkMS0wMTFlLTQwZDMtODA0YS03NTk3ZWRjZDZhNjMiLCJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNzc0NzA5MTcyLCJleHAiOjE3NzQ3MTA5NzJ9._HFZxc9dFAENwNNRlreSdydUkv6Sub2oOUt0Zg1O9io\" __NEW_LINE_1168d7d5b1b6069e__ echo \"=== Create App 1 ===\" curl -s -X POST http://palspaint.localhost:3000/api/rewards/verification-apps -H \"Content-Type: application/json\" -H \"Authorization: Bearer $ADMIN_TOKEN\" -d '{\"\"\"\"app_name\"\"\"\":\"\"\"\"Test App Alpha\"\"\"\",\"\"\"\"currency\"\"\"\":\"\"\"\"INR\"\"\"\",\"\"\"\"description\"\"\"\":\"\"\"\"First test app\"\"\"\"}')",
+      "Bash(ADMIN_TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJlMDAzNDczOS1iYzk3LTRlMGEtYTM4OC0yZGIxOTViODVkMDMiLCJyb2xlIjoiVEVOQU5UX0FETUlOIiwidGVuYW50SWQiOiJkNDNjNGJkMy1mMzcyLTRiZTctODNmNS00NTBmM2Y4MDg0ZjgiLCJzdWJkb21haW5TbHVnIjoicGFsc3BhaW50IiwicGVybWlzc2lvbnMiOltdLCJqdGkiOiIwZmJjNmVkMS0wMTFlLTQwZDMtODA0YS03NTk3ZWRjZDZhNjMiLCJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNzc0NzA5MTcyLCJleHAiOjE3NzQ3MTA5NzJ9._HFZxc9dFAENwNNRlreSdydUkv6Sub2oOUt0Zg1O9io\" __NEW_LINE_9d2953d30f20305f__ echo \"=== Create App 1 ===\" curl -sv -X POST http://palspaint.localhost:3000/api/rewards/verification-apps -H \"Content-Type: application/json\" -H \"Authorization: Bearer $ADMIN_TOKEN\" -d '{\"\"\"\"app_name\"\"\"\":\"\"\"\"Test App Alpha\"\"\"\",\"\"\"\"currency\"\"\"\":\"\"\"\"INR\"\"\"\",\"\"\"\"description\"\"\"\":\"\"\"\"First test app\"\"\"\"}')"
     ]
   }
 }

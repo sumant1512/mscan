@@ -1313,10 +1313,13 @@ $$ LANGUAGE plpgsql;
 -- ============================================
 
 -- Dealers
+-- Each row = one dealer's profile for ONE verification app.
+-- Same person in two apps = two rows. Uniqueness: (user_id, verification_app_id).
 CREATE TABLE IF NOT EXISTS dealers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  verification_app_id UUID NOT NULL REFERENCES verification_apps(id) ON DELETE CASCADE,
   dealer_code VARCHAR(50) NOT NULL,
   shop_name VARCHAR(255) NOT NULL,
   address TEXT NOT NULL,
@@ -1327,11 +1330,13 @@ CREATE TABLE IF NOT EXISTS dealers (
   metadata JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT unique_tenant_dealer_code UNIQUE (tenant_id, dealer_code)
+  CONSTRAINT unique_user_app UNIQUE (user_id, verification_app_id),
+  CONSTRAINT unique_dealer_code_per_app UNIQUE (tenant_id, verification_app_id, dealer_code)
 );
 
 CREATE INDEX IF NOT EXISTS idx_dealers_user ON dealers(user_id);
 CREATE INDEX IF NOT EXISTS idx_dealers_tenant ON dealers(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_dealers_verification_app ON dealers(verification_app_id);
 CREATE INDEX IF NOT EXISTS idx_dealers_code ON dealers(dealer_code);
 CREATE INDEX IF NOT EXISTS idx_dealers_active ON dealers(is_active);
 CREATE INDEX IF NOT EXISTS idx_dealers_shop_name_trgm ON dealers USING GIN (shop_name gin_trgm_ops);
@@ -1388,7 +1393,8 @@ CREATE TABLE IF NOT EXISTS cashback_transactions (
   coupon_code VARCHAR(50),
   amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
   upi_id VARCHAR(255),
-  status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'REVERSED')),
+  status VARCHAR(20) NOT NULL DEFAULT 'PROCESSING' CHECK (status IN ('PROCESSING', 'COMPLETED', 'FAILED', 'REVERSED')),
+  gateway_transaction_id VARCHAR(255),
   payout_reference VARCHAR(255),
   failure_reason TEXT,
   metadata JSONB DEFAULT '{}'::jsonb,

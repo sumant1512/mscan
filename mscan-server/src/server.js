@@ -32,6 +32,7 @@ const dealerRoutes = require('./routes/dealer.routes');
 const dealerMobileRoutes = require('./routes/dealerMobile.routes');
 const cashbackMobileRoutes = require('./routes/cashbackMobile.routes');
 const publicCashbackRoutes = require('./routes/publicCashback.routes');
+const cashbackAdminRoutes = require('./routes/cashbackAdmin.routes');
 const ecommerceMobileRoutes = require('./routes/ecommerceMobile.routes');
 // Import middleware
 const errorHandler = require('./middleware/error.middleware');
@@ -63,6 +64,7 @@ const corsOptions = {
     
     const allowedOrigins = [
       `http://localhost:4200`,
+      `http://localhost:8081`,
       `http://localhost:3000`,
       `http://${baseDomain}`,
       `https://${baseDomain}`,
@@ -181,6 +183,9 @@ app.use('/api/mobile/v1/cashback', cashbackMobileRoutes);
 
 // New: Public cashback (no app required)
 app.use('/api/public/cashback', publicCashbackRoutes);
+
+// New: Cashback admin API (tenant admin view)
+app.use('/api/cashback', cashbackAdminRoutes);
 
 // New: Ecommerce mobile API (customer catalog + profile)
 app.use('/api/mobile/v1/ecommerce', ecommerceMobileRoutes);

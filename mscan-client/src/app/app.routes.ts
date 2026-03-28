@@ -79,9 +79,16 @@ import { DealerListComponent } from './components/dealers/dealer-list.component'
 import { DealerFormComponent } from './components/dealers/dealer-form.component';
 import { DealerDetailComponent } from './components/dealers/dealer-detail.component';
 
+// Cashback
+import { PublicCashbackComponent } from './components/public-cashback/public-cashback.component';
+import { CashbackDashboardComponent } from './components/cashback/cashback-dashboard.component';
+
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
+
+  // Public cashback — no auth required (customers scan QR → land here)
+  { path: 'cashback', component: PublicCashbackComponent },
   { path: 'debug-auth', component: DebugAuthComponent }, // Debug tool
   { path: 'test-api', component: TestProductsApiComponent }, // API test tool
   { path: 'debug-network', component: DebugNetworkComponent }, // Network debugging
@@ -196,6 +203,7 @@ export const routes: Routes = [
         data: { requiredPermission: 'edit_product' }
       },
       { path: 'scans/history', component: ScanHistoryComponent },
+      { path: 'cashback', component: CashbackDashboardComponent },
       // New: Batch Creation Wizard (7-step workflow)
       {
         path: 'batches/create',

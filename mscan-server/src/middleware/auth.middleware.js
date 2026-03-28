@@ -56,25 +56,9 @@ const authenticate = async (req, res, next) => {
       }
     }
 
-    // For DEALER role, fetch dealer context
-    if (decoded.role === 'DEALER') {
-      const dealerResult = await db.query(
-        'SELECT d.id as dealer_id, d.dealer_code, d.shop_name, d.is_active FROM dealers d WHERE d.user_id = $1 AND d.tenant_id = $2',
-        [decoded.userId, decoded.tenantId]
-      );
-      if (dealerResult.rows.length > 0) {
-        const dealer = dealerResult.rows[0];
-        if (!dealer.is_active) {
-          return res.status(403).json({
-            status: false,
-            message: 'Dealer account is deactivated'
-          });
-        }
-        req.user.dealerId = dealer.dealer_id;
-        req.user.dealerCode = dealer.dealer_code;
-        req.user.shopName = dealer.shop_name;
-      }
-    }
+    // For DEALER role: do NOT resolve a single dealer profile here.
+    // One user may have multiple dealer rows (one per verification app).
+    // The specific profile is resolved at request time using the X-App-Id header.
 
     next();
   } catch (error) {

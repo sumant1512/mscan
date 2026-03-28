@@ -269,12 +269,10 @@ exports.dealerVerifyOtp = asyncHandler(async (req, res) => {
     // Verify OTP
     await _verifyOtpRecord(client, tenant.id, phone_e164, otp);
 
-    // Get dealer user
+    // Get dealer user (no dealer join — one user can have multiple dealer profiles across apps)
     const userRes = await client.query(
-      `SELECT u.id, u.role, d.id as dealer_id
-       FROM users u
-       JOIN dealers d ON d.user_id = u.id AND d.tenant_id = u.tenant_id
-       WHERE u.tenant_id = $1 AND u.phone_e164 = $2 AND u.role = 'DEALER' AND u.is_active = true AND d.is_active = true`,
+      `SELECT id FROM users
+       WHERE tenant_id = $1 AND phone_e164 = $2 AND role = 'DEALER' AND is_active = true`,
       [tenant.id, phone_e164]
     );
 
@@ -284,7 +282,7 @@ exports.dealerVerifyOtp = asyncHandler(async (req, res) => {
 
     const user = userRes.rows[0];
 
-    // Generate tokens with dealer context
+    // Generate tokens with dealer context (no dealer_id in JWT — resolved at request time via X-App-Id)
     const { accessToken, refreshToken } = tokenService.generateTokens(
       user.id,
       'DEALER',
@@ -292,7 +290,7 @@ exports.dealerVerifyOtp = asyncHandler(async (req, res) => {
       tenant.subdomain_slug || null
     );
 
-    return { accessToken, refreshToken, dealerId: user.dealer_id };
+    return { accessToken, refreshToken };
   });
 
   return sendSuccess(res, {
@@ -343,14 +341,11 @@ exports.getMe = asyncHandler(async (req, res) => {
   }
 
   if (role === 'DEALER') {
+    // Return user-level info only. Per-app dealer profile is fetched via
+    // GET /api/mobile/v1/dealer/profile with the X-App-Id header.
     const result = await db.query(
-      `SELECT u.id, u.full_name, u.phone_e164,
-              d.id as dealer_id, d.dealer_code, d.shop_name,
-              dp.balance as points_balance,
-              t.tenant_name, t.subdomain_slug
+      `SELECT u.id, u.full_name, u.phone_e164, t.tenant_name, t.subdomain_slug
        FROM users u
-       JOIN dealers d ON d.user_id = u.id AND d.tenant_id = u.tenant_id
-       LEFT JOIN dealer_points dp ON dp.dealer_id = d.id AND dp.tenant_id = d.tenant_id
        JOIN tenants t ON u.tenant_id = t.id
        WHERE u.id = $1 AND u.tenant_id = $2`,
       [id, tenant_id]
@@ -367,13 +362,7 @@ exports.getMe = asyncHandler(async (req, res) => {
       full_name: d.full_name,
       phone: d.phone_e164,
       role: 'DEALER',
-      tenant: { id: tenant_id, name: d.tenant_name, subdomain: d.subdomain_slug },
-      dealer: {
-        id: d.dealer_id,
-        code: d.dealer_code,
-        shop_name: d.shop_name,
-        points: d.points_balance || 0
-      }
+      tenant: { id: tenant_id, name: d.tenant_name, subdomain: d.subdomain_slug }
     });
   }
 

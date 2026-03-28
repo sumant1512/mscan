@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -40,6 +40,7 @@ export class FeatureManagement implements OnInit {
   constructor(
     private featuresService: FeaturesService,
     private tenantService: TenantService,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit() {
@@ -55,11 +56,13 @@ export class FeatureManagement implements OnInit {
           this.features = response?.data?.features || [];
         }
         this.loading = false;
+        this.cdr.detectChanges();
       },
       error: (error) => {
         this.error = 'Failed to load features';
         this.loading = false;
         console.error('Error loading features:', error);
+        this.cdr.detectChanges();
       },
     });
   }
@@ -70,9 +73,11 @@ export class FeatureManagement implements OnInit {
         if (response.status) {
           this.tenants = response.data.tenants || [];
         }
+        this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('Error loading tenants:', error);
+        this.cdr.detectChanges();
       },
     });
   }
@@ -95,6 +100,7 @@ export class FeatureManagement implements OnInit {
       error: (error) => {
         this.error = error.error?.message || 'Failed to create feature';
         console.error('Error creating feature:', error);
+        this.cdr.detectChanges();
       },
     });
   }
@@ -110,11 +116,13 @@ export class FeatureManagement implements OnInit {
             tenantFeature.enabled_for_tenant = newEnabledState;
             tenantFeature.enabled_at = response.data?.feature?.enabled_at;
             tenantFeature.enabled_by = response.data?.feature?.enabled_by;
+            this.cdr.detectChanges();
           }
         },
         error: (error) => {
           this.error = `Failed to ${newEnabledState ? 'enable' : 'disable'} feature`;
           console.error('Error toggling feature:', error);
+          this.cdr.detectChanges();
         },
       });
   }
@@ -129,9 +137,11 @@ export class FeatureManagement implements OnInit {
         if (response.status) {
           this.tenantFeatures[tenantId] = response?.data?.features || [];
         }
+        this.cdr.detectChanges();
       },
       error: (error) => {
         console.error('Error loading tenant features:', error);
+        this.cdr.detectChanges();
       },
     });
   }

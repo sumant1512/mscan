@@ -29,9 +29,9 @@ router.use(requireFeature('coupon_cashback.open_scanning', {
 }));
 
 router.post('/scan', scanRateLimit, cashbackMobileController.scan);
+router.post('/retry/:transactionId', cashbackMobileController.retry);
 router.post('/upi', cashbackMobileController.saveUpi);
 router.get('/upi', cashbackMobileController.getUpi);
-router.post('/claim', cashbackMobileController.claim);
 router.get('/history', cashbackMobileController.getHistory);
 router.get('/balance', cashbackMobileController.getBalance);
 

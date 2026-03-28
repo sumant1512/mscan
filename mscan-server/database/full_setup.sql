@@ -1469,11 +1469,11 @@ CREATE INDEX IF NOT EXISTS idx_templates_custom ON product_templates(tenant_id) 
 -- Super Admin Users
 INSERT INTO users (email, full_name, role, is_active)
 VALUES ('sumantmishra511@gmail.com', 'Super Admin', 'SUPER_ADMIN', true)
-ON CONFLICT (email) DO NOTHING;
+ON CONFLICT (email) WHERE email is NOT NULL DO NOTHING;
 
 INSERT INTO users (email, full_name, role, is_active)
 VALUES ('kumarbhaskar419@gmail.com', 'Super Admin', 'SUPER_ADMIN', true)
-ON CONFLICT (email) DO NOTHING;
+ON CONFLICT (email) WHERE email is NOT NULL DO NOTHING;
 
 -- Initialize credit balance for all tenants (if any exist)
 INSERT INTO tenant_credit_balance (tenant_id, balance, total_received, total_spent)

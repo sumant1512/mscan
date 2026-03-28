@@ -28,6 +28,15 @@ async function wouldCreateCycle(featureId, parentId) {
 
   return result.rows.length > 0;
 }
+
+/**
+ * Create a new feature
+ * @param {Object} data - Feature data
+ * @param {string} actorId - User creating the feature
+ * @param {Object} req - Express request for audit logging
+ * @returns {Promise<Object>} Created feature
+ */
+async function createFeature(data, actorId, req = null) {
   const client = await db.getClient();
 
   try {

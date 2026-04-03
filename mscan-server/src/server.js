@@ -101,27 +101,28 @@ app.use((req, res, next) => {
 });
 
 // ============================================
-// Health Check
+// Health Check (returns current status without blocking)
 // ============================================
-app.get('/health', async (req, res) => {
-  const dbHealth = await db.checkHealth();
-
-  if (dbHealth.success) {
+app.get('/health', (req, res) => {
+  // Return current dbStatus without blocking on a new health check
+  // This allows Cloud Run to get a response quickly
+  if (dbStatus.success) {
     res.json({
       status: 'healthy',
       server: 'running',
-      database: dbHealth.status,
-      timestamp: dbHealth.timestamp,
-      responseTime: dbHealth.responseTime
+      database: dbStatus.status,
+      timestamp: dbStatus.timestamp,
+      responseTime: dbStatus.responseTime
     });
   } else {
+    // Server is running but DB is not ready yet
     res.status(503).json({
       status: 'unhealthy',
       server: 'running',
-      database: dbHealth.status,
-      error: dbHealth.error,
+      database: dbStatus.status,
+      error: dbStatus.error,
       timestamp: new Date().toISOString(),
-      responseTime: dbHealth.responseTime
+      responseTime: dbStatus.responseTime
     });
   }
 });
@@ -264,7 +265,67 @@ app.get('/scan/:coupon_code', async (req, res) => {
 });
 
 // ============================================
-// Start Server (with Database Health Check)
+// Database Status (for background checking)
+// ============================================
+let dbStatus = {
+  success: false,
+  status: 'disconnected',
+  database: null,
+  error: null,
+  timestamp: null,
+  responseTime: null,
+  config: null
+};
+
+/**
+ * Retry database connection with fixed 5-second intervals
+ * @param {number} maxAttempts - Maximum number of attempts (default: 3)
+ * @returns {Promise<Object>} Health check result
+ */
+async function checkDatabaseWithRetry(maxAttempts = 3) {
+  let lastError = null;
+  const RETRY_INTERVAL = 5000; // 5 seconds
+  
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      console.log(`\n🔄 Database connection attempt ${attempt}/${maxAttempts}...`);
+      const health = await db.checkHealth();
+      
+      if (health.success) {
+        console.log(`✅ Connected on attempt ${attempt}!`);
+        return health;
+      } else {
+        lastError = health;
+        console.error(`❌ Attempt ${attempt} failed: ${health.error}`);
+      }
+    } catch (err) {
+      lastError = {
+        success: false,
+        status: 'error',
+        error: err.message,
+        code: err.code
+      };
+      console.error(`❌ Attempt ${attempt} error: ${err.message}`);
+    }
+    
+    // Wait before retry (fixed 5-second interval)
+    if (attempt < maxAttempts) {
+      console.log(`⏳ Waiting ${RETRY_INTERVAL / 1000}s before retry...`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_INTERVAL));
+    }
+  }
+  
+  // All attempts failed
+  console.error(`\n⚠️  All ${maxAttempts} database connection attempts failed`);
+  return lastError || {
+    success: false,
+    status: 'disconnected',
+    error: 'Failed to connect to database after all retries'
+  };
+}
+
+// ============================================
+// Start Server (Cloud Run compatible)
 // ============================================
 async function startServer() {
   try {
@@ -272,50 +333,49 @@ async function startServer() {
     console.log('║            MScan Server - Starting Up                 ║');
     console.log('╚═══════════════════════════════════════════════════════╝\n');
 
-    // Step 1: Check Database Connection
-    console.log('🔍 Checking database connection...');
-    const dbHealth = await db.checkHealth();
-
-    if (!dbHealth.success) {
-      // Database is not healthy
-      console.error('\n❌ DATABASE CONNECTION FAILED!\n');
-      console.error('Error Details:');
-      console.error(`  • Message: ${dbHealth.error}`);
-      console.error(`  • Code: ${dbHealth.code || 'N/A'}`);
-      console.error(`  • Response Time: ${dbHealth.responseTime}`);
-      console.error('\nDatabase Configuration:');
-      console.error(`  • Host: ${dbHealth.config.host}`);
-      console.error(`  • Port: ${dbHealth.config.port}`);
-      console.error(`  • Database: ${dbHealth.config.database}`);
-      console.error(`  • User: ${dbHealth.config.user}`);
-      console.error('\n💡 Troubleshooting:');
-      console.error('  1. Check if PostgreSQL is running');
-      console.error('  2. Verify database exists: npm run db:setup');
-      console.error('  3. Check .env configuration');
-      console.error('  4. Test connection: psql -h localhost -U postgres -d mscan_db');
-      console.error('\n🛑 Server startup aborted.\n');
-      process.exit(1);
-    }
-
-    // Database is healthy
-    console.log('✅ Database connection successful!');
-    console.log(`  • Database: ${dbHealth.database}`);
-    console.log(`  • Response Time: ${dbHealth.responseTime}`);
-    console.log(`  • Status: ${dbHealth.status}`);
-
-    // Step 2: Start HTTP Server
-    console.log('\n🚀 Starting HTTP server...');
-    const server = app.listen(PORT, () => {
+    // Step 1: Start HTTP Server FIRST (required for Cloud Run)
+    // Bind explicitly to 0.0.0.0 for Cloud Run compatibility
+    console.log('🚀 Starting HTTP server...');
+    const server = app.listen(PORT, '0.0.0.0', () => {
       console.log('\n╔═══════════════════════════════════════════════════════╗');
-      console.log('║            MScan Server - Ready!                      ║');
+      console.log('║            MScan Server - Listening!                  ║');
       console.log('╚═══════════════════════════════════════════════════════╝');
-      console.log(`\n📡 Server: http://localhost:${PORT}`);
-      console.log(`📝 API: http://localhost:${PORT}/api`);
-      console.log(`🏥 Health: http://localhost:${PORT}/health`);
+      console.log(`\n📡 Server: http://0.0.0.0:${PORT}`);
+      console.log(`📝 API: http://0.0.0.0:${PORT}/api`);
+      console.log(`🏥 Health: http://0.0.0.0:${PORT}/health`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`💾 Database: ${dbHealth.config.database}`);
-      console.log('\n✨ Ready to accept requests!\n');
+      console.log('\n✨ HTTP server is listening!\n');
     });
+
+    // Step 2: Check Database Connection in Background with Retries (non-blocking)
+    console.log('🔍 Checking database connection in background (up to 3 retries)...');
+    checkDatabaseWithRetry(3)
+      .then((health) => {
+        dbStatus = health;
+        if (health.success) {
+          console.log('✅ Database connection successful!');
+          console.log(`  • Database: ${health.database}`);
+          console.log(`  • Response Time: ${health.responseTime}`);
+          console.log(`  • Status: ${health.status}`);
+          console.log('\n📊 Server is fully operational!\n');
+        } else {
+          console.error('⚠️  Database connection failed after all retries:');
+          console.error(`  • Message: ${health.error}`);
+          console.error(`  • Code: ${health.code || 'N/A'}`);
+          console.error('\n💡 Troubleshooting:');
+          console.error('  1. Check if PostgreSQL is running');
+          console.error('  2. Verify database exists: npm run db:setup');
+          console.error('  3. Check .env configuration');
+          console.error('  4. Test connection: psql -h localhost -U postgres -d mscan_db');
+          console.error('\n⚠️  Server is running but will report unhealthy until DB connects.\n');
+        }
+      })
+      .catch((err) => {
+        console.error('⚠️  Database health check error:', err.message);
+        dbStatus.success = false;
+        dbStatus.status = 'error';
+        dbStatus.error = err.message;
+      });
 
     // Graceful Shutdown
     process.on('SIGTERM', () => {

@@ -3,6 +3,12 @@
  */
 const { Pool } = require('pg');
 
+// Track database connection status
+let dbConnected = false;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_INTERVAL = 5000; // 5 seconds
+
 const pool = new Pool({
   host: process.env.DB_HOST,
   port: parseInt(process.env.DB_PORT),
@@ -17,11 +23,44 @@ const pool = new Pool({
 // Test connection
 pool.on('connect', () => {
   console.log('📦 Database pool connection established');
+  dbConnected = true;
+  reconnectAttempts = 0;
 });
 
 pool.on('error', (err) => {
-  console.error('❌ Unexpected database error:', err);
-  process.exit(-1);
+  // Handle database errors gracefully instead of exiting
+  console.error('⚠️  Database pool error (FATAL):', err?.code, err?.message);
+  
+  if (err?.code === '57P01') {
+    // Connection terminated by administrator
+    console.error('❌ Database connection terminated by administrator');
+    console.error('⏳ Attempting to reconnect...');
+  } else if (err?.code === 'ECONNREFUSED') {
+    console.error('❌ Cannot connect to database (connection refused)');
+    console.error('⏳ Waiting before retry...');
+  } else {
+    console.error('❌ Unexpected database error:', err?.message);
+  }
+  
+  dbConnected = false;
+  
+  // Auto-reconnect logic
+  if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+    reconnectAttempts++;
+    console.log(`\n🔄 Reconnection attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} in ${RECONNECT_INTERVAL / 1000}s...`);
+    
+    setTimeout(() => {
+      console.log('🔍 Retrying database connection...');
+      // Trigger a health check to attempt reconnection
+      checkDatabaseHealth().catch(e => {
+        console.error('Reconnect attempt failed:', e.message);
+      });
+    }, RECONNECT_INTERVAL);
+  } else {
+    console.error('\n❌ Max reconnection attempts reached. Database unavailable.');
+    console.error('⚠️  Server will continue running but database operations will fail.');
+    console.error('💡 Restart the database service to restore connectivity.');
+  }
 });
 
 /**
@@ -36,6 +75,10 @@ async function checkDatabaseHealth() {
     // Try to connect and run a simple query
     const result = await pool.query('SELECT NOW() as current_time, current_database() as database');
     const responseTime = Date.now() - startTime;
+
+    // Mark as connected
+    dbConnected = true;
+    reconnectAttempts = 0;
 
     return {
       success: true,
@@ -53,10 +96,20 @@ async function checkDatabaseHealth() {
   } catch (error) {
     const responseTime = Date.now() - startTime;
 
+    // Handle specific error cases
+    let errorMessage = error.message;
+    if (error.code === '57P01') {
+      errorMessage = 'Database connection terminated by administrator';
+    } else if (error.code === 'ECONNREFUSED') {
+      errorMessage = 'Cannot connect to database (connection refused)';
+    }
+
+    dbConnected = false;
+
     return {
       success: false,
       status: 'unhealthy',
-      error: error.message,
+      error: errorMessage,
       code: error.code,
       responseTime: `${responseTime}ms`,
       config: {
@@ -74,4 +127,10 @@ module.exports = {
   getClient: () => pool.connect(),
   pool,
   checkHealth: checkDatabaseHealth,
+  isConnected: () => dbConnected,
+  getReconnectStatus: () => ({
+    connected: dbConnected,
+    reconnectAttempts,
+    maxAttempts: MAX_RECONNECT_ATTEMPTS
+  })
 };

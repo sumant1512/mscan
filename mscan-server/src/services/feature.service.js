@@ -1,6 +1,6 @@
 /**
  * Feature Service
- * Handles feature flag definition, tenant assignment, and validation
+ * Handles feature flag definition, tenant assignment, and validation //New developemnt
  */
 
 const db = require('../config/database');

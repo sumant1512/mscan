@@ -2,16 +2,17 @@ name: Build and Deploy to Cloud Run
 
 on:
   push:
-    branches: [feature/github-workflow]
+    branches: 
+      - fix-directory
   workflow_dispatch:
 
 env:
-  PROJECT_ID: your-gcp-project-id
-  GAR_LOCATION: us-central1
-  REPOSITORY: your-artifact-registry-repo
-  SERVICE: your-cloud-run-service
-  REGION: us-central1
-  IMAGE_NAME: app
+  PROJECT_ID: orbital-nirvana-492005-q3
+  GAR_LOCATION: us-east4
+  REPOSITORY: mscan-client
+  SERVICE: mscan-client
+  REGION: us-east4
+  IMAGE_NAME: mscan-client
 
 jobs:
   deploy:

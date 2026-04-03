@@ -15,8 +15,8 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build with docker-compose
-        run: docker-compose build --no-cache
+      - name: Build with docker compose
+        run: docker compose build --no-cache
 
       - name: Verify images built
         run: |
@@ -24,7 +24,7 @@ jobs:
           docker images | grep mscan
           echo ""
           echo "=== Compose Services ==="
-          docker-compose config --services
+          docker compose config --services
 
       - name: Test services (without Database)
         run: |
@@ -39,4 +39,4 @@ jobs:
 
       - name: Clean up
         if: always()
-        run: docker-compose down --rmi local 2>/dev/null || true
+        run: docker compose down --rmi local 2>/dev/null || true

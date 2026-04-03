@@ -7,11 +7,11 @@ on:
   workflow_dispatch:
 
 env:
-  PROJECT_ID: your-gcp-project-id
-  GAR_LOCATION: us-central1
-  REPOSITORY: your-artifact-registry-repo
-  SERVICE: your-cloud-run-service
-  REGION: us-central1
+  PROJECT_ID: orbital-nirvana-492005-q3
+  GAR_LOCATION: us-east4
+  REPOSITORY: mscan-server
+  SERVICE: mscan-server
+  REGION: us-east4
   IMAGE_NAME: mscan-server
 
 jobs:

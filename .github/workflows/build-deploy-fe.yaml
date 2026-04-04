@@ -1,3 +1,4 @@
+
 name: Build and Deploy to Cloud Run ms-client
 
 on:
@@ -42,10 +43,9 @@ jobs:
           password: ${{ steps.auth.outputs.access_token }}
 
       - name: Build and push image
+        working-directory: mscan/main/mscan-client
         run: |
-          cd mscan/blob/fix-directory/mscan-client
           IMAGE_URI="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.run_number }}"
-
           docker build -t "$IMAGE_URI" -f Dockerfile .
           docker push "$IMAGE_URI"
 

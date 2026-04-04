@@ -136,6 +136,11 @@ export class SideNavComponent implements OnInit, OnDestroy {
       icon: 'person',
       route: '/tenant/profile',
     },
+    {
+      label: 'Feature Flags',
+      icon: 'toggle_on',
+      route: '/tenant/features',
+    },
   ];
 
   constructor(

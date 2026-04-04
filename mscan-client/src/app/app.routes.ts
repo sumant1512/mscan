@@ -219,6 +219,7 @@ export const routes: Routes = [
         data: { requiredPermission: 'assign_permissions' }
       },
       { path: 'profile', component: ProfileComponent },
+      { path: 'features', component: FeatureManagement },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },

@@ -43,7 +43,7 @@ jobs:
           password: ${{ steps.auth.outputs.access_token }}
 
       - name: Build and push image
-        working-directory: mscan/main/mscan-client
+        working-directory: mscan/mscan-client
         run: |
           IMAGE_URI="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.run_number }}"
           docker build -t "$IMAGE_URI" -f Dockerfile .

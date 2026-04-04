@@ -1,152 +1,610 @@
 <div class="feature-management">
-  <h1>Feature Management</h1>
-
-  <!-- Error Message -->
-  <div class="error-message" *ngIf="error">
-    {{ error }}
+  <!-- Header Section -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="title-section">
+        <h1>🎯 {{ isTenantAdmin ? 'Feature Control Center' : 'Feature Flags' }}</h1>
+        <p class="subtitle">{{ isTenantAdmin ? 'Manage features for ' + currentTenantName : 'Manage global features and tenant-specific enablement' }}</p>
+      </div>
+      <div class="header-actions" *ngIf="isSuperAdmin">
+        <button class="btn-primary" (click)="showCreateForm = !showCreateForm">
+          <span class="btn-icon">+</span>
+          {{ showCreateForm ? 'Cancel' : 'Create Feature' }}
+        </button>
+      </div>
+    </div>
   </div>
 
-  <!-- Create Feature Button -->
-  <div class="actions">
-    <button class="btn-primary" (click)="showCreateForm = !showCreateForm">
-      {{ showCreateForm ? 'Cancel' : 'Create New Feature' }}
-    </button>
+  <!-- Error/Success Messages -->
+  <div class="alert alert-error" *ngIf="error">
+    <span class="alert-icon">⚠️</span>
+    <span>{{ error }}</span>
+    <button class="alert-close" (click)="error = null">×</button>
+  </div>
+  <div class="alert alert-success" *ngIf="successMessage">
+    <span class="alert-icon">✓</span>
+    <span>{{ successMessage }}</span>
+    <button class="alert-close" (click)="successMessage = null">×</button>
   </div>
 
-  <!-- Create Feature Form -->
-  <div class="create-form" *ngIf="showCreateForm">
-    <h3>Create New Feature</h3>
-    <form (ngSubmit)="createFeature()" #featureForm="ngForm">
-      <div class="form-group">
-        <label for="code">Feature Code:</label>
-        <input
-          type="text"
-          id="code"
-          [(ngModel)]="newFeature.code"
-          name="code"
-          required
-          pattern="^[a-z0-9_-]+$"
-          #codeInput="ngModel"
-          placeholder="e.g., advanced-reporting"
-        >
-        <div class="validation-error" *ngIf="codeInput.invalid && (codeInput.dirty || codeInput.touched)">
-          <span *ngIf="codeInput.errors?.['required']">Feature code is required.</span>
-          <span *ngIf="codeInput.errors?.['pattern']">Code must be lowercase, alphanumeric, hyphens or underscores only.</span>
+  <!-- TENANT ADMIN VIEW -->
+  <div class="tenant-admin-view" *ngIf="isTenantAdmin && !loading">
+    <div class="info-banner">
+      <span class="info-icon">ℹ️</span>
+      <span>Toggle features on or off to control what's available for your organization. Changes take effect immediately.</span>
+    </div>
+
+    <div class="features-grid">
+      <ng-container *ngFor="let feature of myTenantFeatures">
+        <div class="feature-card" [class.feature-disabled]="!feature.is_active">
+          <div class="feature-header">
+            <div class="feature-icon">
+              {{ feature.children && feature.children.length > 0 ? '📁' : '🏷️' }}
+            </div>
+            <div class="feature-info">
+              <h3 class="feature-name">{{ feature.name }}</h3>
+              <code class="feature-code">{{ feature.code }}</code>
+              <p class="feature-description" *ngIf="feature.description">
+                {{ feature.description }}
+              </p>
+              <div class="feature-meta">
+                <span class="meta-badge" *ngIf="feature.default_enabled">
+                  <span class="star-icon">⭐</span> Recommended
+                </span>
+                <span class="meta-badge" [class.badge-active]="feature.is_active" [class.badge-inactive]="!feature.is_active">
+                  {{ feature.is_active ? '✓ Available' : '⚠️ Unavailable' }}
+                </span>
+              </div>
+            </div>
+            <div class="feature-toggle">
+              <label class="toggle-switch">
+                <input
+                  type="checkbox"
+                  [checked]="feature.enabled_for_tenant"
+                  (change)="toggleMyFeature(feature, $event)"
+                  [disabled]="!feature.is_active"
+                />
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="toggle-label">
+                {{ feature.enabled_for_tenant ? 'Enabled' : 'Disabled' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Child Features -->
+          <div class="feature-children" *ngIf="feature.children && feature.children.length > 0">
+            <div class="children-header">
+              <span class="children-icon">📦</span>
+              <span class="children-label">Included Features ({{ feature.children.length }})</span>
+            </div>
+            <div class="child-feature-list">
+              <div class="child-feature" *ngFor="let child of feature.children" [class.child-disabled]="!child.is_active">
+                <div class="child-icon">{{ child.default_enabled ? '⭐' : '🏷️' }}</div>
+                <div class="child-info">
+                  <span class="child-name">{{ child.name }}</span>
+                  <span class="child-code">{{ child.code }}</span>
+                </div>
+                <div class="child-toggle">
+                  <label class="toggle-switch toggle-sm">
+                    <input
+                      type="checkbox"
+                      [checked]="child.enabled_for_tenant"
+                      (change)="toggleMyFeature(child, $event)"
+                      [disabled]="!child.is_active"
+                    />
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="toggle-label-sm">
+                    {{ child.enabled_for_tenant ? 'ON' : 'OFF' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </ng-container>
+    </div>
 
-      <div class="form-group">
-        <label for="name">Feature Name:</label>
-        <input
-          type="text"
-          id="name"
-          [(ngModel)]="newFeature.name"
-          name="name"
-          required
-          placeholder="e.g., Advanced Reporting"
-        >
-      </div>
+    <!-- Empty State for Tenant Admin -->
+    <div class="empty-state" *ngIf="myTenantFeatures.length === 0">
+      <div class="empty-icon">📦</div>
+      <h3>No Features Available</h3>
+      <p>Your organization doesn't have any features assigned yet.</p>
+      <p class="empty-hint">Contact your administrator to enable features for your organization.</p>
+    </div>
+  </div>
 
-      <div class="form-group">
-        <label for="description">Description:</label>
-        <textarea
-          id="description"
-          [(ngModel)]="newFeature.description"
-          name="description"
-          rows="3"
-          placeholder="Describe what this feature does"
-        ></textarea>
+  <!-- SUPER ADMIN VIEW -->
+  <div class="super-admin-view" *ngIf="isSuperAdmin">
+  <!-- Create Feature Form -->
+  <div class="modal-overlay" *ngIf="showCreateForm" (click)="closeCreateForm()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Create New Feature</h3>
+        <button class="modal-close" (click)="closeCreateForm()" [disabled]="creatingFeature">×</button>
       </div>
-
-      <div class="form-group">
-        <label for="parent_id">Parent Feature (optional):</label>
-        <select
-          id="parent_id"
-          [(ngModel)]="newFeature.parent_id"
-          name="parent_id"
-        >
-          <option value="">No parent (root feature)</option>
-          <option *ngFor="let feature of features" [value]="feature.id">
-            {{ feature.name }} ({{ feature.code }})
-          </option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>
+      <form (ngSubmit)="createFeature()" #featureForm="ngForm">
+        <div class="form-group">
+          <label for="code">
+            <span class="label-text">Feature Code</span>
+            <span class="label-required">*</span>
+          </label>
           <input
-            type="checkbox"
-            [(ngModel)]="newFeature.default_enabled"
-            name="default_enabled"
+            type="text"
+            id="code"
+            [(ngModel)]="newFeature.code"
+            name="code"
+            required
+            pattern="^[a-z0-9_-]+$"
+            #codeInput="ngModel"
+            placeholder="e.g., advanced-reporting"
+            class="form-input"
+            [class.input-error]="codeInput.invalid && (codeInput.dirty || codeInput.touched)"
           >
-          Enable by default for new tenants
-        </label>
-      </div>
+          <div class="input-hint">Use lowercase letters, numbers, hyphens, or underscores</div>
+          <div class="validation-error" *ngIf="codeInput.invalid && (codeInput.dirty || codeInput.touched)">
+            <span *ngIf="codeInput.errors?.['required']">Feature code is required</span>
+            <span *ngIf="codeInput.errors?.['pattern']">Invalid format - use lowercase, alphanumeric, hyphens or underscores only</span>
+          </div>
+        </div>
 
-      <div class="form-actions">
-        <button type="submit" class="btn-primary" [disabled]="!featureForm.valid">Create Feature</button>
-        <button type="button" class="btn-secondary" (click)="showCreateForm = false">Cancel</button>
+        <div class="form-group">
+          <label for="name">
+            <span class="label-text">Feature Name</span>
+            <span class="label-required">*</span>
+          </label>
+          <input
+            type="text"
+            id="name"
+            [(ngModel)]="newFeature.name"
+            name="name"
+            required
+            #nameInput="ngModel"
+            placeholder="e.g., Advanced Reporting"
+            class="form-input"
+            [class.input-error]="nameInput.invalid && (nameInput.dirty || nameInput.touched)"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="description">
+            <span class="label-text">Description</span>
+          </label>
+          <textarea
+            id="description"
+            [(ngModel)]="newFeature.description"
+            name="description"
+            rows="3"
+            placeholder="Describe what this feature does and when it should be used"
+            class="form-input"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="parent_id">
+            <span class="label-text">Parent Feature</span>
+            <span class="label-optional">(optional)</span>
+          </label>
+          <select
+            id="parent_id"
+            [(ngModel)]="newFeature.parent_id"
+            name="parent_id"
+            class="form-select"
+          >
+            <option [ngValue]="undefined">🌟 No parent (root feature)</option>
+            <option *ngFor="let feature of features" [ngValue]="feature.id">
+              {{ feature.name }} ({{ feature.code }})
+            </option>
+          </select>
+          <div class="input-hint">Child features inherit their parent's enablement state</div>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <span class="label-text">Active Status</span>
+          </label>
+          <div class="toggle-wrapper">
+            <label class="table-toggle">
+              <input
+                type="checkbox"
+                [(ngModel)]="newFeature.is_active"
+                name="is_active"
+              />
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label">{{ newFeature.is_active ? 'Active' : 'Inactive' }}</span>
+          </div>
+          <div class="input-hint">
+            {{ newFeature.is_active ? 'Feature is active and available for use' : 'Feature is inactive and not available' }}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <span class="label-text">Default for New Tenants</span>
+          </label>
+          <div class="toggle-wrapper">
+            <label class="table-toggle">
+              <input
+                type="checkbox"
+                [(ngModel)]="newFeature.default_enabled"
+                name="default_enabled"
+              />
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label">{{ newFeature.default_enabled ? 'Enabled' : 'Disabled' }}</span>
+          </div>
+          <div class="input-hint">
+            {{ newFeature.default_enabled ? 'New tenants will automatically have this feature enabled' : 'New tenants will not have this feature by default' }}
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeCreateForm()" [disabled]="creatingFeature">
+            Cancel
+          </button>
+          <button type="submit" class="btn-primary" [disabled]="!featureForm.valid || creatingFeature">
+            <span class="btn-icon" *ngIf="!creatingFeature">✓</span>
+            <span class="loading-spinner-sm" *ngIf="creatingFeature"></span>
+            {{ creatingFeature ? 'Creating...' : 'Create Feature' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Feature Form -->
+  <div class="modal-overlay" *ngIf="showEditForm" (click)="closeEditForm()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Edit Feature</h3>
+        <button class="modal-close" (click)="closeEditForm()" [disabled]="editingFeature">×</button>
       </div>
-    </form>
+      <form (ngSubmit)="updateFeature()" #editFeatureForm="ngForm">
+        <div class="form-group">
+          <label for="edit-code">
+            <span class="label-text">Feature Code</span>
+            <span class="label-required">*</span>
+          </label>
+          <input
+            type="text"
+            id="edit-code"
+            [(ngModel)]="editFeature.code"
+            name="code"
+            required
+            disabled
+            class="form-input"
+            title="Feature code cannot be changed"
+          >
+          <div class="input-hint">Feature code cannot be changed after creation</div>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-name">
+            <span class="label-text">Feature Name</span>
+            <span class="label-required">*</span>
+          </label>
+          <input
+            type="text"
+            id="edit-name"
+            [(ngModel)]="editFeature.name"
+            name="name"
+            required
+            #editNameInput="ngModel"
+            placeholder="e.g., Advanced Reporting"
+            class="form-input"
+            [class.input-error]="editNameInput.invalid && (editNameInput.dirty || editNameInput.touched)"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="edit-description">
+            <span class="label-text">Description</span>
+          </label>
+          <textarea
+            id="edit-description"
+            [(ngModel)]="editFeature.description"
+            name="description"
+            rows="3"
+            placeholder="Describe what this feature does and when it should be used"
+            class="form-input"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-parent_id">
+            <span class="label-text">Parent Feature</span>
+            <span class="label-optional">(optional)</span>
+          </label>
+          <select
+            id="edit-parent_id"
+            [(ngModel)]="editFeature.parent_id"
+            name="parent_id"
+            class="form-select"
+          >
+            <option [ngValue]="undefined">🌟 No parent (root feature)</option>
+            <option *ngFor="let feature of features" [ngValue]="feature.id" [disabled]="feature.id === selectedFeature?.id">
+              {{ feature.name }} ({{ feature.code }})
+            </option>
+          </select>
+          <div class="input-hint">Child features inherit their parent's enablement state</div>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <span class="label-text">Active Status</span>
+          </label>
+          <div class="toggle-wrapper">
+            <label class="table-toggle">
+              <input
+                type="checkbox"
+                [(ngModel)]="editFeature.is_active"
+                name="is_active"
+              />
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label">{{ editFeature.is_active ? 'Active' : 'Inactive' }}</span>
+          </div>
+          <div class="input-hint">
+            {{ editFeature.is_active ? 'Feature is active and available for use' : 'Feature is inactive and not available' }}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <span class="label-text">Default for New Tenants</span>
+          </label>
+          <div class="toggle-wrapper">
+            <label class="table-toggle">
+              <input
+                type="checkbox"
+                [(ngModel)]="editFeature.default_enabled"
+                name="default_enabled"
+              />
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label">{{ editFeature.default_enabled ? 'Enabled' : 'Disabled' }}</span>
+          </div>
+          <div class="input-hint">
+            {{ editFeature.default_enabled ? 'New tenants will automatically have this feature enabled' : 'New tenants will not have this feature by default' }}
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeEditForm()" [disabled]="editingFeature">
+            Cancel
+          </button>
+          <button type="submit" class="btn-primary" [disabled]="!editFeatureForm.valid || editingFeature">
+            <span class="btn-icon" *ngIf="!editingFeature">✓</span>
+            <span class="loading-spinner-sm" *ngIf="editingFeature"></span>
+            {{ editingFeature ? 'Updating...' : 'Update Feature' }}
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- Features List -->
   <div class="features-section" *ngIf="!loading">
-    <h2>Features ({{ features.length }})</h2>
-
-    <div class="features-grid">
-      <div class="feature-card" *ngFor="let feature of features">
-        <div class="feature-header">
-          <h3>{{ feature.name }}</h3>
-          <span class="feature-code">{{ feature.code }}</span>
+    <div class="section-header">
+      <h2>Global Features <span class="badge">{{ filteredFeatures.length }}</span></h2>
+      <div class="header-actions-right">
+        <div class="tree-controls">
+          <button class="btn-tree-control" (click)="expandAll()" title="Expand all">
+            ⊞ Expand All
+          </button>
+          <button class="btn-tree-control" (click)="collapseAll()" title="Collapse all">
+            ⊟ Collapse All
+          </button>
         </div>
-
-        <p class="feature-description" *ngIf="feature.description">{{ feature.description }}</p>
-
-        <div class="feature-meta">
-          <span class="status" [class.active]="feature.is_active">
-            {{ feature.is_active ? 'Active' : 'Inactive' }}
-          </span>
-          <span class="default" *ngIf="feature.default_enabled">Default: On</span>
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            (input)="filterFeatures()"
+            placeholder="Search features..."
+            class="search-input"
+          >
         </div>
       </div>
+    </div>
+
+    <div class="features-table-container" *ngIf="flattenedTreeFeatures.length > 0">
+      <table class="features-table">
+        <thead>
+          <tr>
+            <th class="col-hierarchy">Feature Hierarchy</th>
+            <th class="col-code">Code</th>
+            <th class="col-description">Description</th>
+            <th class="col-status">Status</th>
+            <th class="col-default">Default</th>
+            <th class="col-toggle">Active</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let feature of flattenedTreeFeatures" 
+              class="feature-row" 
+              [class.inactive]="!feature.is_active"
+              [class.is-child]="feature.level > 0"
+              [class.level-1]="feature.level === 1"
+              [class.level-2]="feature.level === 2"
+              [class.level-3]="feature.level >= 3">
+            <td class="col-hierarchy">
+              <div class="hierarchy-cell" [style.padding-left.px]="feature.level * 32">
+                <!-- Tree lines for hierarchy -->
+                <div class="tree-lines" *ngIf="feature.level > 0">
+                  <span class="tree-line-vertical" *ngFor="let i of getTreeLineArray(feature.level - 1)"></span>
+                  <span class="tree-line-connector"></span>
+                </div>
+                
+                <button 
+                  *ngIf="feature.hasChildren" 
+                  class="tree-expand-btn"
+                  (click)="toggleNode(feature.id)"
+                  [class.expanded]="feature.isExpanded"
+                >
+                  {{ feature.isExpanded ? '▼' : '▶' }}
+                </button>
+                <span class="tree-spacer" *ngIf="!feature.hasChildren"></span>
+                <span class="feature-icon-sm">{{ feature.hasChildren ? '📁' : '🏷️' }}</span>
+                <strong class="feature-name-text">{{ feature.name }}</strong>
+              </div>
+            </td>
+            <td class="col-code">
+              <code class="feature-code-inline">{{ feature.code }}</code>
+            </td>
+            <td class="col-description">
+              <span class="description-text" *ngIf="feature.description">{{ feature.description }}</span>
+              <span class="description-text empty" *ngIf="!feature.description">—</span>
+            </td>
+            <td class="col-status">
+              <span class="status-badge" [class.status-active]="feature.is_active" [class.status-inactive]="!feature.is_active">
+                <span class="status-dot"></span>
+                {{ feature.is_active ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td class="col-default">
+              <span class="default-badge" *ngIf="feature.default_enabled">
+                <span class="star-icon">★</span> Yes
+              </span>
+              <span class="text-muted" *ngIf="!feature.default_enabled">No</span>
+            </td>
+            <td class="col-toggle">
+              <label class="table-toggle">
+                <input
+                  type="checkbox"
+                  [checked]="feature.is_active"
+                  (change)="toggleFeatureActive(feature)"
+                  [disabled]="true"
+                />
+                <span class="toggle-slider"></span>
+              </label>
+            </td>
+            <td class="col-actions">
+              <div class="action-buttons">
+                <button class="btn-table-action" title="Edit feature" (click)="openEditForm(feature); $event.stopPropagation()">
+                  ✏️
+                </button>
+                <button class="btn-table-action" title="Delete feature" (click)="deleteFeature(feature); $event.stopPropagation()">
+                  🗑️
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="empty-state" *ngIf="flattenedTreeFeatures.length === 0">
+      <div class="empty-icon">🔍</div>
+      <h3>No features found</h3>
+      <p>{{ searchQuery ? 'Try adjusting your search terms' : 'Create your first feature to get started' }}</p>
     </div>
   </div>
 
   <!-- Tenant Feature Assignment -->
   <div class="tenant-section">
-    <h2>Tenant Feature Assignment</h2>
+    <div class="section-header">
+      <h2>🏢 Tenant Feature Assignment</h2>
+    </div>
 
-    <div class="tenant-selector">
-      <label for="tenant-select">Select Tenant:</label>
+    <div class="tenant-selector-card">
+      <label for="tenant-select" class="selector-label">
+        <span class="label-icon">🏢</span>
+        Select Tenant
+      </label>
       <select
         id="tenant-select"
         [(ngModel)]="selectedTenantId"
         (change)="selectTenant(selectedTenantId!)"
+        class="form-select tenant-select"
       >
-        <option value="">Choose a tenant...</option>
+        <option value="">Choose a tenant to manage features...</option>
         <option *ngFor="let tenant of tenants" [value]="tenant.id">
-          {{ tenant.tenant_name }} ({{ tenant.subdomain_slug }})
+          {{ tenant.tenant_name }} • {{ tenant.subdomain_slug }}
         </option>
       </select>
     </div>
 
-    <div class="tenant-features" *ngIf="selectedTenantId && tenantFeatures[selectedTenantId]">
-      <h3>Features for {{ getTenantName(selectedTenantId) }}</h3>
+    <div class="tenant-features-card" *ngIf="selectedTenantId && tenantFeatures[selectedTenantId] && !loadingTenantFeatures">
+      <div class="tenant-features-header">
+        <h3>Features for <strong>{{ getTenantName(selectedTenantId) }}</strong></h3>
+        <span class="features-count">{{ getAssignedFeatures(selectedTenantId).length }} assigned</span>
+      </div>
 
-      <div class="feature-tree">
-        <app-feature-tree
-          [features]="buildFeatureTree(tenantFeatures[selectedTenantId])"
-          [tenantId]="selectedTenantId!"
-          [level]="0"
-          (toggleFeature)="onToggleFeature($event)">
-        </app-feature-tree>
+      <!-- Add New Feature Section -->
+      <div class="add-feature-section">
+        <div class="add-feature-header">
+          <span class="section-icon">➕</span>
+          <span class="section-title">Assign New Feature</span>
+        </div>
+        <div class="add-feature-form">
+          <select
+            [(ngModel)]="selectedFeatureToAssign"
+            class="form-select feature-select"
+            [disabled]="getUnassignedFeatures(selectedTenantId).length === 0"
+          >
+            <option [ngValue]="null">{{ getUnassignedFeatures(selectedTenantId).length === 0 ? 'All features assigned' : 'Select a feature to assign...' }}</option>
+            <option *ngFor="let feature of getUnassignedFeatures(selectedTenantId)" [ngValue]="feature">
+              {{ feature.name }} ({{ feature.code }})
+              <ng-container *ngIf="getFeatureChildren(feature.id).length > 0">
+                + {{ getFeatureChildren(feature.id).length }} child feature(s)
+              </ng-container>
+            </option>
+          </select>
+          <button
+            class="btn-primary btn-assign"
+            (click)="assignFeatureToTenant()"
+            [disabled]="!selectedFeatureToAssign || assigningFeature"
+          >
+            <span class="btn-icon" *ngIf="!assigningFeature">✓</span>
+            <span class="loading-spinner-sm" *ngIf="assigningFeature"></span>
+            {{ assigningFeature ? 'Assigning...' : 'Assign Feature' }}
+          </button>
+        </div>
+        <div class="add-feature-hint" *ngIf="getUnassignedFeatures(selectedTenantId).length > 0">
+          💡 {{ getUnassignedFeatures(selectedTenantId).length }} feature(s) available to assign
+        </div>
+        <div class="add-feature-info" *ngIf="selectedFeatureToAssign && getAllDescendants(selectedFeatureToAssign.id).length > 0">
+          ℹ️ This will also assign {{ getAllDescendants(selectedFeatureToAssign.id).length }} child feature(s) automatically
+        </div>
+      </div>
+
+      <!-- Assigned Features List -->
+      <div class="assigned-features-section">
+        <div class="assigned-features-header">
+          <span class="section-icon">📋</span>
+          <span class="section-title">Assigned Features</span>
+        </div>
+        <div class="feature-tree-container" *ngIf="getAssignedFeatures(selectedTenantId).length > 0">
+          <app-feature-tree
+            [features]="buildFeatureTree(getAssignedFeatures(selectedTenantId))"
+            [tenantId]="selectedTenantId!"
+            [level]="0"
+            (toggleFeature)="onToggleFeature($event)">
+          </app-feature-tree>
+        </div>
+        <div class="empty-state" *ngIf="getAssignedFeatures(selectedTenantId).length === 0">
+          <div class="empty-icon">📋</div>
+          <h3>No features assigned yet</h3>
+          <p>Use the section above to assign features to this tenant</p>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Loading -->
-  <div class="loading" *ngIf="loading">
-    Loading features...
+    <div class="empty-tenant-state" *ngIf="selectedTenantId && loadingTenantFeatures">
+      <div class="loading-spinner"></div>
+      <p>Loading tenant features...</p>
+    </div>
+  </div>
+  </div><!-- End super-admin-view -->
+
+  <!-- Loading State -->
+  <div class="loading-overlay" *ngIf="loading">
+    <div class="loading-spinner-large"></div>
+    <p>Loading features...</p>
   </div>
 </div>

@@ -15,7 +15,7 @@ spec:
       labels:
         env_type: ${ENV_TYPE}
       annotations:
-        run.googleapis.com/vpc-access-connector: ${SERVERLESS_VPC_CONNECTOR}
+        run.googleapis.com/vpc-access-connector: test
         run.googleapis.com/vpc-access-egress: all-traffic
     spec:
       serviceAccountName: 
@@ -29,36 +29,4 @@ spec:
               cpu: "${SERVICE_CONTAINER_CPU}"
               memory: ${SERVICE_CONTAINER_MEMORY}
           env: []
-          resources:
-            limits:
-              cpu: "${TROX_CONTAINER_CPU}"
-              memory: ${TROX_CONTAINER_MEMORY}
-          env:
-            - name: PROJECT_ID
-              value: "${TROX_PROJECT_ID}"
-            - name: PROJECT_NUM
-              value: '${TROX_PROJECT_NUM}'
-            - name: TD_SCOPE_NAME
-              value: "${TD_SCOPE_NAME}"
-            - name: TROX_DNS_SUFFIX
-              value: "${TROX_DNS_SUFFIX}"
-            - name: ENABLE_INTERCEPTION
-              value: "${ENABLE_INTERCEPTION}"
-            - name: ZONE
-              value: "${TROX_ZONE}"
-            - name: ENABLE_METRICS_OTEL_STATS_SINK
-              value: "${ENABLE_METRICS_OTEL_STATS_SINK}"
-            - name: OTEL_STATS_SINK_STATS_PREFIX
-              value: "${OTEL_STATS_SINK_STATS_PREFIX}"
-            - name: ENABLE_TRACING_OTEL
-              value: "${ENABLE_TRACING_OTEL}"
-            - name: TRACING_HEADER
-              value: "${TRACING_HEADER}" 
-            - name: TD_INTERCEPTION_PORT
-              value: "${TD_INTERCEPTION_PORT}"
-            - name: FILTER_METRICS
-              value: "${FILTER_METRICS}"
-            - name: OTEL_COLLECTOR_HOST
-              value: "${OTEL_COLLECTOR_HOST}"
-            - name: OTEL_COLLECTOR_PORT
-              value: "${OTEL_COLLECTOR_PORT}"
+         

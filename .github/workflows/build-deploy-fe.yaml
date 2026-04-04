@@ -43,9 +43,11 @@ jobs:
 
       - name: Build and push image
         run: |
-          IMAGE_URI="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.number }}"
-          docker build -t "$IMAGE_URI" .
-          docker push "$IMAGE_URI"
+            cd mscan/blob/fix-directory/mscan-client
+            IMAGE_URI="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.run_number }}"
+        
+            docker build -t "$IMAGE_URI" -f Dockerfile .
+            docker push "$IMAGE_URI
 
       - name: Deploy to Cloud Run
         id: deploy

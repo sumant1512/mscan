@@ -1,9 +1,9 @@
-name: Build and Deploy to Cloud Run
+name: Build and Deploy to Cloud Run ms-server
 
 on:
   push:
     branches:
-      - fix-directory
+      # - fix-directory
   workflow_dispatch:
 
 env:

@@ -52,7 +52,7 @@ Use this if you have existing data (tenants, users, coupons, etc.) that you want
 
 6. **Test the API**
    ```bash
-   curl http://localhost:3000/api/tenants/YOUR_TENANT_ID
+   curl http://localhost:8080/api/tenants/YOUR_TENANT_ID
    ```
 
    You should now see:

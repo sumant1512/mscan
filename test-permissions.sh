@@ -3,7 +3,7 @@
 # Test script to verify permission-based authorization
 # This script tests TENANT_ADMIN vs TENANT_USER permissions
 
-BASE_URL="http://localhost:3000/api/v1"
+BASE_URL="http://localhost:8080/api/v1"
 echo "Testing Permission-Based Authorization"
 echo "======================================="
 echo ""

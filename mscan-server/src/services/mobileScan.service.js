@@ -14,14 +14,14 @@ exports.processScan = async ({
   deviceInfo
 }) => {
   const client = await db.getClient();
-  
+
   try {
     await client.query('BEGIN');
 
     // 1. Get verification app by code
     const appResult = await client.query(
-      `SELECT id, app_name, tenant_id FROM verification_apps 
-       WHERE app_code = $1 AND tenant_id = $2 AND status = 'active'`,
+      `SELECT id, app_name, tenant_id FROM verification_apps
+       WHERE code = $1 AND tenant_id = $2 AND is_active = true`,
       [appCode, tenantId]
     );
 
@@ -39,22 +39,22 @@ exports.processScan = async ({
 
     // 2. Get coupon details
     const couponResult = await client.query(
-      `SELECT 
-        c.id, 
-        c.code, 
-        c.discount_value, 
-        c.discount_currency, 
+      `SELECT
+        c.id,
+        c.coupon_code,
+        c.discount_value,
+        c.discount_currency,
         c.discount_type,
-        c.status, 
-        c.expiry_date, 
-        c.usage_limit, 
+        c.status,
+        c.expiry_date,
+        c.total_usage_limit,
         c.verification_app_id,
         c.coupon_points,
         c.description,
         COUNT(s.id) as usage_count
        FROM coupons c
        LEFT JOIN scans s ON c.id = s.coupon_id AND s.scan_status = 'SUCCESS'
-       WHERE c.code = $1 AND c.tenant_id = $2
+       WHERE c.coupon_code = $1 AND c.tenant_id = $2
        GROUP BY c.id`,
       [couponCode, tenantId]
     );
@@ -104,14 +104,14 @@ exports.processScan = async ({
         message: 'This coupon has expired',
         statusCode: 400,
         coupon: {
-          code: coupon.code,
+          code: coupon.coupon_code,
           expiry_date: coupon.expiry_date
         }
       };
     }
 
-    // 6. Check usage limit (0 = unlimited)
-    if (coupon.usage_limit > 0 && parseInt(coupon.usage_count) >= coupon.usage_limit) {
+    // 6. Check usage limit (0 or null = unlimited)
+    if (coupon.total_usage_limit > 0 && parseInt(coupon.usage_count) >= coupon.total_usage_limit) {
       await client.query('ROLLBACK');
       return {
         success: false,
@@ -129,7 +129,7 @@ exports.processScan = async ({
       [coupon.id, customerId]
     );
 
-    if (customerScanResult.rows.length > 0 && coupon.usage_limit === 1) {
+    if (customerScanResult.rows.length > 0 && coupon.total_usage_limit === 1) {
       const previousScan = customerScanResult.rows[0];
       await client.query('ROLLBACK');
       return {
@@ -154,9 +154,8 @@ exports.processScan = async ({
         latitude,
         longitude,
         device_info,
-        customer_identifier,
         scanned_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING id, scanned_at`,
       [
         coupon.id,
@@ -166,7 +165,6 @@ exports.processScan = async ({
         location?.lat || null,
         location?.lng || null,
         deviceInfo ? JSON.stringify(deviceInfo) : null,
-        customerPhone,
         scannedAt
       ]
     );
@@ -178,32 +176,47 @@ exports.processScan = async ({
     let creditsBalance = 0;
 
     if (coupon.coupon_points && coupon.coupon_points > 0) {
-      // Get or create user points balance
+      // Get current balance before update
+      const currentBalResult = await client.query(
+        `SELECT COALESCE(total_points, 0) as total_points FROM user_points
+         WHERE customer_id = $1 AND tenant_id = $2`,
+        [customerId, tenantId]
+      );
+      const balanceBefore = currentBalResult.rows.length > 0 ? parseInt(currentBalResult.rows[0].total_points) : 0;
+      const balanceAfter = balanceBefore + coupon.coupon_points;
+
+      // Upsert user points balance
       const balanceResult = await client.query(
-        `INSERT INTO user_points (tenant_id, mobile_e164, balance)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (tenant_id, mobile_e164)
-         DO UPDATE SET balance = user_points.balance + $3, updated_at = CURRENT_TIMESTAMP
-         RETURNING balance`,
-        [tenantId, customerPhone, coupon.coupon_points]
+        `INSERT INTO user_points (customer_id, tenant_id, total_points, lifetime_points)
+         VALUES ($1, $2, $3, $3)
+         ON CONFLICT (customer_id, tenant_id)
+         DO UPDATE SET
+           total_points = user_points.total_points + $3,
+           lifetime_points = user_points.lifetime_points + $3,
+           updated_at = CURRENT_TIMESTAMP
+         RETURNING total_points`,
+        [customerId, tenantId, coupon.coupon_points]
       );
 
-      creditsBalance = balanceResult.rows[0].balance;
+      creditsBalance = parseInt(balanceResult.rows[0].total_points);
       creditsEarned = coupon.coupon_points;
 
       // Record transaction
       await client.query(
-        `INSERT INTO points_transactions (tenant_id, mobile_e164, amount, reason, coupon_code)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [tenantId, customerPhone, coupon.coupon_points, 'Coupon scan reward', coupon.code]
+        `INSERT INTO points_transactions
+           (customer_id, tenant_id, transaction_type, points, balance_before, balance_after, description, reference_id, reference_type)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [customerId, tenantId, 'EARN', coupon.coupon_points, balanceBefore, balanceAfter,
+         'Coupon scan reward: ' + coupon.coupon_code, scan.id, 'scan']
       );
     } else {
       // Just get current balance
       const balanceResult = await client.query(
-        `SELECT balance FROM user_points WHERE tenant_id = $1 AND mobile_e164 = $2`,
-        [tenantId, customerPhone]
+        `SELECT COALESCE(total_points, 0) as total_points FROM user_points
+         WHERE customer_id = $1 AND tenant_id = $2`,
+        [customerId, tenantId]
       );
-      creditsBalance = balanceResult.rows.length > 0 ? balanceResult.rows[0].balance : 0;
+      creditsBalance = balanceResult.rows.length > 0 ? parseInt(balanceResult.rows[0].total_points) : 0;
     }
 
     await client.query('COMMIT');
@@ -215,7 +228,7 @@ exports.processScan = async ({
       status: 'success',
       message: 'Coupon verified successfully!',
       coupon: {
-        code: coupon.code,
+        code: coupon.coupon_code,
         discount_value: parseFloat(coupon.discount_value),
         discount_currency: coupon.discount_currency,
         discount_type: coupon.discount_type,
@@ -268,7 +281,7 @@ exports.getScanHistory = async ({
     }
 
     if (appCode) {
-      conditions.push(`va.app_code = $${paramIndex}`);
+      conditions.push(`va.code = $${paramIndex}`);
       params.push(appCode);
       paramIndex++;
     }
@@ -306,12 +319,12 @@ exports.getScanHistory = async ({
         s.scan_status as status,
         s.latitude,
         s.longitude,
-        c.code as coupon_code,
+        c.coupon_code,
         c.discount_value,
         c.discount_currency,
         c.discount_type,
         c.description as coupon_description,
-        va.app_code,
+        va.code as app_code,
         va.app_name
       FROM scans s
       JOIN coupons c ON s.coupon_id = c.id
@@ -325,7 +338,7 @@ exports.getScanHistory = async ({
 
     // Get summary statistics
     const summaryQuery = `
-      SELECT 
+      SELECT
         COUNT(*) as total_scans,
         COUNT(CASE WHEN s.scan_status = 'SUCCESS' THEN 1 END) as successful_scans,
         COUNT(CASE WHEN s.scan_status != 'SUCCESS' THEN 1 END) as failed_scans,
@@ -339,13 +352,11 @@ exports.getScanHistory = async ({
 
     // Get total credits earned
     const creditsQuery = `
-      SELECT COALESCE(balance, 0) as balance
+      SELECT COALESCE(total_points, 0) as balance
       FROM user_points
-      WHERE tenant_id = $1 AND mobile_e164 = (
-        SELECT phone_e164 FROM customers WHERE id = $2
-      )
+      WHERE customer_id = $1 AND tenant_id = $2
     `;
-    const creditsResult = await db.query(creditsQuery, [tenantId, customerId]);
+    const creditsResult = await db.query(creditsQuery, [customerId, tenantId]);
     const totalCreditsEarned = creditsResult.rows.length > 0 ? creditsResult.rows[0].balance : 0;
 
     // Format response data
@@ -409,14 +420,14 @@ exports.getScanDetails = async ({ scanId, customerId, tenantId }) => {
         s.latitude,
         s.longitude,
         s.device_info,
-        c.code as coupon_code,
+        c.coupon_code,
         c.discount_value,
         c.discount_currency,
         c.discount_type,
         c.description as coupon_description,
         c.expiry_date,
         c.coupon_points as credits_earned,
-        va.app_code,
+        va.code as app_code,
         va.app_name,
         va.logo_url
       FROM scans s
@@ -438,13 +449,11 @@ exports.getScanDetails = async ({ scanId, customerId, tenantId }) => {
 
     // Get credits balance after this scan
     const creditsQuery = `
-      SELECT COALESCE(balance, 0) as balance
+      SELECT COALESCE(total_points, 0) as balance
       FROM user_points
-      WHERE tenant_id = $1 AND mobile_e164 = (
-        SELECT phone_e164 FROM customers WHERE id = $2
-      )
+      WHERE customer_id = $1 AND tenant_id = $2
     `;
-    const creditsResult = await db.query(creditsQuery, [tenantId, customerId]);
+    const creditsResult = await db.query(creditsQuery, [customerId, tenantId]);
     const creditsBalance = creditsResult.rows.length > 0 ? creditsResult.rows[0].balance : 0;
 
     return {
@@ -491,7 +500,7 @@ exports.getScanDetails = async ({ scanId, customerId, tenantId }) => {
 exports.getScanStats = async ({ customerId, tenantId }) => {
   try {
     const statsQuery = `
-      SELECT 
+      SELECT
         COUNT(*) as total_scans,
         COUNT(CASE WHEN s.scan_status = 'SUCCESS' THEN 1 END) as successful_scans,
         COUNT(CASE WHEN s.scan_status = 'EXPIRED' THEN 1 END) as expired_scans,
@@ -509,26 +518,24 @@ exports.getScanStats = async ({ customerId, tenantId }) => {
 
     // Get credits balance
     const creditsQuery = `
-      SELECT COALESCE(balance, 0) as balance
+      SELECT COALESCE(total_points, 0) as balance
       FROM user_points
-      WHERE tenant_id = $1 AND mobile_e164 = (
-        SELECT phone_e164 FROM customers WHERE id = $2
-      )
+      WHERE customer_id = $1 AND tenant_id = $2
     `;
-    const creditsResult = await db.query(creditsQuery, [tenantId, customerId]);
+    const creditsResult = await db.query(creditsQuery, [customerId, tenantId]);
     const creditsBalance = creditsResult.rows.length > 0 ? creditsResult.rows[0].balance : 0;
 
     // Get top apps used
     const topAppsQuery = `
-      SELECT 
+      SELECT
         va.app_name,
-        va.app_code,
+        va.code as app_code,
         COUNT(*) as scan_count
       FROM scans s
       JOIN coupons c ON s.coupon_id = c.id
       JOIN verification_apps va ON c.verification_app_id = va.id
       WHERE s.customer_id = $1 AND s.tenant_id = $2 AND s.scan_status = 'SUCCESS'
-      GROUP BY va.app_name, va.app_code
+      GROUP BY va.app_name, va.code
       ORDER BY scan_count DESC
       LIMIT 5
     `;

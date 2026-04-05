@@ -48,7 +48,7 @@ const corsOptions = {
 I tested your server's CORS preflight:
 
 ```bash
-$ curl -I -X OPTIONS http://sumant.localhost:3000/api/products
+$ curl -I -X OPTIONS http://sumant.localhost:8080/api/products
 
 HTTP/1.1 204 No Content
 Access-Control-Allow-Credentials: true

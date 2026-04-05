@@ -1,0 +1,145 @@
+<div class="detail-container">
+  <div class="header">
+    <button (click)="goBack()" class="btn-back">
+      <span class="material-icons">arrow_back</span>
+      Back to Dealers
+    </button>
+    <button *ngIf="dealer" (click)="editDealer()" class="btn-primary">
+      <span class="material-icons">edit</span>
+      Edit Dealer
+    </button>
+  </div>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+
+  <div *ngIf="loading$ | async" class="loading">
+    <p>Loading dealer details...</p>
+  </div>
+
+  <div *ngIf="!(loading$ | async) && dealer" class="detail-content">
+    <!-- Dealer Info Card -->
+    <div class="info-card">
+      <div class="info-card-header">
+        <h2>{{ dealer.shop_name }}</h2>
+        <span [class]="dealer.is_active ? 'status-badge active' : 'status-badge inactive'">
+          {{ dealer.is_active ? 'Active' : 'Inactive' }}
+        </span>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Dealer Code</span>
+          <span class="info-value code">{{ dealer.dealer_code }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Full Name</span>
+          <span class="info-value">{{ dealer.full_name }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Email</span>
+          <span class="info-value">{{ dealer.email || 'N/A' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Phone</span>
+          <span class="info-value">{{ dealer.phone_e164 }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Address</span>
+          <span class="info-value">{{ dealer.address }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">City</span>
+          <span class="info-value">{{ dealer.city }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">State</span>
+          <span class="info-value">{{ dealer.state }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Pincode</span>
+          <span class="info-value">{{ dealer.pincode }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Points Balance Card -->
+    <div class="points-card">
+      <div class="points-header">
+        <h3>
+          <span class="material-icons">stars</span>
+          Points Balance
+        </h3>
+      </div>
+      <div class="points-value">
+        {{ points?.balance || 0 }}
+        <span class="points-unit">points</span>
+      </div>
+    </div>
+
+    <!-- Transaction History -->
+    <div class="transactions-card">
+      <div class="transactions-header">
+        <h3>
+          <span class="material-icons">receipt_long</span>
+          Point Transactions
+        </h3>
+        <span class="tx-count">{{ txTotal }} total</span>
+      </div>
+
+      <div *ngIf="loadingTransactions" class="loading-small">
+        Loading transactions...
+      </div>
+
+      <div *ngIf="!loadingTransactions && transactions.length === 0" class="empty-transactions">
+        <span class="material-icons">receipt</span>
+        <p>No transactions yet</p>
+      </div>
+
+      <table *ngIf="!loadingTransactions && transactions.length > 0" class="tx-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Reason</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let tx of transactions">
+            <td>{{ formatDate(tx.created_at) }}</td>
+            <td>
+              <span [class]="tx.type === 'CREDIT' ? 'type-badge credit' : 'type-badge debit'">
+                {{ tx.type }}
+              </span>
+            </td>
+            <td>{{ tx.reason }}</td>
+            <td [class]="tx.type === 'CREDIT' ? 'amount credit' : 'amount debit'">
+              {{ formatAmount(tx.amount, tx.type) }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Transaction Pagination -->
+      <div *ngIf="txTotalPages > 1" class="tx-pagination">
+        <button
+          (click)="txPreviousPage()"
+          [disabled]="txPage === 1"
+          class="btn-secondary btn-sm"
+        >
+          Previous
+        </button>
+        <span class="page-info">
+          Page {{ txPage }} of {{ txTotalPages }}
+        </span>
+        <button
+          (click)="txNextPage()"
+          [disabled]="txPage === txTotalPages"
+          class="btn-secondary btn-sm"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

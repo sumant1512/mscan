@@ -1,0 +1,267 @@
+<div class="container">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h2>Redemption Requests</h2>
+      <p class="subtitle">Manage customer point redemption requests per verification app</p>
+    </div>
+  </div>
+
+  <!-- Error -->
+  @if (error()) {
+    <div class="alert alert-error">
+      <span class="material-icons">error_outline</span>
+      {{ error() }}
+    </div>
+  }
+
+  <!-- Summary cards -->
+  <div class="stats-grid">
+    <div class="stat-card pending">
+      <div class="stat-icon"><span class="material-icons">pending_actions</span></div>
+      <div class="stat-body">
+        <span class="stat-value">{{ pendingCount() }}</span>
+        <span class="stat-label">Pending</span>
+      </div>
+    </div>
+    <div class="stat-card approved">
+      <div class="stat-icon"><span class="material-icons">check_circle</span></div>
+      <div class="stat-body">
+        <span class="stat-value">{{ approvedCount() }}</span>
+        <span class="stat-label">Approved</span>
+      </div>
+    </div>
+    <div class="stat-card rejected">
+      <div class="stat-icon"><span class="material-icons">cancel</span></div>
+      <div class="stat-body">
+        <span class="stat-value">{{ rejectedCount() }}</span>
+        <span class="stat-label">Rejected</span>
+      </div>
+    </div>
+    <div class="stat-card apps">
+      <div class="stat-icon"><span class="material-icons">apps</span></div>
+      <div class="stat-body">
+        <span class="stat-value">{{ summaryApps().length }}</span>
+        <span class="stat-label">Active Apps</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- App breakdown -->
+  @if (summaryApps().length > 1) {
+    <div class="app-breakdown">
+      @for (app of summaryApps(); track app.app_id) {
+        <div class="app-chip" [class.active]="filterAppId === app.app_id" (click)="filterAppId = (filterAppId === app.app_id ? '' : app.app_id); applyFilter()">
+          <span class="app-name">{{ app.app_name }}</span>
+          @if (app.pending > 0) {
+            <span class="badge-pending">{{ app.pending }}</span>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>App</label>
+      <select [(ngModel)]="filterAppId">
+        <option value="">All Apps</option>
+        @for (app of summaryApps(); track app.app_id) {
+          <option [value]="app.app_id">{{ app.app_name }}</option>
+        }
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Status</label>
+      <select [(ngModel)]="filterStatus">
+        <option value="">All</option>
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+      </select>
+    </div>
+    <div class="filter-actions">
+      <button class="btn-primary" (click)="applyFilter()">Apply</button>
+      <button class="btn-secondary" (click)="clearFilter()">Clear</button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    @if (loading()) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <span>Loading requests...</span>
+      </div>
+    } @else if (requests().length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">inbox</span>
+        <p>No redemption requests found.</p>
+      </div>
+    } @else {
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>App</th>
+              <th>Points</th>
+              <th>Balance</th>
+              <th>Status</th>
+              <th>Submitted</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (req of requests(); track req.id) {
+              <tr>
+                <td>
+                  <div class="customer-cell">
+                    <span class="customer-name">{{ req.customer.name || '—' }}</span>
+                    <span class="customer-phone">{{ req.customer.phone }}</span>
+                    @if (req.customer.email) {
+                      <span class="customer-email">{{ req.customer.email }}</span>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <span class="app-tag">{{ req.app.name || '—' }}</span>
+                </td>
+                <td>
+                  <span class="points-value">{{ req.points_requested | number }}</span>
+                  @if (req.notes) {
+                    <span class="notes-hint" [title]="req.notes">
+                      <span class="material-icons">info_outline</span>
+                    </span>
+                  }
+                </td>
+                <td>
+                  <span class="balance">{{ req.customer.current_balance !== null ? (req.customer.current_balance | number) : '—' }}</span>
+                </td>
+                <td>
+                  <span class="badge" [class]="'badge-' + req.status">
+                    {{ statusLabel(req.status) }}
+                  </span>
+                  @if (req.status === 'rejected' && req.rejection_reason) {
+                    <span class="rejection-reason" [title]="req.rejection_reason">
+                      <span class="material-icons">comment</span>
+                    </span>
+                  }
+                </td>
+                <td>
+                  <span class="date">{{ req.created_at | date:'dd MMM yyyy, HH:mm' }}</span>
+                </td>
+                <td>
+                  @if (req.status === 'pending') {
+                    <div class="action-buttons">
+                      <button
+                        class="btn-approve"
+                        [disabled]="processingId() === req.id"
+                        (click)="approve(req)">
+                        @if (processingId() === req.id) {
+                          <span class="material-icons spinning">sync</span>
+                        } @else {
+                          <span class="material-icons">check</span>
+                        }
+                      </button>
+                      <button
+                        class="btn-reject"
+                        [disabled]="processingId() === req.id"
+                        (click)="openRejectModal(req)">
+                        <span class="material-icons">close</span>
+                      </button>
+                    </div>
+                  } @else {
+                    <span class="processed-at">{{ req.processed_at | date:'dd MMM' }}</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (totalPages > 1) {
+        <div class="pagination">
+          <button class="page-btn" (click)="goToPage(page() - 1)" [disabled]="page() === 1">
+            <span class="material-icons">chevron_left</span>
+          </button>
+          @for (p of pages; track p) {
+            <button class="page-btn" [class.active]="p === page()" (click)="goToPage(p)">{{ p }}</button>
+          }
+          <button class="page-btn" (click)="goToPage(page() + 1)" [disabled]="page() === totalPages">
+            <span class="material-icons">chevron_right</span>
+          </button>
+          <span class="page-info">{{ total() }} total</span>
+        </div>
+      }
+    }
+  </div>
+
+</div>
+
+<!-- Reject Modal -->
+@if (showRejectModal && selectedRequest) {
+  <div class="modal-overlay" (click)="closeRejectModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Reject Redemption Request</h3>
+        <button class="modal-close" (click)="closeRejectModal()">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="request-summary">
+          <div class="summary-row">
+            <span class="summary-label">Customer</span>
+            <span class="summary-value">{{ selectedRequest.customer.name || selectedRequest.customer.phone }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Points</span>
+            <span class="summary-value points-highlight">{{ selectedRequest.points_requested | number }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">App</span>
+            <span class="summary-value">{{ selectedRequest.app.name }}</span>
+          </div>
+        </div>
+
+        <p class="modal-note">
+          Points will be restored to the customer's balance upon rejection.
+        </p>
+
+        <div class="form-group">
+          <label for="rejectReason">Reason <span class="optional">(optional)</span></label>
+          <textarea
+            id="rejectReason"
+            [(ngModel)]="rejectReason"
+            rows="3"
+            placeholder="Explain why this request is being rejected..."
+            class="modal-textarea"></textarea>
+        </div>
+
+        @if (rejectError) {
+          <div class="modal-error">{{ rejectError }}</div>
+        }
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-cancel" (click)="closeRejectModal()">Cancel</button>
+        <button
+          class="btn-confirm-reject"
+          [disabled]="processingId() === selectedRequest.id"
+          (click)="confirmReject()">
+          @if (processingId() === selectedRequest.id) {
+            Rejecting...
+          } @else {
+            Confirm Rejection
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}

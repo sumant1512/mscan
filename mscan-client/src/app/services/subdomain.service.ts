@@ -95,7 +95,7 @@ export class SubdomainService {
     }
 
     const protocol = window.location.protocol;
-    const port = window.location.port ? `:${window.location.port.replace('4200', '3000')}` : ':3000';
+    const port = window.location.port ? `:${window.location.port.replace('4200', '8080')}` : ':8080';
     const baseDomain = environment.domainBase;
     const apiUrl = `${protocol}//${subdomain}.${baseDomain}${port}/api`;
 

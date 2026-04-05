@@ -1,19 +1,19 @@
 // get_gmail_token.js
 // Usage:
 // 1) Put credentials.json (downloaded from Google Cloud Console) next to this file.
-// 2) Ensure the OAuth client has the redirect URI: http://localhost:3000/oauth2callback
+// 2) Ensure the OAuth client has the redirect URI: http://localhost:8080/oauth2callback
 //    (If you created a Desktop client, 'installed' flow may be used; this script supports both.)
 // 3) Run: node get_gmail_token.js
 //
 // It will print an auth URL. Open it in a browser, sign in, and Google will redirect back to
-// http://localhost:3000/oauth2callback?code=... . The script automatically receives the code,
+// http://localhost:8080/oauth2callback?code=... . The script automatically receives the code,
 // exchanges it for tokens, saves token.json and prints token details.
 
 const fs = require("fs");
 const http = require("http");
 const { URL } = require("url");
 const { google } = require("googleapis");
-const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+const port = process.env.PORT ? Number(process.env.PORT) : 8080;
 const CRED_PATH = "./credentials.json";
 const TOKEN_PATH = "./token.json";
 

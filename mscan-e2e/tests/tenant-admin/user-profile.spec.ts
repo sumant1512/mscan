@@ -27,7 +27,7 @@ test.describe('Tenant Admin - User Profile Management', () => {
 
       // Try clicking user menu first
       const userMenuBtn = page.locator('button.user-menu-btn, .user-avatar, button:has([class*="user"])').first();
-      const hasUserMenu = await userMenuBtn.isVisible({ timeout: 3000 }).catch(() => false);
+      const hasUserMenu = await userMenuBtn.isVisible({ timeout: 8080 }).catch(() => false);
 
       if (hasUserMenu) {
         await userMenuBtn.click();
@@ -112,7 +112,7 @@ test.describe('Tenant Admin - User Profile Management', () => {
 
         // Verify success message
         const successMsg = page.locator('.alert-success, .success-message, text=/updated|success/i');
-        const hasSuccess = await successMsg.first().isVisible({ timeout: 3000 }).catch(() => false);
+        const hasSuccess = await successMsg.first().isVisible({ timeout: 8080 }).catch(() => false);
 
         if (hasSuccess) {
           await expect(successMsg.first()).toBeVisible();
@@ -159,7 +159,7 @@ test.describe('Tenant Admin - User Profile Management', () => {
 
         // Verify update
         const successMsg = page.locator('.alert-success, .success-message');
-        const hasSuccess = await successMsg.first().isVisible({ timeout: 3000 }).catch(() => false);
+        const hasSuccess = await successMsg.first().isVisible({ timeout: 8080 }).catch(() => false);
 
         if (hasSuccess) {
           await expect(successMsg.first()).toBeVisible();

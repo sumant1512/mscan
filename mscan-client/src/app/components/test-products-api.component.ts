@@ -43,7 +43,7 @@ export class TestProductsApiComponent {
     console.log('=== TESTING PRODUCTS API ===');
     console.log('Token in localStorage:', localStorage.getItem('tms_access_token') ? 'EXISTS' : 'MISSING');
 
-    const url = 'http://sumant.localhost:3000/api/products?search=&app_id=b3fe1206-da13-40b6-9259-8082ca15430f';
+    const url = 'http://sumant.localhost:8080/api/products?search=&app_id=b3fe1206-da13-40b6-9259-8082ca15430f';
 
     console.log('Making request to:', url);
     console.log('Watch for "🔒 Auth Interceptor" logs...');

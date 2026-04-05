@@ -345,7 +345,7 @@ Expected output for UUID verification:
 3. **Verify Setup**:
    ```bash
    npm run db:test  # Or check health endpoint
-   curl http://localhost:3000/health
+   curl http://localhost:8080/health
    ```
 
 Your database setup is **clean, consolidated, and production-ready**! ✅

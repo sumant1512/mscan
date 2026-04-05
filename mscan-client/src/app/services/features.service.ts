@@ -15,7 +15,6 @@ export interface Feature {
   is_active: boolean;
   default_enabled: boolean;
   parent_id?: string;
-  created_by: string;
   created_at: string;
   updated_at: string;
 }
@@ -25,32 +24,23 @@ export interface FeatureTree extends Feature {
 }
 
 export interface TenantFeature {
-  id?: string;
-  tenant_id?: string;
+  id: string;
+  tenant_id: string;
   feature_id: string;
+  enabled: boolean;
   enabled_at?: string;
   enabled_by?: string;
   code: string;
   name: string;
   description?: string;
-  is_active: boolean;
-  default_enabled: boolean;
   enabled_for_tenant: boolean;
   parent_id?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface TenantFeatureTree extends TenantFeature {
-  children?: TenantFeatureTree[];
-  isExpanded?: boolean;
 }
 
 export interface CreateFeatureRequest {
   code: string;
   name: string;
   description?: string;
-  is_active?: boolean;
   default_enabled?: boolean;
   parent_id?: string;
 }

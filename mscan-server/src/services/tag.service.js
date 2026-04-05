@@ -52,9 +52,6 @@ class TagService {
 
       query += ` ORDER BY t.name ASC`;
 
-      console.log("Final SQL query:", query);
-      console.log("Query params:", params);
-
       const result = await db.query(query, params);
 
       console.log("Query returned rows:", result.rows.length);

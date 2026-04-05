@@ -61,7 +61,7 @@ test.describe('Sequential Coupon Code Generation', () => {
     await codeTypeSelect.selectOption('sequential');
     
     // Wait for prefix field to appear
-    await page.waitForSelector('input#code_prefix', { state: 'visible', timeout: 3000 });
+    await page.waitForSelector('input#code_prefix', { state: 'visible', timeout: 8080 });
     
     // Enter prefix
     await page.fill('input#code_prefix', testPrefix);
@@ -144,7 +144,7 @@ test.describe('Sequential Coupon Code Generation', () => {
     
     // Filter by status "draft" to find newly created coupons
     const statusFilter = page.locator('select[name*="status"], select:has(option:text("Draft"))');
-    const filterExists = await statusFilter.isVisible({ timeout: 3000 }).catch(() => false);
+    const filterExists = await statusFilter.isVisible({ timeout: 8080 }).catch(() => false);
     if (filterExists) {
       await statusFilter.selectOption('draft');
       await page.waitForTimeout(1000);
@@ -154,13 +154,13 @@ test.describe('Sequential Coupon Code Generation', () => {
     const rangeActivateBtn = page.locator('button:has-text("Activate Range"), button:has-text("Range Activation")');
     const bulkActivateBtn = page.locator('button:has-text("Bulk Activate")');
     
-    const hasRangeBtn = await rangeActivateBtn.isVisible({ timeout: 3000 }).catch(() => false);
-    const hasBulkBtn = await bulkActivateBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasRangeBtn = await rangeActivateBtn.isVisible({ timeout: 8080 }).catch(() => false);
+    const hasBulkBtn = await bulkActivateBtn.isVisible({ timeout: 8080 }).catch(() => false);
     
     if (hasRangeBtn) {
       // Use range activation
       await rangeActivateBtn.click();
-      await page.waitForSelector('input[name*="from"], input:has-text("From")', { timeout: 3000 });
+      await page.waitForSelector('input[name*="from"], input:has-text("From")', { timeout: 8080 });
       
       await page.fill('input[name*="from_code"], input[placeholder*="from"]', `${testPrefix}-001`);
       await page.fill('input[name*="to_code"], input[placeholder*="to"]', `${testPrefix}-005`);
@@ -194,7 +194,7 @@ test.describe('Sequential Coupon Code Generation', () => {
     
     // Try to find range activate button
     const rangeActivateBtn = page.locator('button:has-text("Activate Range"), button:has-text("Range Activation")');
-    const hasRangeBtn = await rangeActivateBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasRangeBtn = await rangeActivateBtn.isVisible({ timeout: 8080 }).catch(() => false);
     
     if (!hasRangeBtn) {
       test.skip(true, 'Range activation UI not available');
@@ -202,7 +202,7 @@ test.describe('Sequential Coupon Code Generation', () => {
     }
     
     await rangeActivateBtn.click();
-    await page.waitForSelector('input[name*="from"], input[placeholder*="from"]', { timeout: 3000 });
+    await page.waitForSelector('input[name*="from"], input[placeholder*="from"]', { timeout: 8080 });
     
     // Enter reversed range (alphabetically backwards)
     await page.fill('input[name*="from_code"], input[placeholder*="from"]', 'COUP-050');

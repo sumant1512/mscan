@@ -29,8 +29,8 @@ test.describe('Tenant Admin - Tenant User Management', () => {
     await expect(page.locator('h1, h2, .page-title').first()).toBeVisible();
 
     // Verify either users table/list exists or empty state is shown
-    const hasUsersList = await page.locator('table, .user-card, .card, mat-card').first().isVisible({ timeout: 3000 }).catch(() => false);
-    const hasEmptyState = await page.locator('text=/no users|empty|invite your first/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasUsersList = await page.locator('table, .user-card, .card, mat-card').first().isVisible({ timeout: 8080 }).catch(() => false);
+    const hasEmptyState = await page.locator('text=/no users|empty|invite your first/i').isVisible({ timeout: 8080 }).catch(() => false);
 
     expect(hasUsersList || hasEmptyState).toBeTruthy();
   });
@@ -96,7 +96,7 @@ test.describe('Tenant Admin - Tenant User Management', () => {
 
     // Verify success
     const isOnListPage = page.url().includes('/users') && !page.url().includes('/create');
-    const hasSuccessMessage = await page.locator('text=/success|created|invited|saved/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSuccessMessage = await page.locator('text=/success|created|invited|saved/i').isVisible({ timeout: 8080 }).catch(() => false);
 
     expect(isOnListPage || hasSuccessMessage).toBeTruthy();
 
@@ -134,7 +134,7 @@ test.describe('Tenant Admin - Tenant User Management', () => {
 
     await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
 
-    const hasSuccessMessage = await page.locator('text=/success|created|invited/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSuccessMessage = await page.locator('text=/success|created|invited/i').isVisible({ timeout: 8080 }).catch(() => false);
     expect(hasSuccessMessage).toBeTruthy();
   });
 
@@ -190,7 +190,7 @@ test.describe('Tenant Admin - Tenant User Management', () => {
 
     // Check if search box exists
     const searchBox = page.locator('input[type="text"][placeholder*="earch"], input[type="search"], input.search-input').first();
-    const searchExists = await searchBox.isVisible({ timeout: 3000 }).catch(() => false);
+    const searchExists = await searchBox.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!searchExists) {
       test.skip(true, 'Search functionality not available');
@@ -198,7 +198,7 @@ test.describe('Tenant Admin - Tenant User Management', () => {
 
     // Get a user email from the table/list
     const firstUser = page.locator('table tbody tr, .user-card, .card').first();
-    const hasUsers = await firstUser.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasUsers = await firstUser.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasUsers) {
       test.skip(true, 'No users available to search');
@@ -228,7 +228,7 @@ test.describe('Tenant Admin - Tenant User Management', () => {
 
     // Check if role filter exists
     const roleFilter = page.locator('select[name*="role"], select[id*="role"], .role-filter select').first();
-    const hasFilter = await roleFilter.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasFilter = await roleFilter.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasFilter) {
       test.skip(true, 'Role filter not available');
@@ -257,7 +257,7 @@ test.describe('Tenant Admin - Tenant User Management', () => {
 
     // Click on first user
     const userRow = page.locator('table tbody tr, .user-card, .card').first();
-    const hasUsers = await userRow.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasUsers = await userRow.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasUsers) {
       test.skip(true, 'No users available to view');
@@ -275,7 +275,7 @@ test.describe('Tenant Admin - Tenant User Management', () => {
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
     // Verify user details are displayed
-    const hasDetails = await page.locator('text=/email|role|permissions|status/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasDetails = await page.locator('text=/email|role|permissions|status/i').isVisible({ timeout: 8080 }).catch(() => false);
     expect(hasDetails).toBeTruthy();
   });
 
@@ -290,7 +290,7 @@ test.describe('Tenant Admin - Tenant User Management', () => {
     }).first();
 
     const editButton = editableUser.locator('button:has-text("Edit"), .btn-action:has-text("Edit"), a:has-text("Edit")').first();
-    const hasEditButton = await editButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasEditButton = await editButton.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasEditButton) {
       test.skip(true, 'No editable users available');
@@ -329,7 +329,7 @@ test.describe('Tenant Admin - Tenant User Management', () => {
 
     await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
 
-    const hasSuccessMessage = await page.locator('text=/success|updated|saved/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSuccessMessage = await page.locator('text=/success|updated|saved/i').isVisible({ timeout: 8080 }).catch(() => false);
     expect(hasSuccessMessage).toBeTruthy();
   });
 
@@ -339,14 +339,14 @@ test.describe('Tenant Admin - Tenant User Management', () => {
 
     // Find permissions button
     const userRow = page.locator('table tbody tr, .user-card').first();
-    const hasUsers = await userRow.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasUsers = await userRow.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasUsers) {
       test.skip(true, 'No users available');
     }
 
     const permissionsButton = userRow.locator('button:has-text("Permissions"), a:has-text("Permissions")').first();
-    const hasPermissionsButton = await permissionsButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasPermissionsButton = await permissionsButton.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasPermissionsButton) {
       test.skip(true, 'Permissions management not available');
@@ -356,7 +356,7 @@ test.describe('Tenant Admin - Tenant User Management', () => {
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
     // Verify permissions page/modal loaded
-    const hasPermissionsList = await page.locator('text=/permission|access|grant|allow/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasPermissionsList = await page.locator('text=/permission|access|grant|allow/i').isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasPermissionsList) {
       test.skip(true, 'Permissions page did not load');
@@ -377,7 +377,7 @@ test.describe('Tenant Admin - Tenant User Management', () => {
         await saveButton.click();
         await page.waitForTimeout(1000);
 
-        const hasSuccessMessage = await page.locator('text=/success|updated|saved/i').isVisible({ timeout: 3000 }).catch(() => false);
+        const hasSuccessMessage = await page.locator('text=/success|updated|saved/i').isVisible({ timeout: 8080 }).catch(() => false);
         expect(hasSuccessMessage).toBeTruthy();
       }
     }
@@ -415,7 +415,7 @@ test.describe('Tenant Admin - Tenant User Management', () => {
 
     const userRow = page.locator(`text="${userToDelete}"`).locator('..').locator('..').first();
     const deleteButton = userRow.locator('button:has-text("Delete"), button:has-text("Deactivate"), button[class*="delete"]').first();
-    const hasDeleteButton = await deleteButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasDeleteButton = await deleteButton.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasDeleteButton) {
       test.skip(true, 'Delete/deactivate button not found');
@@ -438,7 +438,7 @@ test.describe('Tenant Admin - Tenant User Management', () => {
       hasNot: page.locator('text=/inactive|deactivated/i')
     });
 
-    const isRemoved = await deletedUser.isVisible({ timeout: 3000 }).catch(() => false);
+    const isRemoved = await deletedUser.isVisible({ timeout: 8080 }).catch(() => false);
     expect(isRemoved).toBeFalsy();
   });
 
@@ -448,7 +448,7 @@ test.describe('Tenant Admin - Tenant User Management', () => {
 
     // Check if users display status badges
     const statusBadge = page.locator('text=/active|inactive/i, .badge, .status').first();
-    const hasStatusBadge = await statusBadge.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasStatusBadge = await statusBadge.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasStatusBadge) {
       test.skip(true, 'User status not displayed');
@@ -463,7 +463,7 @@ test.describe('Tenant Admin - Tenant User Management', () => {
 
     // Check if last login is displayed
     const lastLoginInfo = page.locator('text=/last login|last seen/i').first();
-    const hasLastLoginInfo = await lastLoginInfo.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasLastLoginInfo = await lastLoginInfo.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasLastLoginInfo) {
       test.skip(true, 'Last login time not displayed');
@@ -481,7 +481,7 @@ test.describe('Tenant Admin - Tenant User Management', () => {
       hasNot: page.locator('[disabled]')
     }).first();
 
-    const hasPagination = await paginationNext.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasPagination = await paginationNext.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasPagination) {
       test.skip(true, 'Pagination not available (not enough users)');
@@ -511,6 +511,6 @@ test.describe('Tenant Admin - Tenant User Management', () => {
 
     // Verify validation error
     const errorMessage = page.locator('text=/invalid email|valid email|email.*required/i').first();
-    await expect(errorMessage).toBeVisible({ timeout: 3000 });
+    await expect(errorMessage).toBeVisible({ timeout: 8080 });
   });
 });

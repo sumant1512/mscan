@@ -3,7 +3,7 @@
 ## Base URL
 
 ```
-Development: http://localhost:3000
+Development: http://localhost:8080
 Production: https://api.mscan.com
 Subdomain: https://api.{tenant-slug}.mscan.com (if tenant-specific API endpoint)
 ```
@@ -1570,7 +1570,7 @@ Response:
 
 ```bash
 # Full login flow
-OTP_RESPONSE=$(curl -s -X POST http://localhost:3000/api/auth/request-otp \
+OTP_RESPONSE=$(curl -s -X POST http://localhost:8080/api/auth/request-otp \
   -H "Content-Type: application/json" \
   -d '{"email":"sumantmishra511@gmail.com"}')
 
@@ -1578,7 +1578,7 @@ OTP_RESPONSE=$(curl -s -X POST http://localhost:3000/api/auth/request-otp \
 tail -1 mscan-server/server.log
 
 # Verify OTP (replace 123456 with actual OTP)
-LOGIN_RESPONSE=$(curl -s -X POST http://localhost:3000/api/auth/verify-otp \
+LOGIN_RESPONSE=$(curl -s -X POST http://localhost:8080/api/auth/verify-otp \
   -H "Content-Type: application/json" \
   -d '{"email":"sumantmishra511@gmail.com","otp":"123456"}')
 
@@ -1586,7 +1586,7 @@ LOGIN_RESPONSE=$(curl -s -X POST http://localhost:3000/api/auth/verify-otp \
 TOKEN=$(echo $LOGIN_RESPONSE | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
 
 # Get dashboard stats
-curl -s http://localhost:3000/api/dashboard/stats \
+curl -s http://localhost:8080/api/dashboard/stats \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1648,7 +1648,7 @@ Get high-level statistics for the tenant dashboard.
 **Example:**
 
 ```bash
-curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/overview?dateFrom=2026-01-01T00:00:00Z&dateTo=2026-01-17T23:59:59Z" \
+curl -X GET "http://localhost:8080/api/v1/tenants/{tenantId}/analytics/overview?dateFrom=2026-01-01T00:00:00Z&dateTo=2026-01-17T23:59:59Z" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1695,7 +1695,7 @@ Get time-series data for scan trends visualization (line charts).
 **Example:**
 
 ```bash
-curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/trends?interval=day" \
+curl -X GET "http://localhost:8080/api/v1/tenants/{tenantId}/analytics/trends?interval=day" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1795,7 +1795,7 @@ Get paginated scan history with advanced filtering.
 **Example:**
 
 ```bash
-curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/scans?page=1&limit=50&status=success&city=Mumbai" \
+curl -X GET "http://localhost:8080/api/v1/tenants/{tenantId}/analytics/scans?page=1&limit=50&status=success&city=Mumbai" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1818,7 +1818,7 @@ Download scan history as Excel file (.xlsx).
 **Example:**
 
 ```bash
-curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/scans/export?dateFrom=2026-01-01T00:00:00Z" \
+curl -X GET "http://localhost:8080/api/v1/tenants/{tenantId}/analytics/scans/export?dateFrom=2026-01-01T00:00:00Z" \
   -H "Authorization: Bearer $TOKEN" \
   --output scan-history.xlsx
 ```
@@ -1877,7 +1877,7 @@ Get customer insights with ranking and behavior metrics.
 **Example:**
 
 ```bash
-curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/customers?sortBy=total_rewards_won&sortOrder=DESC&minScans=10" \
+curl -X GET "http://localhost:8080/api/v1/tenants/{tenantId}/analytics/customers?sortBy=total_rewards_won&sortOrder=DESC&minScans=10" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1918,7 +1918,7 @@ Get location data for map-based visualization.
 **Example:**
 
 ```bash
-curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/map?limit=500" \
+curl -X GET "http://localhost:8080/api/v1/tenants/{tenantId}/analytics/map?limit=500" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1982,11 +1982,11 @@ Get performance metrics for reward campaigns.
 
 ```bash
 # Get all campaigns
-curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/campaigns" \
+curl -X GET "http://localhost:8080/api/v1/tenants/{tenantId}/analytics/campaigns" \
   -H "Authorization: Bearer $TOKEN"
 
 # Get specific campaign
-curl -X GET "http://localhost:3000/api/v1/tenants/{tenantId}/analytics/campaigns/{campaignId}" \
+curl -X GET "http://localhost:8080/api/v1/tenants/{tenantId}/analytics/campaigns/{campaignId}" \
   -H "Authorization: Bearer $TOKEN"
 ```
 

@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { QrCodeComponent } from '../../shared/components/qr-code/qr-code.component';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
@@ -16,7 +17,7 @@ import { HttpErrorHandler } from '../../shared/utils/http-error.handler';
 @Component({
   selector: 'app-coupon-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, QrCodeComponent],
   templateUrl: './coupon-list.component.html',
   styleUrls: ['./coupon-list.component.css']
 })
@@ -34,6 +35,7 @@ export class CouponListComponent implements OnInit, OnDestroy {
   successMessage = '';
 
   statusFilter: 'all' | 'draft' | 'printed' | 'active' | 'used' | 'inactive' | 'expired' = 'all';
+  printFilter: 'all' | 'unprinted' | 'printed' = 'all';
   searchQuery = '';
 
   currentPage = 1;
@@ -55,7 +57,6 @@ export class CouponListComponent implements OnInit, OnDestroy {
   rangeActivation = {
     from_reference: '',
     to_reference: '',
-    status_filter: 'printed',
     activation_note: ''
   };
   rangePreviewCount = 0;
@@ -145,6 +146,7 @@ export class CouponListComponent implements OnInit, OnDestroy {
 
     const params: any = { page: this.currentPage, limit: 20 };
     if (this.statusFilter !== 'all') params.status = this.statusFilter;
+    if (this.printFilter !== 'all') params.print_status = this.printFilter;
 
     const selectedAppId = this.appContextService.getSelectedAppId();
     if (selectedAppId !== null) {
@@ -177,6 +179,7 @@ export class CouponListComponent implements OnInit, OnDestroy {
 
     const params: any = { page: this.currentPage, limit: 20 };
     if (this.statusFilter !== 'all') params.status = this.statusFilter;
+    if (this.printFilter !== 'all') params.print_status = this.printFilter;
 
     const selectedAppId = this.appContextService.getSelectedAppId();
     if (selectedAppId !== null) {
@@ -253,16 +256,20 @@ export class CouponListComponent implements OnInit, OnDestroy {
   }
 
   downloadQR() {
-    if (this.selectedCoupon?.qr_code_url) {
-      window.open(this.selectedCoupon.qr_code_url, '_blank');
-    }
+    if (!this.selectedCoupon) return;
+    const canvas = document.querySelector('.modal-content app-qr-code canvas') as HTMLCanvasElement;
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.download = `coupon-${this.selectedCoupon.coupon_code}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
   }
 
   copyCode() {
     if (this.selectedCoupon) {
       navigator.clipboard.writeText(this.selectedCoupon.coupon_code);
       this.successMessage = 'Coupon code copied to clipboard!';
-      setTimeout(() => this.successMessage = '', 3000);
+      setTimeout(() => this.successMessage = '', 8080);
     }
   }
 
@@ -272,7 +279,6 @@ export class CouponListComponent implements OnInit, OnDestroy {
     this.rangeActivation = {
       from_reference: '',
       to_reference: '',
-      status_filter: 'printed',
       activation_note: ''
     };
     this.rangeActivationError = '';
@@ -383,31 +389,26 @@ export class CouponListComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const selectedDraftCoupons = this.coupons.filter(
-      c => this.selectedCouponIds.has(c.id) && c.status === 'draft'
-    );
+    const selectedCoupons = this.coupons.filter(c => this.selectedCouponIds.has(c.id));
+    const reprintCoupons = selectedCoupons.filter(c => (c.printed_count ?? 0) > 0);
 
-    const selectedPrintedCoupons = this.coupons.filter(
-      c => this.selectedCouponIds.has(c.id) && c.status === 'printed'
-    );
+    const navigate = () => {
+      this.router.navigate(['/tenant/coupons/print'], {
+        state: { coupons: selectedCoupons }
+      });
+    };
 
-    if (selectedDraftCoupons.length === 0) {
-      if (selectedPrintedCoupons.length > 0) {
-        this.error = 'The selected coupons are already marked as printed. To activate them, use the "Activate Selected" button or "Activate Range" feature.';
-      } else {
-        this.error = 'Please select draft coupons to mark as printed';
-      }
-      return;
+    if (reprintCoupons.length > 0) {
+      const msg = reprintCoupons.length === selectedCoupons.length
+        ? `All ${reprintCoupons.length} selected coupon(s) have already been printed before. Print again?`
+        : `${reprintCoupons.length} of ${selectedCoupons.length} selected coupon(s) have already been printed before. Print all anyway?`;
+
+      this.confirmationService.confirm(msg, 'Confirm Reprint')
+        .pipe(filter(confirmed => confirmed), takeUntil(this.destroy$))
+        .subscribe(() => navigate());
+    } else {
+      navigate();
     }
-
-    if (selectedPrintedCoupons.length > 0) {
-      this.successMessage = `${selectedDraftCoupons.length} draft coupon(s) will be shown in print preview. ${selectedPrintedCoupons.length} already printed coupon(s) will be skipped.`;
-    }
-
-    // Navigate to print page with selected draft coupons
-    this.router.navigate(['/tenant/coupons/print'], {
-      state: { coupons: selectedDraftCoupons }
-    });
   }
 
   bulkActivate() {
@@ -416,23 +417,23 @@ export class CouponListComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const selectedPrintedCoupons = this.coupons.filter(
-      c => this.selectedCouponIds.has(c.id) && c.status === 'printed'
+    const selectedActivatableCoupons = this.coupons.filter(
+      c => this.selectedCouponIds.has(c.id) && (c.status === 'draft' || c.status === 'printed')
     );
 
-    if (selectedPrintedCoupons.length === 0) {
-      this.error = 'Please select printed coupons to activate';
+    if (selectedActivatableCoupons.length === 0) {
+      this.error = 'Please select draft coupons to activate';
       return;
     }
 
     this.confirmationService
-      .confirm(`Activate ${selectedPrintedCoupons.length} coupon(s)?`, 'Bulk Activation')
+      .confirm(`Activate ${selectedActivatableCoupons.length} coupon(s)?`, 'Bulk Activation')
       .pipe(
         filter(confirmed => confirmed),
         takeUntil(this.destroy$)
       )
       .subscribe(() => {
-        const couponIds = selectedPrintedCoupons.map(c => c.id);
+        const couponIds = selectedActivatableCoupons.map(c => c.id);
 
         this.rewardsService.bulkActivateCoupons(couponIds, 'Bulk activation from selection')
           .pipe(
@@ -535,6 +536,28 @@ export class CouponListComponent implements OnInit, OnDestroy {
     } else {
       this.rangePreviewCount = 0;
     }
+  }
+
+  onPrintFilterChange() {
+    this.loadCoupons();
+  }
+
+  isPrinted(coupon: Coupon): boolean {
+    return (coupon.printed_count ?? 0) > 0;
+  }
+
+  getPrintLabel(coupon: Coupon): string {
+    const count = coupon.printed_count ?? 0;
+    if (count === 0) return 'Not printed';
+    if (count === 1) return 'Printed ×1';
+    return `Reprinted ×${count}`;
+  }
+
+  getPrintBadgeClass(coupon: Coupon): string {
+    const count = coupon.printed_count ?? 0;
+    if (count === 0) return 'print-badge-none';
+    if (count === 1) return 'print-badge-once';
+    return 'print-badge-reprint';
   }
 
   getStatusClass(status: string): string {

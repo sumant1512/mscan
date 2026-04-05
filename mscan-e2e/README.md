@@ -36,7 +36,7 @@ mscan-e2e/
 ### Prerequisites
 
 1. **Node.js** (v18 or higher)
-2. **MScan Backend** running on `http://localhost:3000`
+2. **MScan Backend** running on `http://localhost:8080`
 3. **MScan Frontend** running on `http://localhost:4200`
 4. **Test Database** with seed data
 

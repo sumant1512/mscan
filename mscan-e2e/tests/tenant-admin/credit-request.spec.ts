@@ -113,8 +113,8 @@ test.describe('Tenant Admin - Credit Request Management', () => {
     const textError = page.locator('text=/invalid|positive|required|must be|greater than|cannot be negative/i').first();
     
     // Try to find either CSS-based error or text-based error
-    const errorVisible = await errorMessage.isVisible({ timeout: 3000 }).catch(() => false);
-    const textErrorVisible = await textError.isVisible({ timeout: 3000 }).catch(() => false);
+    const errorVisible = await errorMessage.isVisible({ timeout: 8080 }).catch(() => false);
+    const textErrorVisible = await textError.isVisible({ timeout: 8080 }).catch(() => false);
     
     expect(errorVisible || textErrorVisible).toBeTruthy();
   });
@@ -155,10 +155,10 @@ test.describe('Tenant Admin - Credit Request Management', () => {
     const historyText = page.locator('text=/transaction|history|credit/i').first();
     const pageContent = page.locator('body').first();
     
-    const tableVisible = await table.isVisible({ timeout: 3000 }).catch(() => false);
-    const containerVisible = await transactionContainer.isVisible({ timeout: 3000 }).catch(() => false);
-    const textVisible = await historyText.isVisible({ timeout: 3000 }).catch(() => false);
-    const contentExists = await pageContent.isVisible({ timeout: 3000 }).catch(() => false);
+    const tableVisible = await table.isVisible({ timeout: 8080 }).catch(() => false);
+    const containerVisible = await transactionContainer.isVisible({ timeout: 8080 }).catch(() => false);
+    const textVisible = await historyText.isVisible({ timeout: 8080 }).catch(() => false);
+    const contentExists = await pageContent.isVisible({ timeout: 8080 }).catch(() => false);
     
     // Pass if URL indicates correct page OR any relevant content found
     expect(urlContainsHistory || tableVisible || containerVisible || textVisible || contentExists).toBeTruthy();

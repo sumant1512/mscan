@@ -258,7 +258,7 @@ npm run report
 ## 📋 Test Checklist
 
 ### Before Running Tests
-- [ ] Backend server running (`http://localhost:3000`)
+- [ ] Backend server running (`http://localhost:8080`)
 - [ ] Frontend server running (`http://localhost:4200`)
 - [ ] Database seeded with test data
 - [ ] Test tenant created (subdomain: `testenant`)

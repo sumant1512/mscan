@@ -24,7 +24,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
 
     // Check if template selector exists
     const templateSelector = page.locator('select[formControlName="template"], mat-select[formControlName="template"]').first();
-    const hasTemplateSelector = await templateSelector.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTemplateSelector = await templateSelector.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasTemplateSelector) {
       test.skip(true, 'Template selector not available in product form');
@@ -38,7 +38,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
     await page.waitForLoadState('networkidle');
 
     const templateSelector = page.locator('select[formControlName="template"], mat-select[formControlName="template"]').first();
-    const hasTemplateSelector = await templateSelector.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTemplateSelector = await templateSelector.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasTemplateSelector) {
       test.skip(true, 'Template selector not available');
@@ -70,7 +70,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
 
     // Verify dynamic fields/attributes appeared
     const dynamicFields = page.locator('.attribute-field, .dynamic-field, [formControlName*="attribute"]').first();
-    const hasDynamicFields = await dynamicFields.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasDynamicFields = await dynamicFields.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasDynamicFields) {
       test.skip(true, 'Template attributes did not load');
@@ -91,7 +91,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
 
     // Select template first
     const templateSelector = page.locator('select[formControlName="template"], mat-select[formControlName="template"]').first();
-    const hasTemplateSelector = await templateSelector.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTemplateSelector = await templateSelector.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasTemplateSelector) {
       test.skip(true, 'Template selector not available');
@@ -150,7 +150,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
 
     // Verify success
     const isOnListPage = page.url().includes('/products') && !page.url().includes('/create');
-    const hasSuccessMessage = await page.locator('text=/success|created|saved/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSuccessMessage = await page.locator('text=/success|created|saved/i').isVisible({ timeout: 8080 }).catch(() => false);
 
     expect(isOnListPage || hasSuccessMessage).toBeTruthy();
   });
@@ -175,7 +175,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
 
     // Look for variants section
     const addVariantButton = page.locator('button:has-text("Add Variant"), button:has-text("Add Option")').first();
-    const hasVariantButton = await addVariantButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasVariantButton = await addVariantButton.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasVariantButton) {
       test.skip(true, 'Product variants feature not available');
@@ -212,7 +212,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
 
     await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
 
-    const hasSuccessMessage = await page.locator('text=/success|created/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSuccessMessage = await page.locator('text=/success|created/i').isVisible({ timeout: 8080 }).catch(() => false);
     expect(hasSuccessMessage).toBeTruthy();
   });
 
@@ -222,7 +222,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
 
     // Select a template
     const templateSelector = page.locator('select[formControlName="template"], mat-select[formControlName="template"]').first();
-    const hasTemplateSelector = await templateSelector.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTemplateSelector = await templateSelector.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasTemplateSelector) {
       test.skip(true, 'Template selector not available');
@@ -251,7 +251,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
 
     // Check for validation errors
     const errorMessage = page.locator('text=/required|field.*required|complete.*field/i').first();
-    const hasError = await errorMessage.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasError = await errorMessage.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasError) {
       // Alternative: form should still be on create page (not submitted)
@@ -271,7 +271,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
       has: page.locator('text=/template|based on/i')
     }).first();
 
-    const hasProductWithTemplate = await productWithTemplate.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasProductWithTemplate = await productWithTemplate.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasProductWithTemplate) {
       test.skip(true, 'No template-based products found');
@@ -289,7 +289,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
       has: page.locator('text=/template/i')
     }).first();
 
-    const hasProduct = await productWithTemplate.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasProduct = await productWithTemplate.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasProduct) {
       test.skip(true, 'No template-based products to edit');
@@ -307,7 +307,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
 
     // Verify template attributes are editable
     const attributeFields = page.locator('input[formControlName*="attribute"], textarea[formControlName*="attribute"]').first();
-    const hasAttributes = await attributeFields.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasAttributes = await attributeFields.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasAttributes) {
       test.skip(true, 'Template attributes not shown in edit mode');
@@ -322,7 +322,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
 
     await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
 
-    const hasSuccessMessage = await page.locator('text=/success|updated/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSuccessMessage = await page.locator('text=/success|updated/i').isVisible({ timeout: 8080 }).catch(() => false);
     expect(hasSuccessMessage).toBeTruthy();
   });
 
@@ -332,7 +332,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
 
     // Look for products with variant pricing indicators
     const productWithVariants = page.locator('text=/from.*[$€£₹]|starting at/i').first();
-    const hasVariantPricing = await productWithVariants.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasVariantPricing = await productWithVariants.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasVariantPricing) {
       test.skip(true, 'No products with variant pricing found');
@@ -347,7 +347,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
 
     // Check if template filter exists
     const templateFilter = page.locator('select[name*="template"], select[id*="template"], .template-filter select').first();
-    const hasFilter = await templateFilter.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasFilter = await templateFilter.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasFilter) {
       test.skip(true, 'Template filter not available');
@@ -384,7 +384,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
       has: page.locator('text=/template/i')
     }).first();
 
-    const hasBadge = await templateBadge.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasBadge = await templateBadge.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasBadge) {
       test.skip(true, 'Template badges not displayed on product cards');
@@ -403,7 +403,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
 
     // Look for preview button
     const previewButton = page.locator('button:has-text("Preview"), button:has-text("Show Preview")').first();
-    const hasPreviewButton = await previewButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasPreviewButton = await previewButton.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasPreviewButton) {
       test.skip(true, 'Product preview feature not available');
@@ -414,7 +414,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
 
     // Verify preview is shown
     const previewSection = page.locator('.preview, .product-preview, [class*="preview"]').first();
-    const hasPreview = await previewSection.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasPreview = await previewSection.isVisible({ timeout: 8080 }).catch(() => false);
 
     expect(hasPreview).toBeTruthy();
   });
@@ -425,7 +425,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
 
     // Look for bulk import button
     const bulkImportButton = page.locator('button:has-text("Bulk Import"), button:has-text("Import")').first();
-    const hasBulkImport = await bulkImportButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasBulkImport = await bulkImportButton.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasBulkImport) {
       test.skip(true, 'Bulk import feature not available');
@@ -436,7 +436,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
 
     // Verify import dialog opened
     const importDialog = page.locator('text=/template|CSV|upload|import/i').first();
-    const hasImportDialog = await importDialog.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasImportDialog = await importDialog.isVisible({ timeout: 8080 }).catch(() => false);
 
     expect(hasImportDialog).toBeTruthy();
   });
@@ -447,7 +447,7 @@ test.describe('Tenant Admin - Template-based Product Creation', () => {
 
     // Select template
     const templateSelector = page.locator('select[formControlName="template"], mat-select[formControlName="template"]').first();
-    const hasTemplateSelector = await templateSelector.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTemplateSelector = await templateSelector.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasTemplateSelector) {
       test.skip(true, 'Template selector not available');

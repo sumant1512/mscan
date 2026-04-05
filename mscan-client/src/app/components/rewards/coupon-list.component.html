@@ -36,11 +36,17 @@
     <select [(ngModel)]="statusFilter" (change)="onFilterChange()" class="filter-select">
       <option value="all">All Status</option>
       <option value="draft">📝 Draft</option>
-      <option value="printed">🖨️ Printed</option>
+      <option value="printed">🖨️ Printed (legacy)</option>
       <option value="active">✅ Active</option>
       <option value="used">✓ Used</option>
       <option value="inactive">🚫 Inactive</option>
       <option value="expired">⏰ Expired</option>
+    </select>
+
+    <select [(ngModel)]="printFilter" (change)="onPrintFilterChange()" class="filter-select">
+      <option value="all">All Print Status</option>
+      <option value="unprinted">🔲 Not Printed</option>
+      <option value="printed">🖨️ Printed</option>
     </select>
   </div>
 
@@ -82,6 +88,11 @@
         <!-- Status -->
         <span [class]="getStatusClass(coupon.status)" class="main-status-badge">
           {{ getStatusIcon(coupon.status) }} {{ coupon.status }}
+        </span>
+
+        <!-- Print Status -->
+        <span [class]="getPrintBadgeClass(coupon)" class="print-status-badge">
+          {{ getPrintLabel(coupon) }}
         </span>
 
         <!-- Coupon Reference -->
@@ -144,7 +155,7 @@
           <button
             (click)="showQRCode(coupon)"
             class="btn-action btn-align"
-            *ngIf="coupon.status === 'active'"
+            *ngIf="coupon.status === 'active' || coupon.status === 'draft'"
           >
             <span class="material-icons me-1">qr_code</span>
             QR Code
@@ -152,10 +163,11 @@
           <button
             (click)="markAsPrinted(coupon)"
             class="btn-action btn-align"
-            *ngIf="coupon.status === 'draft' && canEditCoupon"
+            *ngIf="canEditCoupon && coupon.status !== 'used' && coupon.status !== 'expired' && coupon.status !== 'exhausted'"
+            [title]="isPrinted(coupon) ? 'Reprint · printed ' + (coupon.printed_count) + ' time(s)' : 'Mark as printed'"
           >
             <span class="material-icons me-1">print</span>
-            Mark Printed
+            {{ isPrinted(coupon) ? 'Reprint' : 'Print' }}
           </button>
           <button
             (click)="toggleStatus(coupon)"
@@ -183,13 +195,7 @@
     <h3>{{ selectedCoupon.description || 'Coupon' }}</h3>
 
     <div class="qr-section">
-      <img
-        *ngIf="selectedCoupon.qr_code_url"
-        [src]="selectedCoupon.qr_code_url"
-        alt="QR Code"
-        class="qr-image"
-      />
-      <div *ngIf="!selectedCoupon.qr_code_url" class="qr-placeholder">QR Code not available</div>
+      <app-qr-code [couponCode]="selectedCoupon.coupon_code" [size]="200"></app-qr-code>
     </div>
 
     <div class="code-section">
@@ -270,15 +276,6 @@
       </div>
 
       <div class="form-group">
-        <label for="fromStatus">From Status</label>
-        <select id="fromStatus" [(ngModel)]="rangeActivation.status_filter" class="form-select">
-          <option value="draft">📝 Draft</option>
-          <option value="printed">🖨️ Printed</option>
-        </select>
-        <small class="hint">Only coupons with this status will be activated</small>
-      </div>
-
-      <div class="form-group">
         <label for="activationNote">Activation Note (Optional)</label>
         <textarea
           id="activationNote"
@@ -292,8 +289,9 @@
       <div class="info-box">
         <span class="icon">ℹ️</span>
         <div class="text">
-          <strong>Important:</strong> This will activate all coupons in the specified range with
-          status "{{ rangeActivation.status_filter }}". The action cannot be undone.
+          <strong>Important:</strong> This will activate all draft coupons in the specified reference range.
+          Already-active or terminal-status coupons in the range are skipped automatically.
+          The action cannot be undone.
         </div>
       </div>
     </div>

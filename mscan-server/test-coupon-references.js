@@ -3,7 +3,7 @@
  * Run this directly with: node test-coupon-references.js
  */
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = 'http://localhost:8080/api';
 
 // Get a test auth token (you'll need to set this manually)
 // OR we can create an OTP-less approach for testing

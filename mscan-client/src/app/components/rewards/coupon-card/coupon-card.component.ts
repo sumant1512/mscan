@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
+import { QrCodeComponent } from '../../../shared/components/qr-code/qr-code.component';
 
 @Component({
   selector: 'app-coupon-card',
-  imports: [CommonModule],
+  imports: [CommonModule, QrCodeComponent],
   templateUrl: './coupon-card.component.html',
   styleUrl: './coupon-card.component.css',
 })
@@ -17,8 +18,8 @@ export class CouponCardComponent {
   /** Bucket text / descriptor under starburst */
   @Input() productName: string | undefined;
 
-  /** QR image source (data url or asset path) */
-  @Input() qrSrc: string | undefined;
+  /** Raw coupon code string — QR is generated at runtime */
+  @Input() couponCode: string | undefined;
 
   /** Big heading below logo */
   @Input() heading: string = 'Painter Token';

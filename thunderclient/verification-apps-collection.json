@@ -1,0 +1,566 @@
+{
+  "_id": "col_mscan_verifyapp",
+  "version": "1.2",
+  "name": "MScan — Verification Apps",
+  "folders": [
+    {
+      "_id": "fol_admin_auth",
+      "name": "Admin Auth",
+      "containerId": "col_mscan_verifyapp",
+      "sortNum": 10000
+    },
+    {
+      "_id": "fol_dealer_auth",
+      "name": "Dealer Auth (Mobile)",
+      "containerId": "col_mscan_verifyapp",
+      "sortNum": 20000
+    },
+    {
+      "_id": "fol_apps",
+      "name": "Verification Apps",
+      "containerId": "col_mscan_verifyapp",
+      "sortNum": 30000
+    },
+    {
+      "_id": "fol_config",
+      "name": "API Configuration",
+      "containerId": "col_mscan_verifyapp",
+      "sortNum": 40000
+    },
+    {
+      "_id": "fol_scan",
+      "name": "Scan (Unified)",
+      "containerId": "col_mscan_verifyapp",
+      "sortNum": 25000
+    },
+    {
+      "_id": "fol_webhooks",
+      "name": "Webhooks",
+      "containerId": "col_mscan_verifyapp",
+      "sortNum": 50000
+    }
+  ],
+  "requests": [
+    {
+      "_id": "req_adm_001",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_admin_auth",
+      "url": "{{baseUrl}}/api/auth/request-otp",
+      "name": "1. Request OTP",
+      "method": "POST",
+      "sortNum": 10000,
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"{{adminEmail}}\"\n}"
+      }
+    },
+    {
+      "_id": "req_adm_002",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_admin_auth",
+      "url": "{{baseUrl}}/api/auth/verify-otp",
+      "name": "2. Verify OTP — get token",
+      "method": "POST",
+      "sortNum": 20000,
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"otp\": \"123456\"\n}"
+      },
+      "notes": "Copy accessToken → {{token}}, refreshToken → {{refreshToken}}"
+    },
+    {
+      "_id": "req_adm_003",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_admin_auth",
+      "url": "{{baseUrl}}/api/auth/refresh",
+      "name": "3. Refresh Access Token",
+      "method": "POST",
+      "sortNum": 30000,
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+      }
+    },
+    {
+      "_id": "req_adm_004",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_admin_auth",
+      "url": "{{baseUrl}}/api/auth/logout",
+      "name": "4. Logout",
+      "method": "POST",
+      "sortNum": 40000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" }
+      ],
+      "params": [],
+      "body": { "type": "none" }
+    },
+    {
+      "_id": "req_dlr_001",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_dealer_auth",
+      "url": "{{baseUrl}}/api/mobile/v1/auth/dealer/request-otp",
+      "name": "1. Dealer Request OTP",
+      "method": "POST",
+      "sortNum": 10000,
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"phone_e164\": \"{{dealerPhone}}\"\n}"
+      },
+      "notes": "Phone must be in E.164 format: +919876543210 (include + and country code). Dealer must be pre-registered by tenant admin."
+    },
+    {
+      "_id": "req_dlr_002",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_dealer_auth",
+      "url": "{{baseUrl}}/api/mobile/v1/auth/dealer/verify-otp",
+      "name": "2. Dealer Verify OTP — get token",
+      "method": "POST",
+      "sortNum": 20000,
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"phone_e164\": \"{{dealerPhone}}\",\n  \"otp\": \"123456\"\n}"
+      },
+      "notes": "Copy accessToken → {{dealerToken}}. Then use X-App-Id header on all dealer mobile endpoints to select which verification app context to use."
+    },
+    {
+      "_id": "req_dlr_003",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_dealer_auth",
+      "url": "{{baseUrl}}/api/mobile/v1/auth/refresh",
+      "name": "3. Refresh Dealer Token",
+      "method": "POST",
+      "sortNum": 30000,
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"refreshToken\": \"{{dealerRefreshToken}}\"\n}"
+      }
+    },
+    {
+      "_id": "req_dlr_004",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_dealer_auth",
+      "url": "{{baseUrl}}/api/mobile/v1/auth/me",
+      "name": "4. Get My Profile (user-level)",
+      "method": "GET",
+      "sortNum": 40000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{dealerToken}}" }
+      ],
+      "params": [],
+      "body": { "type": "none" },
+      "notes": "Returns user-level info only (no dealer_id). Use /dealer/profile with X-App-Id to get app-specific dealer data."
+    },
+    {
+      "_id": "req_dlr_005",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_dealer_auth",
+      "url": "{{baseUrl}}/api/mobile/v1/dealer/profile",
+      "name": "5. Get Dealer Profile (app-scoped)",
+      "method": "GET",
+      "sortNum": 50000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{dealerToken}}" },
+        { "name": "X-App-Id", "value": "{{appId}}" }
+      ],
+      "params": [],
+      "body": { "type": "none" },
+      "notes": "X-App-Id determines which verification app's dealer profile is returned"
+    },
+    {
+      "_id": "req_dlr_006",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_dealer_auth",
+      "url": "{{baseUrl}}/api/mobile/v1/dealer/points",
+      "name": "6. Get Points Balance (app-scoped)",
+      "method": "GET",
+      "sortNum": 60000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{dealerToken}}" },
+        { "name": "X-App-Id", "value": "{{appId}}" }
+      ],
+      "params": [],
+      "body": { "type": "none" }
+    },
+    {
+      "_id": "req_dlr_007",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_dealer_auth",
+      "url": "{{baseUrl}}/api/mobile/v1/dealer/points/history",
+      "name": "7. Get Points History (app-scoped)",
+      "method": "GET",
+      "sortNum": 70000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{dealerToken}}" },
+        { "name": "X-App-Id", "value": "{{appId}}" }
+      ],
+      "params": [
+        { "name": "page", "value": "1", "isPath": false },
+        { "name": "limit", "value": "10", "isPath": false }
+      ],
+      "body": { "type": "none" }
+    },
+    {
+      "_id": "req_dlr_008",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_dealer_auth",
+      "url": "{{baseUrl}}/api/mobile/v1/dealer/scan",
+      "name": "8. Scan Coupon (app-scoped)",
+      "method": "POST",
+      "sortNum": 80000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{dealerToken}}" },
+        { "name": "X-App-Id", "value": "{{appId}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"coupon_code\": \"COUPON001\"\n}"
+      }
+    },
+    {
+      "_id": "req_scan_001",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_scan",
+      "url": "{{baseUrl}}/api/mobile/v1/scan",
+      "name": "1. Scan Coupon (DEALER or CUSTOMER)",
+      "method": "POST",
+      "sortNum": 10000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{dealerToken}}" },
+        { "name": "X-App-Id", "value": "{{appId}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"coupon_code\": \"COUPON001\"\n}"
+      },
+      "notes": "Works for both DEALER and CUSTOMER JWTs. Use dealerToken or customerToken in Authorization. X-App-Id must be the verification app UUID. DEALER: marks coupon used and awards dealer points. CUSTOMER: records scan and awards customer credits."
+    },
+    {
+      "_id": "req_scan_002",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_scan",
+      "url": "{{baseUrl}}/api/mobile/v1/scan",
+      "name": "2. Scan Coupon (as CUSTOMER)",
+      "method": "POST",
+      "sortNum": 20000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{customerToken}}" },
+        { "name": "X-App-Id", "value": "{{appId}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"coupon_code\": \"COUPON001\"\n}"
+      },
+      "notes": "Same endpoint, same payload — just swap the Bearer token to a customer JWT from /auth/verify-otp"
+    },
+    {
+      "_id": "req_apps_001",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_apps",
+      "url": "{{baseUrl}}/api/rewards/verification-apps",
+      "name": "Create Verification App",
+      "method": "POST",
+      "sortNum": 10000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"app_name\": \"My Loyalty App\",\n  \"template_id\": \"{{templateId}}\",\n  \"description\": \"Dealer loyalty scanning app\",\n  \"currency\": \"INR\",\n  \"primary_color\": \"#FF6B00\",\n  \"secondary_color\": \"#FFFFFF\",\n  \"welcome_message\": \"Welcome!\",\n  \"scan_success_message\": \"Points awarded!\",\n  \"scan_failure_message\": \"Invalid coupon\"\n}"
+      },
+      "notes": "Copy the returned id into {{appId}}"
+    },
+    {
+      "_id": "req_apps_002",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_apps",
+      "url": "{{baseUrl}}/api/rewards/verification-apps",
+      "name": "List Verification Apps",
+      "method": "GET",
+      "sortNum": 20000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" }
+      ],
+      "params": [
+        { "name": "active_only", "value": "true", "isPath": false }
+      ],
+      "body": { "type": "none" }
+    },
+    {
+      "_id": "req_apps_003",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_apps",
+      "url": "{{baseUrl}}/api/rewards/verification-apps/{{appId}}",
+      "name": "Get Verification App by ID",
+      "method": "GET",
+      "sortNum": 30000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" }
+      ],
+      "params": [],
+      "body": { "type": "none" }
+    },
+    {
+      "_id": "req_apps_004",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_apps",
+      "url": "{{baseUrl}}/api/rewards/verification-apps/{{appId}}",
+      "name": "Update Verification App",
+      "method": "PUT",
+      "sortNum": 40000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"app_name\": \"Updated App Name\",\n  \"description\": \"Updated description\",\n  \"primary_color\": \"#0066FF\",\n  \"welcome_message\": \"Welcome back!\"\n}"
+      }
+    },
+    {
+      "_id": "req_apps_005",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_apps",
+      "url": "{{baseUrl}}/api/rewards/verification-apps/{{appId}}",
+      "name": "Delete Verification App",
+      "method": "DELETE",
+      "sortNum": 50000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" }
+      ],
+      "params": [],
+      "body": { "type": "none" }
+    },
+    {
+      "_id": "req_apps_006",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_apps",
+      "url": "{{baseUrl}}/api/rewards/verification-apps/{{appId}}/regenerate-key",
+      "name": "Regenerate API Key",
+      "method": "POST",
+      "sortNum": 60000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" }
+      ],
+      "params": [],
+      "body": { "type": "none" }
+    },
+    {
+      "_id": "req_apps_007",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_apps",
+      "url": "{{baseUrl}}/api/rewards/verification-apps/{{appId}}/toggle-status",
+      "name": "Toggle App Status",
+      "method": "PATCH",
+      "sortNum": 70000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" }
+      ],
+      "params": [],
+      "body": { "type": "none" }
+    },
+    {
+      "_id": "req_cfg_001",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_config",
+      "url": "{{baseUrl}}/api/verification-apps/{{appId}}/api-config",
+      "name": "Get API Config",
+      "method": "GET",
+      "sortNum": 10000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" }
+      ],
+      "params": [],
+      "body": { "type": "none" }
+    },
+    {
+      "_id": "req_cfg_002",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_config",
+      "url": "{{baseUrl}}/api/verification-apps/{{appId}}/api-config",
+      "name": "Update API Config",
+      "method": "PUT",
+      "sortNum": 20000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"mobile_api_enabled\": true,\n  \"ecommerce_api_enabled\": false,\n  \"api_rate_limits\": {\n    \"mobile_rpm\": 100,\n    \"ecommerce_rpm\": 60\n  }\n}"
+      }
+    },
+    {
+      "_id": "req_cfg_003",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_config",
+      "url": "{{baseUrl}}/api/verification-apps/{{appId}}/enable-mobile-api",
+      "name": "Enable Mobile API",
+      "method": "POST",
+      "sortNum": 30000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" }
+      ],
+      "params": [],
+      "body": { "type": "none" }
+    },
+    {
+      "_id": "req_cfg_004",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_config",
+      "url": "{{baseUrl}}/api/verification-apps/{{appId}}/enable-ecommerce-api",
+      "name": "Enable E-commerce API",
+      "method": "POST",
+      "sortNum": 40000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" }
+      ],
+      "params": [],
+      "body": { "type": "none" }
+    },
+    {
+      "_id": "req_cfg_005",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_config",
+      "url": "{{baseUrl}}/api/verification-apps/{{appId}}/regenerate-mobile-key",
+      "name": "Regenerate Mobile API Key",
+      "method": "POST",
+      "sortNum": 50000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" }
+      ],
+      "params": [],
+      "body": { "type": "none" }
+    },
+    {
+      "_id": "req_cfg_006",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_config",
+      "url": "{{baseUrl}}/api/verification-apps/{{appId}}/regenerate-ecommerce-key",
+      "name": "Regenerate E-commerce API Key",
+      "method": "POST",
+      "sortNum": 60000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" }
+      ],
+      "params": [],
+      "body": { "type": "none" }
+    },
+    {
+      "_id": "req_cfg_007",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_config",
+      "url": "{{baseUrl}}/api/verification-apps/{{appId}}/api-usage",
+      "name": "Get API Usage Statistics",
+      "method": "GET",
+      "sortNum": 70000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" }
+      ],
+      "params": [
+        { "name": "days", "value": "7", "isPath": false },
+        { "name": "api_type", "value": "mobile", "isPath": false }
+      ],
+      "body": { "type": "none" }
+    },
+    {
+      "_id": "req_wh_001",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_webhooks",
+      "url": "{{baseUrl}}/api/verification-apps/{{appId}}/webhooks",
+      "name": "Register Webhook",
+      "method": "POST",
+      "sortNum": 10000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"event_type\": \"coupon_scanned\",\n  \"webhook_url\": \"https://your-server.com/webhooks/mscan\",\n  \"secret_key\": \"your-webhook-secret\",\n  \"retry_count\": 3,\n  \"timeout_seconds\": 30\n}"
+      },
+      "notes": "event_type: low_stock | out_of_stock | product_updated | product_created | product_deleted | order_created | coupon_scanned"
+    },
+    {
+      "_id": "req_wh_002",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_webhooks",
+      "url": "{{baseUrl}}/api/verification-apps/{{appId}}/webhooks",
+      "name": "List Webhooks",
+      "method": "GET",
+      "sortNum": 20000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" }
+      ],
+      "params": [],
+      "body": { "type": "none" }
+    },
+    {
+      "_id": "req_wh_003",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_webhooks",
+      "url": "{{baseUrl}}/api/webhooks/{{webhookId}}",
+      "name": "Update Webhook",
+      "method": "PUT",
+      "sortNum": 30000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"webhook_url\": \"https://your-server.com/webhooks/mscan-v2\",\n  \"is_active\": true,\n  \"retry_count\": 5,\n  \"timeout_seconds\": 15\n}"
+      }
+    },
+    {
+      "_id": "req_wh_004",
+      "colId": "col_mscan_verifyapp",
+      "containerId": "fol_webhooks",
+      "url": "{{baseUrl}}/api/webhooks/{{webhookId}}",
+      "name": "Delete Webhook",
+      "method": "DELETE",
+      "sortNum": 40000,
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{token}}" }
+      ],
+      "params": [],
+      "body": { "type": "none" }
+    }
+  ]
+}

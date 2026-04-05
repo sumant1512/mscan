@@ -74,7 +74,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       this.loading = false;
       this.success = 'Profile updated successfully!';
-      setTimeout(() => this.success = '', 3000);
+      setTimeout(() => this.success = '', 8080);
     }, 500);
   }
 }

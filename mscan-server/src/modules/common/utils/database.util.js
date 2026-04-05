@@ -3,7 +3,7 @@
  * Common database operations and helpers
  */
 
-const { DatabaseError } = require('../errors/AppError');
+const { AppError, DatabaseError } = require('../errors/AppError');
 
 /**
  * Execute query with error handling
@@ -34,6 +34,9 @@ const executeTransaction = async (db, callback) => {
     return result;
   } catch (error) {
     await client.query('ROLLBACK');
+    if (error instanceof AppError) {
+      throw error;
+    }
     console.error('Transaction error:', error);
     throw new DatabaseError(error.message);
   } finally {

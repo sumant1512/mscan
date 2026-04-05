@@ -79,22 +79,31 @@ CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    full_name VARCHAR(255),
     phone VARCHAR(50),
-    role VARCHAR(50) NOT NULL CHECK (role IN ('SUPER_ADMIN', 'TENANT_ADMIN', 'TENANT_USER')),
+    phone_e164 VARCHAR(20),
+    role VARCHAR(50) NOT NULL CHECK (role IN ('SUPER_ADMIN', 'TENANT_ADMIN', 'TENANT_USER', 'DEALER', 'CUSTOMER')),
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_super_admin_no_tenant CHECK (
         (role = 'SUPER_ADMIN' AND tenant_id IS NULL) OR
         (role != 'SUPER_ADMIN' AND tenant_id IS NOT NULL)
+    ),
+    CONSTRAINT check_user_identifier CHECK (
+        email IS NOT NULL OR phone_e164 IS NOT NULL
     )
 );
 
+-- Partial unique index: email must be unique where not null
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users(email) WHERE email IS NOT NULL;
+-- Partial unique index: phone_e164 must be unique per tenant
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_phone_tenant_unique ON users(tenant_id, phone_e164) WHERE phone_e164 IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_phone_e164 ON users(phone_e164);
 
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -541,9 +550,11 @@ CREATE TABLE IF NOT EXISTS coupons (
   product_name VARCHAR(255),
   product_sku VARCHAR(100),
   coupon_points INTEGER,
+  cashback_amount DECIMAL(10,2) DEFAULT 0,
   printed_count INTEGER DEFAULT 0,
   activation_note TEXT,
   deactivation_reason TEXT,
+  scanned_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT chk_expiry_future CHECK (expiry_date > created_at),
@@ -590,9 +601,11 @@ CREATE OR REPLACE FUNCTION validate_coupon_status_transition()
 RETURNS TRIGGER AS $$
 BEGIN
     IF OLD.status IS NOT NULL AND NEW.status != OLD.status THEN
-        IF OLD.status = 'draft' AND NEW.status NOT IN ('printed', 'inactive') THEN
+        -- draft can go directly to active (printing is a side-action, not a lifecycle step)
+        IF OLD.status = 'draft' AND NEW.status NOT IN ('active', 'inactive') THEN
             RAISE EXCEPTION 'Invalid transition from draft to %', NEW.status;
         END IF;
+        -- printed kept for backward compatibility with existing data
         IF OLD.status = 'printed' AND NEW.status NOT IN ('active', 'inactive') THEN
             RAISE EXCEPTION 'Invalid transition from printed to %', NEW.status;
         END IF;
@@ -602,11 +615,6 @@ BEGIN
         IF OLD.status = 'used' AND NEW.status NOT IN ('used', 'inactive') THEN
             RAISE EXCEPTION 'Invalid transition from used to %', NEW.status;
         END IF;
-    END IF;
-
-    IF NEW.status = 'printed' AND OLD.status = 'draft' THEN
-        NEW.printed_at = COALESCE(NEW.printed_at, CURRENT_TIMESTAMP);
-        NEW.printed_count = COALESCE(NEW.printed_count, 0) + 1;
     END IF;
 
     IF NEW.status = 'active' AND OLD.status IN ('draft', 'printed') THEN
@@ -1012,6 +1020,7 @@ CREATE TRIGGER update_customer_devices_updated_at BEFORE UPDATE ON customer_devi
 
 CREATE TABLE IF NOT EXISTS mobile_otps (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
   phone_e164 VARCHAR(20) NOT NULL,
   otp_code VARCHAR(6) NOT NULL,
   expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -1022,23 +1031,34 @@ CREATE TABLE IF NOT EXISTS mobile_otps (
 );
 
 CREATE INDEX IF NOT EXISTS idx_mobile_otps_phone ON mobile_otps(phone_e164);
+CREATE INDEX IF NOT EXISTS idx_mobile_otps_tenant ON mobile_otps(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_mobile_otps_expires_at ON mobile_otps(expires_at);
 CREATE INDEX IF NOT EXISTS idx_mobile_otps_phone_not_used ON mobile_otps(phone_e164, is_used) WHERE is_used = false;
 
 CREATE TABLE IF NOT EXISTS scan_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  session_token VARCHAR(255) UNIQUE NOT NULL,
+  session_token VARCHAR(255) UNIQUE,
   device_id VARCHAR(255),
-  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  coupon_id UUID REFERENCES coupons(id) ON DELETE SET NULL,
+  scanned_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  scan_type VARCHAR(20) DEFAULT 'customer' CHECK (scan_type IN ('customer', 'dealer', 'public')),
+  status VARCHAR(20) DEFAULT 'pending-verification' CHECK (status IN ('pending-verification', 'verified', 'completed', 'expired', 'failed')),
+  metadata JSONB DEFAULT '{}'::jsonb,
+  expires_at TIMESTAMP WITH TIME ZONE,
   is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_scan_sessions_customer ON scan_sessions(customer_id);
 CREATE INDEX IF NOT EXISTS idx_scan_sessions_token ON scan_sessions(session_token);
 CREATE INDEX IF NOT EXISTS idx_scan_sessions_expires_at ON scan_sessions(expires_at);
+CREATE INDEX IF NOT EXISTS idx_scan_sessions_coupon ON scan_sessions(coupon_id);
+CREATE INDEX IF NOT EXISTS idx_scan_sessions_scanned_by ON scan_sessions(scanned_by);
+CREATE INDEX IF NOT EXISTS idx_scan_sessions_scan_type ON scan_sessions(scan_type);
+CREATE INDEX IF NOT EXISTS idx_scan_sessions_status ON scan_sessions(status);
 
 CREATE TABLE IF NOT EXISTS user_points (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1075,6 +1095,34 @@ CREATE INDEX IF NOT EXISTS idx_points_transactions_customer ON points_transactio
 CREATE INDEX IF NOT EXISTS idx_points_transactions_tenant ON points_transactions(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_points_transactions_type ON points_transactions(transaction_type);
 CREATE INDEX IF NOT EXISTS idx_points_transactions_created_at ON points_transactions(created_at);
+
+-- Redemption requests: pending = locked points, approved = paid out, rejected = restored
+CREATE TABLE IF NOT EXISTS redemption_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  verification_app_id UUID REFERENCES verification_apps(id) ON DELETE SET NULL,
+  points_requested INTEGER NOT NULL CHECK (points_requested > 0),
+  status VARCHAR(20) NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'approved', 'rejected')),
+  notes TEXT,
+  processed_by UUID REFERENCES users(id),
+  processed_at TIMESTAMP WITH TIME ZONE,
+  rejection_reason TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_redemption_requests_customer ON redemption_requests(customer_id);
+CREATE INDEX IF NOT EXISTS idx_redemption_requests_tenant ON redemption_requests(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_redemption_requests_status ON redemption_requests(status);
+CREATE INDEX IF NOT EXISTS idx_redemption_requests_created_at ON redemption_requests(created_at);
+CREATE INDEX IF NOT EXISTS idx_redemption_requests_app ON redemption_requests(verification_app_id);
+CREATE INDEX IF NOT EXISTS idx_redemption_requests_tenant_app_status ON redemption_requests(tenant_id, verification_app_id, status);
+
+CREATE TRIGGER update_redemption_requests_updated_at
+  BEFORE UPDATE ON redemption_requests
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TABLE IF NOT EXISTS scan_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1216,14 +1264,17 @@ CREATE TABLE IF NOT EXISTS features (
     code VARCHAR(100) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
+    parent_id UUID REFERENCES features(id) ON DELETE CASCADE,
     is_active BOOLEAN DEFAULT true,
     default_enabled BOOLEAN DEFAULT false,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_features_code ON features(code);
 CREATE INDEX IF NOT EXISTS idx_features_active ON features(is_active);
+CREATE INDEX IF NOT EXISTS idx_features_parent ON features(parent_id);
 
 CREATE TRIGGER update_features_updated_at BEFORE UPDATE ON features
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -1283,6 +1334,129 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================
+-- DEALER MANAGEMENT
+-- ============================================
+
+-- Dealers
+-- Each row = one dealer's profile for ONE verification app.
+-- Same person in two apps = two rows. Uniqueness: (user_id, verification_app_id).
+CREATE TABLE IF NOT EXISTS dealers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  verification_app_id UUID NOT NULL REFERENCES verification_apps(id) ON DELETE CASCADE,
+  dealer_code VARCHAR(50) NOT NULL,
+  shop_name VARCHAR(255) NOT NULL,
+  address TEXT NOT NULL,
+  pincode VARCHAR(10) NOT NULL,
+  city VARCHAR(100) NOT NULL,
+  state VARCHAR(100) NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT unique_user_app UNIQUE (user_id, verification_app_id),
+  CONSTRAINT unique_dealer_code_per_app UNIQUE (tenant_id, verification_app_id, dealer_code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_dealers_user ON dealers(user_id);
+CREATE INDEX IF NOT EXISTS idx_dealers_tenant ON dealers(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_dealers_verification_app ON dealers(verification_app_id);
+CREATE INDEX IF NOT EXISTS idx_dealers_code ON dealers(dealer_code);
+CREATE INDEX IF NOT EXISTS idx_dealers_active ON dealers(is_active);
+CREATE INDEX IF NOT EXISTS idx_dealers_shop_name_trgm ON dealers USING GIN (shop_name gin_trgm_ops);
+
+CREATE TRIGGER update_dealers_updated_at BEFORE UPDATE ON dealers
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Dealer Points (Credit Points Balance)
+CREATE TABLE IF NOT EXISTS dealer_points (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  dealer_id UUID NOT NULL REFERENCES dealers(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  balance INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT unique_dealer_tenant_points UNIQUE (dealer_id, tenant_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_dealer_points_dealer ON dealer_points(dealer_id);
+CREATE INDEX IF NOT EXISTS idx_dealer_points_tenant ON dealer_points(tenant_id);
+
+CREATE TRIGGER update_dealer_points_updated_at BEFORE UPDATE ON dealer_points
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Dealer Point Transactions
+CREATE TABLE IF NOT EXISTS dealer_point_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  dealer_id UUID NOT NULL REFERENCES dealers(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  amount INTEGER NOT NULL,
+  type VARCHAR(10) NOT NULL CHECK (type IN ('CREDIT', 'DEBIT')),
+  reason VARCHAR(255),
+  reference_id UUID,
+  reference_type VARCHAR(50),
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_dealer_point_tx_dealer ON dealer_point_transactions(dealer_id);
+CREATE INDEX IF NOT EXISTS idx_dealer_point_tx_tenant ON dealer_point_transactions(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_dealer_point_tx_type ON dealer_point_transactions(type);
+CREATE INDEX IF NOT EXISTS idx_dealer_point_tx_created ON dealer_point_transactions(created_at);
+
+-- ============================================
+-- CASHBACK SYSTEM
+-- ============================================
+
+-- Cashback Transactions
+CREATE TABLE IF NOT EXISTS cashback_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  scan_session_id UUID,
+  coupon_code VARCHAR(50),
+  amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
+  upi_id VARCHAR(255),
+  status VARCHAR(20) NOT NULL DEFAULT 'PROCESSING' CHECK (status IN ('PROCESSING', 'COMPLETED', 'FAILED', 'REVERSED')),
+  gateway_transaction_id VARCHAR(255),
+  payout_reference VARCHAR(255),
+  failure_reason TEXT,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_cashback_tx_customer ON cashback_transactions(customer_id);
+CREATE INDEX IF NOT EXISTS idx_cashback_tx_tenant ON cashback_transactions(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_cashback_tx_status ON cashback_transactions(status);
+CREATE INDEX IF NOT EXISTS idx_cashback_tx_coupon ON cashback_transactions(coupon_code);
+CREATE INDEX IF NOT EXISTS idx_cashback_tx_created ON cashback_transactions(created_at);
+
+CREATE TRIGGER update_cashback_transactions_updated_at BEFORE UPDATE ON cashback_transactions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Customer UPI Details
+CREATE TABLE IF NOT EXISTS customer_upi_details (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  upi_id VARCHAR(255) NOT NULL,
+  is_verified BOOLEAN DEFAULT false,
+  is_primary BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT unique_customer_tenant_upi UNIQUE (customer_id, tenant_id, upi_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_customer_upi_customer ON customer_upi_details(customer_id);
+CREATE INDEX IF NOT EXISTS idx_customer_upi_tenant ON customer_upi_details(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_customer_upi_primary ON customer_upi_details(customer_id, tenant_id) WHERE is_primary = true;
+
+CREATE TRIGGER update_customer_upi_details_updated_at BEFORE UPDATE ON customer_upi_details
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
 -- SEED DATA
 -- ============================================
 
@@ -1327,16 +1501,140 @@ CREATE INDEX IF NOT EXISTS idx_templates_custom ON product_templates(tenant_id) 
 -- Super Admin Users
 INSERT INTO users (email, full_name, role, is_active)
 VALUES ('sumantmishra511@gmail.com', 'Super Admin', 'SUPER_ADMIN', true)
-ON CONFLICT (email) DO NOTHING;
+ON CONFLICT (email) WHERE email is NOT NULL DO NOTHING;
 
 INSERT INTO users (email, full_name, role, is_active)
 VALUES ('kumarbhaskar419@gmail.com', 'Super Admin', 'SUPER_ADMIN', true)
-ON CONFLICT (email) DO NOTHING;
+ON CONFLICT (email) WHERE email is NOT NULL DO NOTHING;
 
--- Initialize credit balance for all tenants (if any exist)
-INSERT INTO tenant_credit_balance (tenant_id, balance, total_received, total_spent)
-SELECT id, 0, 0, 0 FROM tenants
-ON CONFLICT (tenant_id) DO NOTHING;
+-- ============================================
+-- SEED: Demo Tenants & Tenant Admins
+-- ============================================
+DO $$
+DECLARE
+    v_super_admin1_id UUID;
+    v_super_admin2_id UUID;
+    v_tenant1_id UUID;
+    v_tenant2_id UUID;
+BEGIN
+    -- Get super admin IDs
+    SELECT id INTO v_super_admin1_id FROM users WHERE email = 'sumantmishra511@gmail.com';
+    SELECT id INTO v_super_admin2_id FROM users WHERE email = 'kumarbhaskar419@gmail.com';
+
+    -- Create Tenant 1 (if not exists)
+    INSERT INTO tenants (tenant_name, email, contact_person, subdomain_slug, is_active, status, created_by)
+    VALUES ('Demo Brand One', 'tenant1@demo.com', 'Admin One', 'demo-brand-one', true, 'active', v_super_admin1_id)
+    ON CONFLICT (email) DO NOTHING
+    RETURNING id INTO v_tenant1_id;
+
+    IF v_tenant1_id IS NULL THEN
+        SELECT id INTO v_tenant1_id FROM tenants WHERE email = 'tenant1@demo.com';
+    END IF;
+
+    -- Create Tenant 2 (if not exists)
+    INSERT INTO tenants (tenant_name, email, contact_person, subdomain_slug, is_active, status, created_by)
+    VALUES ('Demo Brand Two', 'tenant2@demo.com', 'Admin Two', 'demo-brand-two', true, 'active', v_super_admin2_id)
+    ON CONFLICT (email) DO NOTHING
+    RETURNING id INTO v_tenant2_id;
+
+    IF v_tenant2_id IS NULL THEN
+        SELECT id INTO v_tenant2_id FROM tenants WHERE email = 'tenant2@demo.com';
+    END IF;
+
+    -- Create Tenant Admin for Tenant 1 (if not exists)
+    -- Login: tenant1@demo.com on subdomain demo-brand-one
+    INSERT INTO users (email, full_name, role, tenant_id, is_active)
+    VALUES ('tenant1@demo.com', 'Admin One', 'TENANT_ADMIN', v_tenant1_id, true)
+    ON CONFLICT (email) WHERE email IS NOT NULL DO NOTHING;
+
+    -- Create Tenant Admin for Tenant 2 (if not exists)
+    -- Login: tenant2@demo.com on subdomain demo-brand-two
+    INSERT INTO users (email, full_name, role, tenant_id, is_active)
+    VALUES ('tenant2@demo.com', 'Admin Two', 'TENANT_ADMIN', v_tenant2_id, true)
+    ON CONFLICT (email) WHERE email IS NOT NULL DO NOTHING;
+
+    RAISE NOTICE 'Demo tenants and tenant admin users created successfully';
+END $$;
+
+-- ============================================
+-- Initialize credit balance for all tenants with 5000 welcome credits
+-- Creates a full paper trail:
+--   credit_requests  (approved)        → visible in super-admin request list
+--   credit_transactions (CREDIT)       → visible in transaction history at all levels
+-- ============================================
+DO $$
+DECLARE
+    v_tenant        RECORD;
+    v_super_admin   UUID;
+    v_tenant_admin  UUID;
+    v_request_id    UUID;
+    v_balance_before INTEGER := 0;
+    v_welcome_credits CONSTANT INTEGER := 5000;
+BEGIN
+    -- Use first super admin as the approver
+    SELECT id INTO v_super_admin FROM users WHERE role = 'SUPER_ADMIN' LIMIT 1;
+
+    FOR v_tenant IN SELECT id, tenant_name FROM tenants ORDER BY created_at LOOP
+
+        -- Skip if this tenant already has a credit balance
+        IF EXISTS (SELECT 1 FROM tenant_credit_balance WHERE tenant_id = v_tenant.id) THEN
+            RAISE NOTICE 'Credit balance already exists for tenant %, skipping', v_tenant.tenant_name;
+            CONTINUE;
+        END IF;
+
+        -- Find a TENANT_ADMIN user for this tenant (used as requested_by)
+        SELECT id INTO v_tenant_admin
+        FROM users
+        WHERE tenant_id = v_tenant.id AND role = 'TENANT_ADMIN'
+        LIMIT 1;
+
+        -- Fall back to super admin if no tenant admin exists yet
+        IF v_tenant_admin IS NULL THEN
+            v_tenant_admin := v_super_admin;
+        END IF;
+
+        -- 1. Insert the approved credit request
+        INSERT INTO credit_requests (
+            tenant_id, requested_by, requested_amount, status,
+            justification, processed_by, processed_at, requested_at
+        ) VALUES (
+            v_tenant.id,
+            v_tenant_admin,
+            v_welcome_credits,
+            'approved',
+            'Welcome credits allocated on account creation',
+            v_super_admin,
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+        RETURNING id INTO v_request_id;
+
+        -- 2. Create the CREDIT transaction record linked to the request
+        INSERT INTO credit_transactions (
+            tenant_id, transaction_type, amount,
+            balance_before, balance_after,
+            reference_id, reference_type,
+            description, created_by
+        ) VALUES (
+            v_tenant.id,
+            'CREDIT',
+            v_welcome_credits,
+            v_balance_before,
+            v_balance_before + v_welcome_credits,
+            v_request_id,
+            'CREDIT_APPROVAL',
+            'Welcome credits: ' || v_welcome_credits || ' credits allocated on account creation',
+            v_super_admin
+        );
+
+        -- 3. Set the tenant credit balance
+        INSERT INTO tenant_credit_balance (tenant_id, balance, total_received, total_spent)
+        VALUES (v_tenant.id, v_welcome_credits, v_welcome_credits, 0)
+        ON CONFLICT (tenant_id) DO NOTHING;
+
+        RAISE NOTICE 'Allocated % welcome credits to tenant %', v_welcome_credits, v_tenant.tenant_name;
+    END LOOP;
+END $$;
 
 -- ============================================
 -- SEED: Permission Definitions
@@ -1408,91 +1706,482 @@ INSERT INTO permissions (code, name, description, scope, allowed_assigners) VALU
 ON CONFLICT (code) DO NOTHING;
 
 -- ============================================
--- SEED: System Templates (requires a tenant)
+-- SEED: Feature Flags for Ecommerce & Cashback
+-- ============================================
+
+-- Ecommerce feature flag
+INSERT INTO features (code, name, description, default_enabled)
+VALUES ('ecommerce', 'Ecommerce Module', 'Enable ecommerce product catalog and customer profile for tenant', false)
+ON CONFLICT (code) DO NOTHING;
+
+-- Coupon cashback parent flag
+INSERT INTO features (code, name, description, default_enabled)
+VALUES ('coupon_cashback', 'Coupon Cashback Module', 'Parent flag for the entire coupon cashback system', false)
+ON CONFLICT (code) DO NOTHING;
+
+-- Coupon cashback child flags
+INSERT INTO features (code, name, description, parent_id, default_enabled)
+VALUES (
+  'coupon_cashback.dealer_scanning',
+  'Dealer Scanning',
+  'Enable dealer-only QR scanning with credit points (app required)',
+  (SELECT id FROM features WHERE code = 'coupon_cashback'),
+  false
+)
+ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO features (code, name, description, parent_id, default_enabled)
+VALUES (
+  'coupon_cashback.open_scanning',
+  'Open Scanning',
+  'Enable open scanning for all users with UPI cashback payout',
+  (SELECT id FROM features WHERE code = 'coupon_cashback'),
+  false
+)
+ON CONFLICT (code) DO NOTHING;
+
+-- ============================================
+-- SEED: System Templates & Default Verify App (all tenants)
 -- ============================================
 DO $$
 DECLARE
-    v_tenant_id UUID;
+    v_tenant RECORD;
+    v_template_id UUID;
 BEGIN
-    -- Get the first tenant (if any exist)
-    SELECT id INTO v_tenant_id FROM tenants ORDER BY created_at LIMIT 1;
+    FOR v_tenant IN SELECT id, tenant_name FROM tenants ORDER BY created_at LOOP
 
-    IF v_tenant_id IS NULL THEN
-        RAISE NOTICE 'No tenants found - skipping system template seeding (run after first tenant is created)';
+        -- ---- System Templates ----
+        IF EXISTS (SELECT 1 FROM product_templates WHERE tenant_id = v_tenant.id AND is_system_template = true) THEN
+            RAISE NOTICE 'System templates already exist for tenant %, skipping templates', v_tenant.tenant_name;
+        ELSE
+            INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active, variant_config, custom_fields)
+            VALUES
+                (v_tenant.id, 'Basic Product', 'basic', 'Simple product template with essential fields only', 'inventory_2', true, true, '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb),
+                (v_tenant.id, 'Clothing & Apparel', 'clothing', 'Template for shirts, pants, dresses, and other clothing items', 'checkroom', true, true, '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb),
+                (v_tenant.id, 'Footwear', 'footwear', 'Template for shoes, sandals, boots, and other footwear', 'run_circle', true, true, '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb),
+                (v_tenant.id, 'Jewelry & Accessories', 'jewelry', 'Template for rings, necklaces, bracelets, and other jewelry', 'diamond', true, true, '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb),
+                (v_tenant.id, 'Wall Paint & Coatings', 'paint', 'Template for paints, varnishes, and coating products', 'format_paint', true, true, '{"variant_label": "Pack Size", "dimensions": [{"attribute_key": "pack_size", "attribute_name": "Pack Size", "type": "select", "required": true, "options": ["1L", "4L", "10L", "20L"], "placeholder": "Select pack size", "help_text": "Select the size of the paint pack"}], "common_fields": [{"attribute_key": "price", "attribute_name": "Price (₹)", "type": "number", "required": true, "min": 0, "placeholder": "0.00"}]}'::jsonb, '[]'::jsonb),
+                (v_tenant.id, 'Bags & Luggage', 'bags', 'Template for backpacks, suitcases, handbags, and travel bags', 'work_outline', true, true, '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb),
+                (v_tenant.id, 'Electronics & Gadgets', 'electronics', 'Template for phones, tablets, laptops, and electronic devices', 'devices', true, true, '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb),
+                (v_tenant.id, 'Cosmetics & Beauty', 'cosmetics', 'Template for skincare, makeup, fragrances, and beauty products', 'face_retouching_natural', true, true, '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb),
+                (v_tenant.id, 'Food & Beverage', 'food', 'Template for packaged food items and beverages', 'restaurant', true, true, '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb),
+                (v_tenant.id, 'Home & Furniture', 'furniture', 'Template for furniture, home decor, and appliances', 'weekend', true, true, '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb),
+                (v_tenant.id, 'Sports & Fitness', 'sports', 'Template for sports equipment, fitness gear, and athletic apparel', 'fitness_center', true, true, '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+
+            RAISE NOTICE 'Created 11 system templates for tenant %', v_tenant.tenant_name;
+        END IF;
+
+        -- ---- Default Verify App ----
+        IF EXISTS (SELECT 1 FROM verification_apps WHERE tenant_id = v_tenant.id) THEN
+            RAISE NOTICE 'Verify app already exists for tenant %, skipping', v_tenant.tenant_name;
+        ELSE
+            -- Use the Wall Paint & Coatings template as the default
+            SELECT id INTO v_template_id
+            FROM product_templates
+            WHERE tenant_id = v_tenant.id AND template_name = 'Wall Paint & Coatings'
+            LIMIT 1;
+
+            INSERT INTO verification_apps (
+                tenant_id, app_name, code, api_key, description,
+                enable_scanning, is_active, template_id
+            ) VALUES (
+                v_tenant.id,
+                'Default Verify App',
+                upper(left(replace(gen_random_uuid()::text, '-', ''), 8)),
+                'msk_' || replace(gen_random_uuid()::text, '-', ''),
+                'Default verification app created during initial setup',
+                true,
+                true,
+                v_template_id
+            );
+
+            RAISE NOTICE 'Created default verify app for tenant %', v_tenant.tenant_name;
+        END IF;
+
+    END LOOP;
+
+    IF NOT EXISTS (SELECT 1 FROM tenants) THEN
+        RAISE NOTICE 'No tenants found - skipping system template and verify app seeding';
+    END IF;
+END $$;
+
+-- ============================================
+-- SEED: Demo Brand One — Wall Paint brand dummy data
+-- ============================================
+-- Tenant Admin : tenant1@demo.com  (subdomain: demo-brand-one)
+-- Dealer       : dealer1@demo.com  (mobile: +919000000001)
+-- Staff        : staff1@demo.com
+-- Template     : Wall Paint & Coatings (Pack Size + Price)
+-- Products     : 4 paint products across 2 categories
+-- ============================================
+DO $$
+DECLARE
+    v_tenant1_id     UUID;
+    v_app_id         UUID;
+    v_template_id    UUID;
+    v_dealer_user_id UUID;
+    v_staff_user_id  UUID;
+    v_dealer_id      UUID;
+    v_batch_id       UUID;
+    v_cat_interior   INTEGER;
+    v_cat_exterior   INTEGER;
+    v_admin_user_id  UUID;
+BEGIN
+    -- Resolve tenant
+    SELECT id INTO v_tenant1_id FROM tenants WHERE subdomain_slug = 'demo-brand-one';
+    IF v_tenant1_id IS NULL THEN
+        RAISE NOTICE 'Demo Brand One tenant not found, skipping';
         RETURN;
     END IF;
 
-    -- Skip if system templates already exist for this tenant
-    IF EXISTS (SELECT 1 FROM product_templates WHERE tenant_id = v_tenant_id AND is_system_template = true) THEN
-        RAISE NOTICE 'System templates already exist for tenant, skipping';
+    -- Resolve verify app
+    SELECT id INTO v_app_id FROM verification_apps
+    WHERE tenant_id = v_tenant1_id AND app_name = 'Default Verify App' LIMIT 1;
+    IF v_app_id IS NULL THEN
+        RAISE NOTICE 'No verify app found for Demo Brand One, skipping';
         RETURN;
     END IF;
 
-    -- 1. Basic Product
-    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
-        variant_config, custom_fields)
-    VALUES (v_tenant_id, 'Basic Product', 'basic', 'Simple product template with essential fields only', 'inventory_2', true, true,
-        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+    -- Resolve Wall Paint & Coatings template
+    SELECT id INTO v_template_id FROM product_templates
+    WHERE tenant_id = v_tenant1_id AND template_name = 'Wall Paint & Coatings' LIMIT 1;
 
-    -- 2. Clothing & Apparel
-    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
-        variant_config, custom_fields)
-    VALUES (v_tenant_id, 'Clothing & Apparel', 'clothing', 'Template for shirts, pants, dresses, and other clothing items', 'checkroom', true, true,
-        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+    -- Resolve tenant admin
+    SELECT id INTO v_admin_user_id FROM users
+    WHERE email = 'tenant1@demo.com' AND tenant_id = v_tenant1_id LIMIT 1;
 
-    -- 3. Footwear
-    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
-        variant_config, custom_fields)
-    VALUES (v_tenant_id, 'Footwear', 'footwear', 'Template for shoes, sandals, boots, and other footwear', 'run_circle', true, true,
-        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+    -- ---- Dealer User ----
+    INSERT INTO users (email, full_name, role, tenant_id, phone_e164, is_active)
+    VALUES ('dealer1@demo.com', 'Demo Dealer One', 'DEALER', v_tenant1_id, '+919000000001', true)
+    ON CONFLICT (email) WHERE email IS NOT NULL DO NOTHING
+    RETURNING id INTO v_dealer_user_id;
+    IF v_dealer_user_id IS NULL THEN
+        SELECT id INTO v_dealer_user_id FROM users WHERE email = 'dealer1@demo.com';
+    END IF;
 
-    -- 4. Jewelry & Accessories
-    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
-        variant_config, custom_fields)
-    VALUES (v_tenant_id, 'Jewelry & Accessories', 'jewelry', 'Template for rings, necklaces, bracelets, and other jewelry', 'diamond', true, true,
-        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+    -- ---- Staff User ----
+    INSERT INTO users (email, full_name, role, tenant_id, is_active)
+    VALUES ('staff1@demo.com', 'Demo Staff One', 'TENANT_USER', v_tenant1_id, true)
+    ON CONFLICT (email) WHERE email IS NOT NULL DO NOTHING
+    RETURNING id INTO v_staff_user_id;
+    IF v_staff_user_id IS NULL THEN
+        SELECT id INTO v_staff_user_id FROM users WHERE email = 'staff1@demo.com';
+    END IF;
 
-    -- 5. Wall Paint & Coatings
-    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
-        variant_config, custom_fields)
-    VALUES (v_tenant_id, 'Wall Paint & Coatings', 'paint', 'Template for paints, varnishes, and coating products', 'format_paint', true, true,
-        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+    -- ---- Dealer Profile ----
+    IF NOT EXISTS (SELECT 1 FROM dealers WHERE user_id = v_dealer_user_id AND verification_app_id = v_app_id) THEN
+        INSERT INTO dealers (user_id, tenant_id, verification_app_id, dealer_code, shop_name, address, pincode, city, state, is_active)
+        VALUES (v_dealer_user_id, v_tenant1_id, v_app_id, 'DLR001', 'Demo Paint Store', '12 Market Street', '400001', 'Mumbai', 'Maharashtra', true)
+        RETURNING id INTO v_dealer_id;
+        INSERT INTO dealer_points (dealer_id, tenant_id, balance)
+        VALUES (v_dealer_id, v_tenant1_id, 150)
+        ON CONFLICT (dealer_id, tenant_id) DO NOTHING;
+    ELSE
+        SELECT id INTO v_dealer_id FROM dealers WHERE user_id = v_dealer_user_id AND verification_app_id = v_app_id;
+    END IF;
 
-    -- 6. Bags & Luggage
-    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
-        variant_config, custom_fields)
-    VALUES (v_tenant_id, 'Bags & Luggage', 'bags', 'Template for backpacks, suitcases, handbags, and travel bags', 'work_outline', true, true,
-        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+    -- ---- Categories ----
+    IF NOT EXISTS (SELECT 1 FROM categories WHERE tenant_id = v_tenant1_id AND name = 'Interior Paints') THEN
+        INSERT INTO categories (tenant_id, verification_app_id, name, description, is_active)
+        VALUES (v_tenant1_id, v_app_id, 'Interior Paints', 'Paints for interior walls and ceilings', true)
+        RETURNING id INTO v_cat_interior;
+    ELSE
+        SELECT id INTO v_cat_interior FROM categories WHERE tenant_id = v_tenant1_id AND name = 'Interior Paints' LIMIT 1;
+    END IF;
 
-    -- 7. Electronics & Gadgets
-    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
-        variant_config, custom_fields)
-    VALUES (v_tenant_id, 'Electronics & Gadgets', 'electronics', 'Template for phones, tablets, laptops, and electronic devices', 'devices', true, true,
-        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+    IF NOT EXISTS (SELECT 1 FROM categories WHERE tenant_id = v_tenant1_id AND name = 'Exterior Paints') THEN
+        INSERT INTO categories (tenant_id, verification_app_id, name, description, is_active)
+        VALUES (v_tenant1_id, v_app_id, 'Exterior Paints', 'Paints for exterior walls and outdoor surfaces', true)
+        RETURNING id INTO v_cat_exterior;
+    ELSE
+        SELECT id INTO v_cat_exterior FROM categories WHERE tenant_id = v_tenant1_id AND name = 'Exterior Paints' LIMIT 1;
+    END IF;
 
-    -- 8. Cosmetics & Beauty
-    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
-        variant_config, custom_fields)
-    VALUES (v_tenant_id, 'Cosmetics & Beauty', 'cosmetics', 'Template for skincare, makeup, fragrances, and beauty products', 'face_retouching_natural', true, true,
-        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+    -- ---- 4 Paint Products ----
+    IF NOT EXISTS (SELECT 1 FROM products WHERE tenant_id = v_tenant1_id AND product_name = 'Royale Shyne Interior Emulsion') THEN
+        INSERT INTO products (tenant_id, verification_app_id, template_id, category_id, product_name, price, currency, status, is_active, thumbnail_url, attributes)
+        VALUES (v_tenant1_id, v_app_id, v_template_id, v_cat_interior,
+            'Royale Shyne Interior Emulsion', 1850.00, 'INR', 'active', true,
+            'https://placehold.co/400x400?text=Royale+Shyne',
+            '{"pack_size": "20L", "price": 1850}'::jsonb);
+    END IF;
 
-    -- 9. Food & Beverage
-    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
-        variant_config, custom_fields)
-    VALUES (v_tenant_id, 'Food & Beverage', 'food', 'Template for packaged food items and beverages', 'restaurant', true, true,
-        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+    IF NOT EXISTS (SELECT 1 FROM products WHERE tenant_id = v_tenant1_id AND product_name = 'Tractor Emulsion Interior') THEN
+        INSERT INTO products (tenant_id, verification_app_id, template_id, category_id, product_name, price, currency, status, is_active, thumbnail_url, attributes)
+        VALUES (v_tenant1_id, v_app_id, v_template_id, v_cat_interior,
+            'Tractor Emulsion Interior', 980.00, 'INR', 'active', true,
+            'https://placehold.co/400x400?text=Tractor+Emulsion',
+            '{"pack_size": "10L", "price": 980}'::jsonb);
+    END IF;
 
-    -- 10. Home & Furniture
-    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
-        variant_config, custom_fields)
-    VALUES (v_tenant_id, 'Home & Furniture', 'furniture', 'Template for furniture, home decor, and appliances', 'weekend', true, true,
-        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+    IF NOT EXISTS (SELECT 1 FROM products WHERE tenant_id = v_tenant1_id AND product_name = 'Apex Exterior Emulsion') THEN
+        INSERT INTO products (tenant_id, verification_app_id, template_id, category_id, product_name, price, currency, status, is_active, thumbnail_url, attributes)
+        VALUES (v_tenant1_id, v_app_id, v_template_id, v_cat_exterior,
+            'Apex Exterior Emulsion', 2200.00, 'INR', 'active', true,
+            'https://placehold.co/400x400?text=Apex+Exterior',
+            '{"pack_size": "20L", "price": 2200}'::jsonb);
+    END IF;
 
-    -- 11. Sports & Fitness
-    INSERT INTO product_templates (tenant_id, template_name, industry_type, description, icon, is_system_template, is_active,
-        variant_config, custom_fields)
-    VALUES (v_tenant_id, 'Sports & Fitness', 'sports', 'Template for sports equipment, fitness gear, and athletic apparel', 'fitness_center', true, true,
-        '{"variant_label": "Variant", "dimensions": [], "common_fields": []}'::jsonb, '[]'::jsonb);
+    IF NOT EXISTS (SELECT 1 FROM products WHERE tenant_id = v_tenant1_id AND product_name = 'Weathercoat All Guard Exterior') THEN
+        INSERT INTO products (tenant_id, verification_app_id, template_id, category_id, product_name, price, currency, status, is_active, thumbnail_url, attributes)
+        VALUES (v_tenant1_id, v_app_id, v_template_id, v_cat_exterior,
+            'Weathercoat All Guard Exterior', 560.00, 'INR', 'active', true,
+            'https://placehold.co/400x400?text=Weathercoat',
+            '{"pack_size": "4L", "price": 560}'::jsonb);
+    END IF;
 
-    RAISE NOTICE 'Successfully created 11 system templates';
+    -- ---- Enable all features ----
+    INSERT INTO tenant_features (tenant_id, feature_id, enabled, enabled_by)
+    SELECT v_tenant1_id, id, true, v_admin_user_id
+    FROM features
+    ON CONFLICT (tenant_id, feature_id) DO UPDATE SET enabled = true;
+
+    -- ---- Coupon Batch ----
+    IF NOT EXISTS (SELECT 1 FROM coupon_batches WHERE tenant_id = v_tenant1_id AND batch_name = 'Demo Batch Q1-2026') THEN
+        INSERT INTO coupon_batches (tenant_id, verification_app_id, batch_name, dealer_name, zone, total_coupons, serial_number_start, serial_number_end, batch_status, activated_at)
+        VALUES (v_tenant1_id, v_app_id, 'Demo Batch Q1-2026', 'Demo Dealer One', 'West', 5, 1, 5, 'activated', NOW())
+        RETURNING id INTO v_batch_id;
+    ELSE
+        SELECT id INTO v_batch_id FROM coupon_batches WHERE tenant_id = v_tenant1_id AND batch_name = 'Demo Batch Q1-2026' LIMIT 1;
+    END IF;
+
+    -- ---- Active Coupons ----
+    INSERT INTO coupons (
+        tenant_id, verification_app_id, coupon_code, discount_type, discount_value, discount_currency,
+        expiry_date, total_usage_limit, per_user_usage_limit, status, credit_cost, max_scans_per_code,
+        batch_id, code_type, coupon_reference, serial_number, description, activated_at, coupon_points
+    ) VALUES
+    (v_tenant1_id, v_app_id, 'DEMO-ACTV-0001', 'PERCENTAGE',   10.00, 'INR', NOW() + INTERVAL '6 months', 1, 1, 'active', 1, 1, v_batch_id, 'sequential', 'DEMO-Q1-001', 1, 'Demo 10% off coupon', NOW(), 10),
+    (v_tenant1_id, v_app_id, 'DEMO-ACTV-0002', 'PERCENTAGE',   15.00, 'INR', NOW() + INTERVAL '6 months', 1, 1, 'active', 1, 1, v_batch_id, 'sequential', 'DEMO-Q1-002', 2, 'Demo 15% off coupon', NOW(), 15),
+    (v_tenant1_id, v_app_id, 'DEMO-ACTV-0003', 'FIXED_AMOUNT', 200.00, 'INR', NOW() + INTERVAL '6 months', 1, 1, 'active', 1, 1, v_batch_id, 'sequential', 'DEMO-Q1-003', 3, 'Demo flat Rs.200 off coupon', NOW(), 20),
+    (v_tenant1_id, v_app_id, 'DEMO-ACTV-0004', 'FIXED_AMOUNT', 500.00, 'INR', NOW() + INTERVAL '6 months', 1, 1, 'active', 1, 1, v_batch_id, 'sequential', 'DEMO-Q1-004', 4, 'Demo flat Rs.500 off coupon', NOW(), 50),
+    (v_tenant1_id, v_app_id, 'DEMO-ACTV-0005', 'PERCENTAGE',   20.00, 'INR', NOW() + INTERVAL '6 months', 1, 1, 'active', 1, 1, v_batch_id, 'sequential', 'DEMO-Q1-005', 5, 'Demo 20% off coupon', NOW(), 20)
+    ON CONFLICT (coupon_code) DO NOTHING;
+
+    RAISE NOTICE 'Demo Brand One seed complete (paint brand, tenant: %)', v_tenant1_id;
+END $$;
+
+-- ============================================
+-- SEED: Demo Brand Two — Clothing brand dummy data
+-- ============================================
+-- Tenant Admin : tenant2@demo.com  (subdomain: demo-brand-two)
+-- Dealer       : dealer2@demo.com  (mobile: +919000000002)
+-- Staff        : staff2@demo.com
+-- Template     : Clothing Brand (custom, Size + Color variants, Price + SKU fields)
+-- Products     : 4 clothing products across 2 categories
+-- ============================================
+DO $$
+DECLARE
+    v_tenant2_id     UUID;
+    v_app_id         UUID;
+    v_template_id    UUID;
+    v_dealer_user_id UUID;
+    v_staff_user_id  UUID;
+    v_dealer_id      UUID;
+    v_batch_id       UUID;
+    v_cat_topwear    INTEGER;
+    v_cat_bottomwear INTEGER;
+    v_admin_user_id  UUID;
+    v_clothing_config JSONB := '{
+      "variant_label": "Variant",
+      "dimensions": [
+        {
+          "attribute_key": "size",
+          "attribute_name": "Size",
+          "type": "select",
+          "required": true,
+          "options": ["XS", "S", "M", "L", "XL", "XXL"],
+          "help_text": "Select the garment size"
+        },
+        {
+          "attribute_key": "color",
+          "attribute_name": "Color",
+          "type": "text",
+          "required": true,
+          "placeholder": "e.g., Navy Blue, Black, White",
+          "help_text": "Enter the colour of the garment"
+        }
+      ],
+      "common_fields": [
+        {
+          "attribute_key": "price",
+          "attribute_name": "Price (₹)",
+          "type": "number",
+          "required": true,
+          "min": 0,
+          "placeholder": "0.00"
+        },
+        {
+          "attribute_key": "sku",
+          "attribute_name": "SKU",
+          "type": "text",
+          "required": true,
+          "placeholder": "e.g., CLT-001-M-NVY"
+        },
+        {
+          "attribute_key": "fabric",
+          "attribute_name": "Fabric",
+          "type": "select",
+          "required": false,
+          "options": ["Cotton", "Polyester", "Linen", "Wool", "Silk", "Denim", "Blend"]
+        }
+      ]
+    }'::jsonb;
+BEGIN
+    -- Resolve tenant
+    SELECT id INTO v_tenant2_id FROM tenants WHERE subdomain_slug = 'demo-brand-two';
+    IF v_tenant2_id IS NULL THEN
+        RAISE NOTICE 'Demo Brand Two tenant not found, skipping';
+        RETURN;
+    END IF;
+
+    -- Resolve verify app
+    SELECT id INTO v_app_id FROM verification_apps
+    WHERE tenant_id = v_tenant2_id AND app_name = 'Default Verify App' LIMIT 1;
+    IF v_app_id IS NULL THEN
+        RAISE NOTICE 'No verify app found for Demo Brand Two, skipping';
+        RETURN;
+    END IF;
+
+    -- Resolve tenant admin
+    SELECT id INTO v_admin_user_id FROM users
+    WHERE email = 'tenant2@demo.com' AND tenant_id = v_tenant2_id LIMIT 1;
+
+    -- ---- Clothing Brand custom template ----
+    IF NOT EXISTS (SELECT 1 FROM product_templates WHERE tenant_id = v_tenant2_id AND template_name = 'Clothing Brand') THEN
+        INSERT INTO product_templates (
+            tenant_id, template_name, industry_type, description, icon,
+            is_system_template, is_active, variant_config, custom_fields
+        ) VALUES (
+            v_tenant2_id,
+            'Clothing Brand',
+            'clothing',
+            'Custom template for Demo Brand Two — apparel with size, colour, SKU and fabric variants',
+            'checkroom',
+            false,
+            true,
+            v_clothing_config,
+            '[]'::jsonb
+        )
+        RETURNING id INTO v_template_id;
+    ELSE
+        SELECT id INTO v_template_id FROM product_templates
+        WHERE tenant_id = v_tenant2_id AND template_name = 'Clothing Brand' LIMIT 1;
+    END IF;
+
+    -- ---- Assign template to verify app ----
+    UPDATE verification_apps
+    SET template_id = v_template_id,
+        updated_at  = CURRENT_TIMESTAMP
+    WHERE id = v_app_id;
+
+    -- ---- Dealer User ----
+    INSERT INTO users (email, full_name, role, tenant_id, phone_e164, is_active)
+    VALUES ('dealer2@demo.com', 'Demo Dealer Two', 'DEALER', v_tenant2_id, '+919000000002', true)
+    ON CONFLICT (email) WHERE email IS NOT NULL DO NOTHING
+    RETURNING id INTO v_dealer_user_id;
+    IF v_dealer_user_id IS NULL THEN
+        SELECT id INTO v_dealer_user_id FROM users WHERE email = 'dealer2@demo.com';
+    END IF;
+
+    -- ---- Staff User ----
+    INSERT INTO users (email, full_name, role, tenant_id, is_active)
+    VALUES ('staff2@demo.com', 'Demo Staff Two', 'TENANT_USER', v_tenant2_id, true)
+    ON CONFLICT (email) WHERE email IS NOT NULL DO NOTHING
+    RETURNING id INTO v_staff_user_id;
+    IF v_staff_user_id IS NULL THEN
+        SELECT id INTO v_staff_user_id FROM users WHERE email = 'staff2@demo.com';
+    END IF;
+
+    -- ---- Dealer Profile ----
+    IF NOT EXISTS (SELECT 1 FROM dealers WHERE user_id = v_dealer_user_id AND verification_app_id = v_app_id) THEN
+        INSERT INTO dealers (user_id, tenant_id, verification_app_id, dealer_code, shop_name, address, pincode, city, state, is_active)
+        VALUES (v_dealer_user_id, v_tenant2_id, v_app_id, 'DLR002', 'Demo Fashion Store', '45 Fashion Street', '110001', 'New Delhi', 'Delhi', true)
+        RETURNING id INTO v_dealer_id;
+        INSERT INTO dealer_points (dealer_id, tenant_id, balance)
+        VALUES (v_dealer_id, v_tenant2_id, 200)
+        ON CONFLICT (dealer_id, tenant_id) DO NOTHING;
+    ELSE
+        SELECT id INTO v_dealer_id FROM dealers WHERE user_id = v_dealer_user_id AND verification_app_id = v_app_id;
+    END IF;
+
+    -- ---- Categories ----
+    IF NOT EXISTS (SELECT 1 FROM categories WHERE tenant_id = v_tenant2_id AND name = 'Topwear') THEN
+        INSERT INTO categories (tenant_id, verification_app_id, name, description, is_active)
+        VALUES (v_tenant2_id, v_app_id, 'Topwear', 'T-shirts, shirts, kurtas and other upper garments', true)
+        RETURNING id INTO v_cat_topwear;
+    ELSE
+        SELECT id INTO v_cat_topwear FROM categories WHERE tenant_id = v_tenant2_id AND name = 'Topwear' LIMIT 1;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM categories WHERE tenant_id = v_tenant2_id AND name = 'Bottomwear') THEN
+        INSERT INTO categories (tenant_id, verification_app_id, name, description, is_active)
+        VALUES (v_tenant2_id, v_app_id, 'Bottomwear', 'Jeans, trousers, chinos and other lower garments', true)
+        RETURNING id INTO v_cat_bottomwear;
+    ELSE
+        SELECT id INTO v_cat_bottomwear FROM categories WHERE tenant_id = v_tenant2_id AND name = 'Bottomwear' LIMIT 1;
+    END IF;
+
+    -- ---- 4 Clothing Products ----
+    IF NOT EXISTS (SELECT 1 FROM products WHERE tenant_id = v_tenant2_id AND product_name = 'Classic Cotton Polo T-Shirt') THEN
+        INSERT INTO products (tenant_id, verification_app_id, template_id, category_id, product_name, price, currency, status, is_active, thumbnail_url, attributes)
+        VALUES (v_tenant2_id, v_app_id, v_template_id, v_cat_topwear,
+            'Classic Cotton Polo T-Shirt', 799.00, 'INR', 'active', true,
+            'https://placehold.co/400x400?text=Polo+T-Shirt',
+            '{"size": "M", "color": "Navy Blue", "price": 799, "sku": "CLT-PLO-M-NVY", "fabric": "Cotton"}'::jsonb);
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM products WHERE tenant_id = v_tenant2_id AND product_name = 'Linen Formal Shirt') THEN
+        INSERT INTO products (tenant_id, verification_app_id, template_id, category_id, product_name, price, currency, status, is_active, thumbnail_url, attributes)
+        VALUES (v_tenant2_id, v_app_id, v_template_id, v_cat_topwear,
+            'Linen Formal Shirt', 1499.00, 'INR', 'active', true,
+            'https://placehold.co/400x400?text=Linen+Shirt',
+            '{"size": "L", "color": "White", "price": 1499, "sku": "CLT-SHT-L-WHT", "fabric": "Linen"}'::jsonb);
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM products WHERE tenant_id = v_tenant2_id AND product_name = 'Slim Fit Stretch Jeans') THEN
+        INSERT INTO products (tenant_id, verification_app_id, template_id, category_id, product_name, price, currency, status, is_active, thumbnail_url, attributes)
+        VALUES (v_tenant2_id, v_app_id, v_template_id, v_cat_bottomwear,
+            'Slim Fit Stretch Jeans', 1999.00, 'INR', 'active', true,
+            'https://placehold.co/400x400?text=Slim+Jeans',
+            '{"size": "32", "color": "Dark Blue", "price": 1999, "sku": "CLT-JNS-32-DBL", "fabric": "Denim"}'::jsonb);
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM products WHERE tenant_id = v_tenant2_id AND product_name = 'Relaxed Fit Chinos') THEN
+        INSERT INTO products (tenant_id, verification_app_id, template_id, category_id, product_name, price, currency, status, is_active, thumbnail_url, attributes)
+        VALUES (v_tenant2_id, v_app_id, v_template_id, v_cat_bottomwear,
+            'Relaxed Fit Chinos', 1299.00, 'INR', 'active', true,
+            'https://placehold.co/400x400?text=Chinos',
+            '{"size": "34", "color": "Beige", "price": 1299, "sku": "CLT-CHN-34-BGE", "fabric": "Cotton"}'::jsonb);
+    END IF;
+
+    -- ---- Enable all features ----
+    INSERT INTO tenant_features (tenant_id, feature_id, enabled, enabled_by)
+    SELECT v_tenant2_id, id, true, v_admin_user_id
+    FROM features
+    ON CONFLICT (tenant_id, feature_id) DO UPDATE SET enabled = true;
+
+    -- ---- Coupon Batch ----
+    IF NOT EXISTS (SELECT 1 FROM coupon_batches WHERE tenant_id = v_tenant2_id AND batch_name = 'Demo Batch Q1-2026') THEN
+        INSERT INTO coupon_batches (tenant_id, verification_app_id, batch_name, dealer_name, zone, total_coupons, serial_number_start, serial_number_end, batch_status, activated_at)
+        VALUES (v_tenant2_id, v_app_id, 'Demo Batch Q1-2026', 'Demo Dealer Two', 'North', 5, 1, 5, 'activated', NOW())
+        RETURNING id INTO v_batch_id;
+    ELSE
+        SELECT id INTO v_batch_id FROM coupon_batches WHERE tenant_id = v_tenant2_id AND batch_name = 'Demo Batch Q1-2026' LIMIT 1;
+    END IF;
+
+    -- ---- Active Coupons ----
+    INSERT INTO coupons (
+        tenant_id, verification_app_id, coupon_code, discount_type, discount_value, discount_currency,
+        expiry_date, total_usage_limit, per_user_usage_limit, status, credit_cost, max_scans_per_code,
+        batch_id, code_type, coupon_reference, serial_number, description, activated_at, coupon_points
+    ) VALUES
+    (v_tenant2_id, v_app_id, 'DEMO-T2-0001', 'PERCENTAGE',   10.00, 'INR', NOW() + INTERVAL '6 months', 1, 1, 'active', 1, 1, v_batch_id, 'sequential', 'DEMO-T2-001', 1, 'Demo 10% off coupon', NOW(), 10),
+    (v_tenant2_id, v_app_id, 'DEMO-T2-0002', 'PERCENTAGE',   15.00, 'INR', NOW() + INTERVAL '6 months', 1, 1, 'active', 1, 1, v_batch_id, 'sequential', 'DEMO-T2-002', 2, 'Demo 15% off coupon', NOW(), 15),
+    (v_tenant2_id, v_app_id, 'DEMO-T2-0003', 'FIXED_AMOUNT', 200.00, 'INR', NOW() + INTERVAL '6 months', 1, 1, 'active', 1, 1, v_batch_id, 'sequential', 'DEMO-T2-003', 3, 'Demo flat Rs.200 off coupon', NOW(), 20),
+    (v_tenant2_id, v_app_id, 'DEMO-T2-0004', 'FIXED_AMOUNT', 500.00, 'INR', NOW() + INTERVAL '6 months', 1, 1, 'active', 1, 1, v_batch_id, 'sequential', 'DEMO-T2-004', 4, 'Demo flat Rs.500 off coupon', NOW(), 50),
+    (v_tenant2_id, v_app_id, 'DEMO-T2-0005', 'PERCENTAGE',   20.00, 'INR', NOW() + INTERVAL '6 months', 1, 1, 'active', 1, 1, v_batch_id, 'sequential', 'DEMO-T2-005', 5, 'Demo 20% off coupon', NOW(), 20)
+    ON CONFLICT (coupon_code) DO NOTHING;
+
+    RAISE NOTICE 'Demo Brand Two seed complete (clothing brand, tenant: %)', v_tenant2_id;
 END $$;

@@ -42,7 +42,7 @@ test.describe('Super Admin - Tenant Management', () => {
     await page.waitForTimeout(2000);
     
     // Verify success - either message or back on list page
-    const hasSuccessMessage = await page.locator('text=/success|created/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSuccessMessage = await page.locator('text=/success|created/i').isVisible({ timeout: 8080 }).catch(() => false);
     const isOnListPage = page.url().includes('/tenants') && !page.url().includes('/new');
     
     expect(hasSuccessMessage || isOnListPage).toBeTruthy();
@@ -57,7 +57,7 @@ test.describe('Super Admin - Tenant Management', () => {
       }
       
       // Verify tenant appears in the table
-      const hasNewTenant = await page.locator(`text=${uniqueTenant.companyName}`).isVisible({ timeout: 3000 }).catch(() => false);
+      const hasNewTenant = await page.locator(`text=${uniqueTenant.companyName}`).isVisible({ timeout: 8080 }).catch(() => false);
       if (!hasNewTenant) {
         console.log(`⚠️ New tenant "${uniqueTenant.companyName}" not immediately visible in list`);
       }
@@ -85,7 +85,7 @@ test.describe('Super Admin - Tenant Management', () => {
     
     // Verify success - either message or navigation back to list
     await page.waitForTimeout(2000);
-    const hasSuccessMessage = await page.locator('text=/success|updated/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSuccessMessage = await page.locator('text=/success|updated/i').isVisible({ timeout: 8080 }).catch(() => false);
     const isOnListPage = page.url().includes('/tenants') && !page.url().includes('/edit');
     
     expect(hasSuccessMessage || isOnListPage).toBeTruthy();

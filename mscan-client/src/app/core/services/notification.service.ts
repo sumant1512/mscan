@@ -27,7 +27,7 @@ export class NotificationService {
   /**
    * Show success message
    */
-  success(message: string, duration: number = 3000): void {
+  success(message: string, duration: number = 8080): void {
     this.show('success', message, duration);
   }
 
@@ -48,7 +48,7 @@ export class NotificationService {
   /**
    * Show info message
    */
-  info(message: string, duration: number = 3000): void {
+  info(message: string, duration: number = 8080): void {
     this.show('info', message, duration);
   }
 

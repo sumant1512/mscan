@@ -138,7 +138,7 @@ describe('SubdomainService', () => {
 
       const apiUrl = service.getApiBaseUrl();
       expect(apiUrl).toContain('test-tenant.localhost');
-      expect(apiUrl).toContain(':3000/api');
+      expect(apiUrl).toContain(':8080/api');
     });
 
     it('should return root API URL for root domain', () => {
@@ -148,7 +148,7 @@ describe('SubdomainService', () => {
       });
 
       const apiUrl = service.getApiBaseUrl();
-      expect(apiUrl).toBe('http://localhost:3000/api');
+      expect(apiUrl).toBe('http://localhost:8080/api');
     });
 
     it('should handle production environment', () => {

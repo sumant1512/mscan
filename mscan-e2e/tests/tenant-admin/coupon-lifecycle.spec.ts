@@ -17,7 +17,7 @@ test.describe('Tenant Admin - Coupon Lifecycle Management', () => {
 
   test('should open range activation modal', async ({ page }) => {
     const activateRangeBtn = page.locator('button:has-text("Activate Range")');
-    const exists = await activateRangeBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const exists = await activateRangeBtn.isVisible({ timeout: 8080 }).catch(() => false);
     if (!exists) test.skip(true, 'Activate Range button not found on coupon list');
     await activateRangeBtn.click();
     await expect(page.locator('.range-activation-modal')).toBeVisible();
@@ -25,7 +25,7 @@ test.describe('Tenant Admin - Coupon Lifecycle Management', () => {
 
   test('should mark any draft coupon as printed (if available)', async ({ page }) => {
     const draftButton = page.locator('.coupon-card:has(.status-draft) button:has-text("Mark Printed")').first();
-    const hasDraft = await draftButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasDraft = await draftButton.isVisible({ timeout: 8080 }).catch(() => false);
     if (!hasDraft) test.skip(true, 'No draft coupons available to mark as printed');
     page.once('dialog', dialog => dialog.accept());
     await draftButton.click();
@@ -35,7 +35,7 @@ test.describe('Tenant Admin - Coupon Lifecycle Management', () => {
 
   test('should activate coupon range (UI only)', async ({ page }) => {
     const activateRangeBtn = page.locator('button:has-text("Activate Range")');
-    const exists = await activateRangeBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const exists = await activateRangeBtn.isVisible({ timeout: 8080 }).catch(() => false);
     if (!exists) test.skip(true, 'Activate Range button not found');
     await activateRangeBtn.click();
     await page.fill('input#fromRef', 'RANGE-001');
@@ -48,7 +48,7 @@ test.describe('Tenant Admin - Coupon Lifecycle Management', () => {
 
   test('should validate range activation - maximum 1000 coupons', async ({ page }) => {
     const activateRangeBtn = page.locator('button:has-text("Activate Range")');
-    const exists = await activateRangeBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const exists = await activateRangeBtn.isVisible({ timeout: 8080 }).catch(() => false);
     if (!exists) test.skip(true, 'Activate Range button not found');
     await activateRangeBtn.click();
     
@@ -64,7 +64,7 @@ test.describe('Tenant Admin - Coupon Lifecycle Management', () => {
 
   test('should validate range activation - matching prefix', async ({ page }) => {
     const activateRangeBtn = page.locator('button:has-text("Activate Range")');
-    const exists = await activateRangeBtn.isVisible({ timeout: 3000 }).catch(() => false);
+    const exists = await activateRangeBtn.isVisible({ timeout: 8080 }).catch(() => false);
     if (!exists) test.skip(true, 'Activate Range button not found');
     await activateRangeBtn.click();
     
@@ -93,7 +93,7 @@ test.describe('Tenant Admin - Coupon Lifecycle Management', () => {
     await page.selectOption('select:has-text("All Status")', 'active').catch(() => {});
     await page.waitForTimeout(500);
     const anyCoupon = page.locator('.coupon-card').first();
-    const exists = await anyCoupon.isVisible({ timeout: 3000 }).catch(() => false);
+    const exists = await anyCoupon.isVisible({ timeout: 8080 }).catch(() => false);
     if (!exists) test.skip(true, 'No coupons available to view details');
     await anyCoupon.click();
     await expect(page.locator('text=/Printed:/')).toBeVisible().catch(() => {});

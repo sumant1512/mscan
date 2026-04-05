@@ -25,10 +25,10 @@ echo ""
 
 # Check if backend is running
 echo "🔍 Checking if backend is running..."
-if curl -s http://localhost:3000/api/health > /dev/null 2>&1; then
+if curl -s http://localhost:8080/api/health > /dev/null 2>&1; then
     echo "✅ Backend is running"
 else
-    echo "⚠️  Backend is not running on http://localhost:3000"
+    echo "⚠️  Backend is not running on http://localhost:8080"
     echo "   Please start the backend server before running tests"
 fi
 echo ""

@@ -65,19 +65,31 @@ class DatabaseError extends AppError {
   }
 }
 
+class UnprocessableError extends AppError {
+  constructor(message, action = null, details = null) {
+    super(message, 422, 'UNPROCESSABLE', details);
+    if (action) this.action = action;
+  }
+}
+
 class ExternalServiceError extends AppError {
   constructor(service, message) {
     super(`${service}: ${message}`, 502, 'EXTERNAL_SERVICE_ERROR');
   }
 }
 
+// Alias for backwards compatibility
+const ForbiddenError = AuthorizationError;
+
 module.exports = {
   AppError,
   ValidationError,
   AuthenticationError,
   AuthorizationError,
+  ForbiddenError,
   NotFoundError,
   ConflictError,
+  UnprocessableError,
   DatabaseError,
   ExternalServiceError
 };

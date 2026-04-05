@@ -50,7 +50,7 @@ Enable third-party applications (mobile apps, kiosks, web apps, POS systems) to 
 ### Base URL
 ```
 Production: https://{tenant-subdomain}.mscan.com/api
-Development: http://localhost:3000/api
+Development: http://localhost:8080/api
 ```
 
 ### Authentication
@@ -465,7 +465,7 @@ Authenticated API for MScan mobile applications where users log in with their MS
 ### Base URL
 ```
 Production: https://{tenant-subdomain}.mscan.com/api/mobile/v1/scan
-Development: http://localhost:3000/api/mobile/v1/scan
+Development: http://localhost:8080/api/mobile/v1/scan
 ```
 
 ### Authentication
@@ -681,7 +681,7 @@ Enable anonymous coupon redemption via public web pages without requiring user a
 ### Base URL
 ```
 Production: https://{tenant-subdomain}.mscan.com/api/public-scan
-Development: http://localhost:3000/api/public-scan
+Development: http://localhost:8080/api/public-scan
 ```
 
 ### Authentication

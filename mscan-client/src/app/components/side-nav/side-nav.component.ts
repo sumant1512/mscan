@@ -114,6 +114,11 @@ export class SideNavComponent implements OnInit, OnDestroy {
       ],
     },
     {
+      label: 'Redemptions',
+      icon: 'redeem',
+      route: '/tenant/redemptions',
+    },
+    {
       label: 'Credits',
       icon: 'account_balance_wallet',
       children: [
@@ -121,6 +126,14 @@ export class SideNavComponent implements OnInit, OnDestroy {
         { label: 'Request Credits', icon: 'add', route: '/tenant/credits/request' },
         { label: 'Pending Requests', icon: 'pending', route: '/tenant/credits/pending' },
         { label: 'Transaction History', icon: 'receipt', route: '/tenant/credits/history' },
+      ],
+    },
+    {
+      label: 'Dealers',
+      icon: 'storefront',
+      children: [
+        { label: 'Add Dealer', icon: 'person_add', route: '/tenant/dealers/create' },
+        { label: 'View Dealers', icon: 'list', route: '/tenant/dealers' },
       ],
     },
     {
@@ -135,11 +148,6 @@ export class SideNavComponent implements OnInit, OnDestroy {
       label: 'Profile',
       icon: 'person',
       route: '/tenant/profile',
-    },
-    {
-      label: 'Feature Flags',
-      icon: 'toggle_on',
-      route: '/tenant/features',
     },
   ];
 

@@ -75,7 +75,7 @@ Tell me:
 ```
 === TEST 1: Angular HttpClient ===
 🔑 Token found: eyJhbGci...
-🔒 Auth Interceptor - URL: http://sumant.localhost:3000/api/products
+🔒 Auth Interceptor - URL: http://sumant.localhost:8080/api/products
 🔑 Token exists: true
 ✅ Adding Authorization header
 📋 Final request headers:

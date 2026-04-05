@@ -44,17 +44,21 @@ const authenticate = async (req, res, next) => {
       permissions: decoded.permissions || [] // Include permissions from JWT
     };
 
-    // For CUSTOMER role, fetch phone_e164 for mobile scanning
+    // For CUSTOMER role, fetch customer context
     if (decoded.role === 'CUSTOMER') {
       const customerResult = await db.query(
-        'SELECT phone_e164 FROM customers WHERE id = $1',
-        [decoded.userId]
+        'SELECT id, phone_e164 FROM customers WHERE id = (SELECT id FROM customers WHERE tenant_id = $1 AND phone_e164 = (SELECT phone_e164 FROM users WHERE id = $2)) OR id = $2 LIMIT 1',
+        [decoded.tenantId, decoded.userId]
       );
       if (customerResult.rows.length > 0) {
-        req.user.customerId = decoded.userId;
+        req.user.customerId = customerResult.rows[0].id;
         req.user.phone_e164 = customerResult.rows[0].phone_e164;
       }
     }
+
+    // For DEALER role: do NOT resolve a single dealer profile here.
+    // One user may have multiple dealer rows (one per verification app).
+    // The specific profile is resolved at request time using the X-App-Id header.
 
     next();
   } catch (error) {

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { DatabaseHelper } from '../../utils/database-helper';
 import { TEST_CONFIG } from '../../utils/test-config';
 
-const API_BASE = process.env.API_BASE || 'http://127.0.0.1:3000/api';
+const API_BASE = process.env.API_BASE || 'http://127.0.0.1:8080/api';
 
 test.describe('Public Scan Flow', () => {
   let db: DatabaseHelper;

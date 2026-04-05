@@ -146,7 +146,7 @@ test.describe('Tenant Admin - Batch Activation', () => {
       // Check for confirmation dialog
       const confirmDialog = page.locator('[role="dialog"], .modal, .confirmation').filter({ hasText: /confirm|activate/i });
       
-      if (await confirmDialog.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await confirmDialog.isVisible({ timeout: 8080 }).catch(() => false)) {
         console.log('✅ Confirmation dialog shown');
         expect(await confirmDialog.isVisible()).toBeTruthy();
 

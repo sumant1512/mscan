@@ -145,7 +145,7 @@ test.describe('Super Admin – Tenant Detail App Limit Editing', () => {
     await editBtn.click();
 
     // Inline edit form should appear
-    await expect(page.locator('input.limit-input')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('input.limit-input')).toBeVisible({ timeout: 8080 });
     await expect(page.locator('button.btn-save-limit')).toBeVisible();
     await expect(page.locator('button.btn-cancel-limit')).toBeVisible();
   });
@@ -161,7 +161,7 @@ test.describe('Super Admin – Tenant Detail App Limit Editing', () => {
     await page.locator('button.btn-cancel-limit').click();
 
     // Form closes, no value change visible
-    await expect(page.locator('input.limit-input')).not.toBeVisible({ timeout: 3000 });
+    await expect(page.locator('input.limit-input')).not.toBeVisible({ timeout: 8080 });
     // Edit button should be visible again
     await expect(page.locator('button.btn-edit-limit')).toBeVisible();
   });
@@ -256,7 +256,7 @@ test.describe('Tenant Admin – Verification App List Limit UI', () => {
     if (isAtLimit) {
       // Verify button is disabled
       const createBtn = page.locator('button.btn-primary:has-text("Create New App")');
-      await expect(createBtn).toBeDisabled({ timeout: 3000 });
+      await expect(createBtn).toBeDisabled({ timeout: 8080 });
 
       // Tooltip text
       await expect(createBtn).toHaveAttribute('title', /administrator.*limit/i);

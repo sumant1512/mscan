@@ -23,7 +23,7 @@ test.describe('Tenant Admin - API Configuration', () => {
 
     // Click on first verification app
     const appCard = page.locator('.app-card, mat-card, .card').first();
-    const hasApps = await appCard.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasApps = await appCard.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasApps) {
       test.skip(true, 'No verification apps available');
@@ -38,7 +38,7 @@ test.describe('Tenant Admin - API Configuration', () => {
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
       // Verify API config page loaded
-      const hasApiConfig = await page.locator('text=/API.*key|mobile.*API|e-commerce.*API/i').isVisible({ timeout: 3000 }).catch(() => false);
+      const hasApiConfig = await page.locator('text=/API.*key|mobile.*API|e-commerce.*API/i').isVisible({ timeout: 8080 }).catch(() => false);
       expect(hasApiConfig).toBeTruthy();
     } else {
       // Try clicking the card itself to open details, then look for API tab
@@ -46,14 +46,14 @@ test.describe('Tenant Admin - API Configuration', () => {
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
       const apiTab = page.locator('button:has-text("API"), mat-tab:has-text("API"), a:has-text("API")').first();
-      const hasApiTab = await apiTab.isVisible({ timeout: 3000 }).catch(() => false);
+      const hasApiTab = await apiTab.isVisible({ timeout: 8080 }).catch(() => false);
 
       if (hasApiTab) {
         await apiTab.click();
         await page.waitForTimeout(1000);
       }
 
-      const hasApiConfig = await page.locator('text=/API.*key|mobile.*API|e-commerce.*API/i').isVisible({ timeout: 3000 }).catch(() => false);
+      const hasApiConfig = await page.locator('text=/API.*key|mobile.*API|e-commerce.*API/i').isVisible({ timeout: 8080 }).catch(() => false);
       expect(hasApiConfig).toBeTruthy();
     }
   });
@@ -63,7 +63,7 @@ test.describe('Tenant Admin - API Configuration', () => {
     await pageHelper.waitForLoadingToComplete();
 
     const appCard = page.locator('.app-card, mat-card, .card').first();
-    const hasApps = await appCard.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasApps = await appCard.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasApps) {
       test.skip(true, 'No verification apps available');
@@ -81,7 +81,7 @@ test.describe('Tenant Admin - API Configuration', () => {
 
     // Verify Mobile API section exists
     const mobileApiSection = page.locator('text=/mobile.*API|mobile.*key/i').first();
-    const hasMobileApiSection = await mobileApiSection.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasMobileApiSection = await mobileApiSection.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasMobileApiSection) {
       test.skip(true, 'Mobile API section not found');
@@ -95,7 +95,7 @@ test.describe('Tenant Admin - API Configuration', () => {
     await pageHelper.waitForLoadingToComplete();
 
     const appCard = page.locator('.app-card, mat-card, .card').first();
-    const hasApps = await appCard.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasApps = await appCard.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasApps) {
       test.skip(true, 'No verification apps available');
@@ -112,7 +112,7 @@ test.describe('Tenant Admin - API Configuration', () => {
 
     // Verify E-commerce API section exists
     const ecommerceApiSection = page.locator('text=/e-commerce.*API|ecommerce.*key/i').first();
-    const hasEcommerceApiSection = await ecommerceApiSection.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasEcommerceApiSection = await ecommerceApiSection.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasEcommerceApiSection) {
       test.skip(true, 'E-commerce API section not found');
@@ -140,7 +140,7 @@ test.describe('Tenant Admin - API Configuration', () => {
       has: page.locator('text=/mobile/i')
     }).first();
 
-    const hasEnableButton = await enableMobileButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasEnableButton = await enableMobileButton.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasEnableButton) {
       test.skip(true, 'Enable Mobile API button not found (may already be enabled)');
@@ -194,7 +194,7 @@ test.describe('Tenant Admin - API Configuration', () => {
       has: page.locator('text=/e-commerce|ecommerce/i')
     }).first();
 
-    const hasEnableButton = await enableEcommerceButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasEnableButton = await enableEcommerceButton.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasEnableButton) {
       test.skip(true, 'Enable E-commerce API button not found (may already be enabled)');
@@ -233,7 +233,7 @@ test.describe('Tenant Admin - API Configuration', () => {
 
     // Look for regenerate button
     const regenerateButton = page.locator('button:has-text("Regenerate Mobile"), button:has-text("Refresh Mobile")').first();
-    const hasRegenerateButton = await regenerateButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasRegenerateButton = await regenerateButton.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasRegenerateButton) {
       test.skip(true, 'Regenerate Mobile API button not found (Mobile API may not be enabled)');
@@ -287,7 +287,7 @@ test.describe('Tenant Admin - API Configuration', () => {
     }
 
     const regenerateButton = page.locator('button:has-text("Regenerate E-commerce"), button:has-text("Refresh E-commerce")').first();
-    const hasRegenerateButton = await regenerateButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasRegenerateButton = await regenerateButton.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasRegenerateButton) {
       test.skip(true, 'Regenerate E-commerce API button not found (E-commerce API may not be enabled)');
@@ -322,7 +322,7 @@ test.describe('Tenant Admin - API Configuration', () => {
 
     // Look for copy button
     const copyButton = page.locator('button:has-text("Copy"), button[title*="Copy"], .copy-button').first();
-    const hasCopyButton = await copyButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasCopyButton = await copyButton.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasCopyButton) {
       test.skip(true, 'Copy API key button not found');
@@ -333,7 +333,7 @@ test.describe('Tenant Admin - API Configuration', () => {
 
     // Verify copy success (either through tooltip or message)
     const successIndicator = page.locator('text=/copied|copy.*success/i').first();
-    const hasSuccess = await successIndicator.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSuccess = await successIndicator.isVisible({ timeout: 8080 }).catch(() => false);
 
     expect(hasSuccess).toBeTruthy();
   });
@@ -354,7 +354,7 @@ test.describe('Tenant Admin - API Configuration', () => {
 
     // Look for API usage stats
     const usageStats = page.locator('text=/API.*usage|requests|calls|rate limit/i').first();
-    const hasUsageStats = await usageStats.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasUsageStats = await usageStats.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasUsageStats) {
       test.skip(true, 'API usage statistics not displayed');
@@ -379,7 +379,7 @@ test.describe('Tenant Admin - API Configuration', () => {
 
     // Look for API documentation or endpoint URLs
     const apiDocs = page.locator('text=/endpoint|base URL|API.*documentation/i, code, pre').first();
-    const hasDocs = await apiDocs.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasDocs = await apiDocs.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasDocs) {
       test.skip(true, 'API documentation not displayed');
@@ -407,7 +407,7 @@ test.describe('Tenant Admin - API Configuration', () => {
       has: page.locator('text=/mobile/i')
     }).first();
 
-    const hasDisableButton = await disableButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasDisableButton = await disableButton.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasDisableButton) {
       test.skip(true, 'Disable Mobile API option not found (API may already be disabled)');
@@ -425,7 +425,7 @@ test.describe('Tenant Admin - API Configuration', () => {
         await page.waitForTimeout(1000);
 
         const successMessage = page.locator('text=/disabled|deactivated/i').first();
-        const hasSuccess = await successMessage.isVisible({ timeout: 3000 }).catch(() => false);
+        const hasSuccess = await successMessage.isVisible({ timeout: 8080 }).catch(() => false);
         expect(hasSuccess).toBeTruthy();
       }
     }
@@ -447,7 +447,7 @@ test.describe('Tenant Admin - API Configuration', () => {
 
     // Look for show/hide/eye icon button
     const toggleVisibilityButton = page.locator('button[title*="Show"], button[title*="Hide"], .visibility-toggle, button:has(mat-icon:has-text("visibility"))').first();
-    const hasToggleButton = await toggleVisibilityButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasToggleButton = await toggleVisibilityButton.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasToggleButton) {
       test.skip(true, 'API key visibility toggle not found');
@@ -482,7 +482,7 @@ test.describe('Tenant Admin - API Configuration', () => {
 
     // Look for creation/last updated date
     const dateInfo = page.locator('text=/created|generated|last updated.*ago|[0-9]{4}-[0-9]{2}-[0-9]{2}/i').first();
-    const hasDateInfo = await dateInfo.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasDateInfo = await dateInfo.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasDateInfo) {
       test.skip(true, 'API key creation/update date not displayed');

@@ -84,7 +84,7 @@ export class CustomerRegistrationComponent implements OnInit, OnDestroy {
             // Navigate to dashboard after 3 seconds
             setTimeout(() => {
               this.router.navigate(['/dashboard']);
-            }, 3000);
+            }, 8080);
           }
         },
         error: (error) => {

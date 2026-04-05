@@ -2,7 +2,7 @@
 
 **Version:** 1.0
 **Last Updated:** 2026-01-26
-**Base URL:** `http://localhost:3000/api` (Development)
+**Base URL:** `http://localhost:8080/api` (Development)
 **Protocol:** REST with JSON
 
 ---

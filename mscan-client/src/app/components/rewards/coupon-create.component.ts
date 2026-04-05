@@ -382,7 +382,7 @@ export class CouponCreateComponent implements OnInit, OnDestroy {
   copyCouponCode(code: string) {
     navigator.clipboard.writeText(code).then(() => {
       this.success = 'Coupon code copied to clipboard!';
-      setTimeout(() => (this.success = ''), 3000);
+      setTimeout(() => (this.success = ''), 8080);
     });
   }
 

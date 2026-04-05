@@ -52,13 +52,14 @@ export class RewardsService {
     );
   }
 
-  getCoupons(params?: { status?: string; verification_app_id?: string; page?: number; limit?: number; search?: string }): Observable<ApiResponse<{ coupons: Coupon[]; pagination?: { page: number; limit: number; total: number; hasMore: boolean } }>> {
+  getCoupons(params?: { status?: string; verification_app_id?: string; page?: number; limit?: number; search?: string; print_status?: 'all' | 'unprinted' | 'printed' }): Observable<ApiResponse<{ coupons: Coupon[]; pagination?: { page: number; limit: number; total: number; hasMore: boolean } }>> {
     let httpParams = new HttpParams();
     if (params?.status) httpParams = httpParams.set('status', params.status);
     if (params?.verification_app_id) httpParams = httpParams.set('verification_app_id', params.verification_app_id);
     if (params?.page) httpParams = httpParams.set('page', params.page.toString());
     if (params?.limit) httpParams = httpParams.set('limit', params.limit.toString());
     if (params?.search) httpParams = httpParams.set('search', params.search);
+    if (params?.print_status && params.print_status !== 'all') httpParams = httpParams.set('print_status', params.print_status);
 
     return this.http.get<ApiResponse<{ coupons: Coupon[]; pagination?: { page: number; limit: number; total: number; hasMore: boolean } }>>(`${this.apiUrl}/coupons`, { params: httpParams });
   }

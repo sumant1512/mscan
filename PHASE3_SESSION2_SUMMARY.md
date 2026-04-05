@@ -115,7 +115,7 @@ alert('Coupon code copied to clipboard!');
 **After (Lines 264-265):**
 ```typescript
 this.successMessage = 'Coupon code copied to clipboard!';
-setTimeout(() => this.successMessage = '', 3000);
+setTimeout(() => this.successMessage = '', 8080);
 ```
 
 **Before (Lines 300-318): Multiple alerts in activateRange**

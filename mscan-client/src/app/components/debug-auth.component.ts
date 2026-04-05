@@ -163,7 +163,7 @@ export class DebugAuthComponent implements OnInit {
     this.testResult = null;
 
     // Test the auth context endpoint
-    this.http.get<any>('http://sumant.localhost:3000/api/auth/context')
+    this.http.get<any>('http://sumant.localhost:8080/api/auth/context')
       .subscribe({
         next: (response) => {
           this.testResult = {

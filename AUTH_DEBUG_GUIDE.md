@@ -58,7 +58,7 @@ console.log({
 **Check:**
 ```javascript
 // In browser console
-fetch('http://sumant.localhost:3000/api/auth/context', {
+fetch('http://sumant.localhost:8080/api/auth/context', {
   headers: {
     'Authorization': `Bearer ${localStorage.getItem('tms_access_token')}`
   }
@@ -178,7 +178,7 @@ Open DevTools → Network Tab:
 ### Step 4: Test Auth Endpoint Directly
 ```javascript
 // Test if your token is valid
-fetch('http://sumant.localhost:3000/api/auth/context', {
+fetch('http://sumant.localhost:8080/api/auth/context', {
   method: 'GET',
   headers: {
     'Authorization': `Bearer ${localStorage.getItem('tms_access_token')}`,
@@ -210,7 +210,7 @@ window.location.href = '/login';
 // Try refreshing the token manually
 const refreshToken = localStorage.getItem('tms_refresh_token');
 if (refreshToken) {
-  fetch('http://sumant.localhost:3000/api/auth/refresh', {
+  fetch('http://sumant.localhost:8080/api/auth/refresh', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refreshToken })
@@ -230,7 +230,7 @@ if (refreshToken) {
 ### Fix 3: Check if Server is Running
 ```bash
 # Check if backend is running
-curl http://sumant.localhost:3000/api/auth/health
+curl http://sumant.localhost:8080/api/auth/health
 ```
 
 ## For Your Current Issue

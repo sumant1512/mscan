@@ -113,6 +113,11 @@ export interface ApiResponse<T = any> {
 export * from './permissions.model';
 
 /**
+ * Export Dealer Models
+ */
+export * from './dealer.model';
+
+/**
  * Export Template Models
  */
 export * from './templates.model';

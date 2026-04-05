@@ -4,7 +4,7 @@
 
 The server was not listening on the port quickly enough for Cloud Run's startup probe. This caused the revision to fail to start with error code 3 (internal error).
 
-**Root Cause**: The code was blocking on `await db.checkHealth()` BEFORE calling `app.listen()`. If the database check hung or timed out, the container never started listening on PORT=3000, causing Cloud Run to kill the revision.
+**Root Cause**: The code was blocking on `await db.checkHealth()` BEFORE calling `app.listen()`. If the database check hung or timed out, the container never started listening on PORT=8080, causing Cloud Run to kill the revision.
 
 ### Before (Blocking Architecture)
 
@@ -123,7 +123,7 @@ npm run dev
 
 ### Cloud Run Compatibility
 
-- ✅ Server listens on `0.0.0.0:3000` immediately
+- ✅ Server listens on `0.0.0.0:8080` immediately
 - ✅ Startup probe can complete successfully
 - ✅ `/health` endpoint responds without blocking
 - ✅ Database issues don't prevent container from starting
@@ -132,7 +132,7 @@ npm run dev
 ## Startup Flow
 
 ```
-🚀 Start HTTP server on 0.0.0.0:3000 (IMMEDIATE)
+🚀 Start HTTP server on 0.0.0.0:8080 (IMMEDIATE)
    ✅ Cloud Run startup probe succeeds here
 
 🔍 Begin background DB health check with retries

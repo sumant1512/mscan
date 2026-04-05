@@ -204,7 +204,7 @@ To verify the fix:
 1. **Scan History Endpoint**
    ```bash
    curl -H "Authorization: Bearer YOUR_TOKEN" \
-     http://sumant.localhost:3000/api/rewards/scans/history
+     http://sumant.localhost:8080/api/rewards/scans/history
    ```
 
 2. **Mobile Scan**
@@ -213,13 +213,13 @@ To verify the fix:
      -H "Content-Type: application/json" \
      -H "x-api-key: YOUR_API_KEY" \
      -d '{"qr_code":"COUPON_CODE","location":{"lat":28.6139,"lng":77.2090}}' \
-     http://sumant.localhost:3000/api/mobile/scan
+     http://sumant.localhost:8080/api/mobile/scan
    ```
 
 3. **Mobile Scan History**
    ```bash
    curl -H "x-api-key: YOUR_API_KEY" \
-     http://sumant.localhost:3000/api/mobile/scans/history
+     http://sumant.localhost:8080/api/mobile/scans/history
    ```
 
 ## Prevention

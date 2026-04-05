@@ -13,7 +13,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Base URL (update with your actual subdomain)
-BASE_URL="http://sumant.localhost:3000/api"
+BASE_URL="http://sumant.localhost:8080/api"
 
 # You'll need to set these after logging in
 echo -e "${BLUE}NOTE: You need to set the TOKEN and APP_ID variables in this script${NC}"

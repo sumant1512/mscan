@@ -31,7 +31,7 @@ class AuthHelper {
       // Request OTP
       const otpResponse = await request(this.app)
         .post('/api/auth/request-otp')
-        .set('Host', subdomain ? `${subdomain}.localhost:3000` : 'localhost:3000')
+        .set('Host', subdomain ? `${subdomain}.localhost:8080` : 'localhost:8080')
         .send({ identifier: email });
 
       if (otpResponse.status !== 200) {
@@ -53,7 +53,7 @@ class AuthHelper {
       // Verify OTP
       const verifyResponse = await request(this.app)
         .post('/api/auth/verify-otp')
-        .set('Host', subdomain ? `${subdomain}.localhost:3000` : 'localhost:3000')
+        .set('Host', subdomain ? `${subdomain}.localhost:8080` : 'localhost:8080')
         .send({ identifier: email, otp: otpCode });
 
       if (verifyResponse.status !== 200) {

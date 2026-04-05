@@ -1,15 +1,16 @@
 /**
  * Mobile Scan Controller
- * Refactored to use modern error handling and validators
+ * Unified scan endpoint for DEALER and CUSTOMER roles.
  */
 
 const db = require('../config/database');
 const mobileScanService = require('../services/mobileScan.service');
+const dealerScanService = require('../services/dealerScan.service');
 const { asyncHandler } = require('../modules/common/middleware/errorHandler.middleware');
 const {
   AuthenticationError,
-  ValidationError,
-  NotFoundError
+  NotFoundError,
+  ForbiddenError
 } = require('../modules/common/errors/AppError');
 const {
   validateRequiredFields
@@ -20,37 +21,107 @@ const {
 
 /**
  * POST /api/mobile/v1/scan
- * Scan and verify coupon for authenticated customer
+ * Unified coupon scan for DEALER and CUSTOMER.
+ *
+ * Body:   { coupon_code }
+ * Header: X-App-Id  (verification app UUID)
+ *
+ * DEALER  → marks coupon used, awards dealer points
+ * CUSTOMER → records scan, awards customer credits
  */
 exports.scanCoupon = asyncHandler(async (req, res) => {
-  const { coupon_code, app_code, location, scanned_at, device_info } = req.body;
+  let { coupon_code, location, device_info } = req.body;
+  validateRequiredFields(req.body, ['coupon_code']);
 
-  validateRequiredFields(req.body, ['coupon_code', 'app_code']);
-
-  // Get customer from JWT token (set by authenticate middleware)
-  const customerId = req.user?.customerId;
-  const customerPhone = req.user?.phone_e164;
-  const tenantId = req.tenant?.id;
-
-  if (!customerId || !tenantId) {
-    throw new AuthenticationError('Invalid or expired token', 'unauthorized');
+  // Accept full scan URLs (e.g. http://demo-brand-one.localhost:8080/scan/DEMO-ACTV-0001)
+  if (coupon_code && (coupon_code.startsWith('http://') || coupon_code.startsWith('https://'))) {
+    try {
+      const segments = new URL(coupon_code).pathname.split('/').filter(Boolean);
+      coupon_code = segments[segments.length - 1] || coupon_code;
+    } catch (_) { /* leave coupon_code unchanged if URL is malformed */ }
   }
 
-  // Process the scan
-  const result = await mobileScanService.processScan({
-    customerId,
-    customerPhone,
-    tenantId,
-    couponCode: coupon_code,
-    appCode: app_code,
-    location,
-    scannedAt: scanned_at || new Date().toISOString(),
-    deviceInfo: device_info
-  });
+  const verificationAppId = req.headers['x-app-id'] || req.headers['x-verification-app-id'];
+  if (!verificationAppId) {
+    return res.status(400).json({ status: false, message: 'X-App-Id header is required' });
+  }
 
-  // Return appropriate response based on result
-  const statusCode = result.success ? 200 : (result.statusCode || 400);
-  return res.status(statusCode).json(result);
+  const { id: userId, role, tenant_id: tenantId } = req.user;
+
+  if (!tenantId) {
+    throw new AuthenticationError('Invalid or expired token');
+  }
+
+  // ── DEALER path ────────────────────────────────────────────────────────────
+  if (role === 'DEALER') {
+    const result = await dealerScanService.processDealerScan(
+      userId, tenantId, verificationAppId, coupon_code
+    );
+    return sendSuccess(res, {
+      coupon_code:    result.coupon_code,
+      points_awarded: result.points_awarded,
+      balance:        result.dealer_balance,
+      role:           'DEALER'
+    }, 'Scan successful');
+  }
+
+  // ── CUSTOMER path ──────────────────────────────────────────────────────────
+  if (role === 'CUSTOMER') {
+    // Resolve the customers record for this user
+    const custRes = await db.query(
+      `SELECT c.id, c.phone_e164
+       FROM customers c
+       JOIN users u ON u.phone_e164 = c.phone_e164
+       WHERE u.id = $1 AND c.tenant_id = $2
+       LIMIT 1`,
+      [userId, tenantId]
+    );
+    if (custRes.rows.length === 0) {
+      throw new NotFoundError('Customer profile');
+    }
+    const { id: customerId, phone_e164: customerPhone } = custRes.rows[0];
+
+    console.log('Customer scan attempt:', verificationAppId, tenantId)
+
+    // Resolve app_code string from the UUID
+    const appRes = await db.query(
+      `SELECT code FROM verification_apps
+       WHERE id = $1 AND tenant_id = $2 AND is_active = true
+       LIMIT 1`,
+      [verificationAppId, tenantId]
+    );
+    if (appRes.rows.length === 0) {
+      throw new NotFoundError('Verification app');
+    }
+    const appCode = appRes.rows[0].code;
+
+    const result = await mobileScanService.processScan({
+      customerId,
+      customerPhone,
+      tenantId,
+      couponCode:  coupon_code,
+      appCode,
+      location,
+      scannedAt:   new Date().toISOString(),
+      deviceInfo:  device_info
+    });
+
+    if (!result.success) {
+      return res.status(result.statusCode || 400).json(result);
+    }
+
+    return sendSuccess(res, {
+      scan_id:        result.scan_id,
+      coupon_code:    result.coupon?.code,
+      points_awarded: result.reward?.credits_earned,
+      balance:        result.reward?.credits_balance,
+      role:           'CUSTOMER',
+      coupon:         result.coupon,
+      scanned_at:     result.scanned_at
+    }, 'Scan successful');
+  }
+
+  throw new ForbiddenError('Only DEALER and CUSTOMER roles can scan coupons');
 });
 
 /**

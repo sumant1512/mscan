@@ -18,7 +18,7 @@ describe('AuthService Subdomain Tests', () => {
   beforeEach(() => {
     router = { navigate: jest.fn() };
     subdomainService = {
-      getApiBaseUrl: jest.fn().mockReturnValue('http://test-tenant.localhost:3000/api'),
+      getApiBaseUrl: jest.fn().mockReturnValue('http://test-tenant.localhost:8080/api'),
       getCurrentSubdomain: jest.fn(),
       redirectToSubdomain: jest.fn(),
       redirectToRootDomain: jest.fn()
@@ -64,7 +64,7 @@ describe('AuthService Subdomain Tests', () => {
         done();
       });
 
-      const req = httpMock.expectOne('http://test-tenant.localhost:3000/api/auth/verify-otp');
+      const req = httpMock.expectOne('http://test-tenant.localhost:8080/api/auth/verify-otp');
       req.flush(loginResponse);
     });
 
@@ -86,7 +86,7 @@ describe('AuthService Subdomain Tests', () => {
         done();
       });
 
-      const req = httpMock.expectOne('http://test-tenant.localhost:3000/api/auth/verify-otp');
+      const req = httpMock.expectOne('http://test-tenant.localhost:8080/api/auth/verify-otp');
       req.flush(loginResponse);
     });
 
@@ -106,7 +106,7 @@ describe('AuthService Subdomain Tests', () => {
         done();
       });
 
-      const req = httpMock.expectOne('http://test-tenant.localhost:3000/api/auth/verify-otp');
+      const req = httpMock.expectOne('http://test-tenant.localhost:8080/api/auth/verify-otp');
       req.flush(loginResponse);
     });
 
@@ -128,7 +128,7 @@ describe('AuthService Subdomain Tests', () => {
         done();
       });
 
-      const req = httpMock.expectOne('http://test-tenant.localhost:3000/api/auth/verify-otp');
+      const req = httpMock.expectOne('http://test-tenant.localhost:8080/api/auth/verify-otp');
       req.flush(loginResponse);
     });
   });

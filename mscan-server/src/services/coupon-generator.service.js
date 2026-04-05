@@ -33,60 +33,6 @@ class CouponGeneratorService {
   }
 
   /**
-   * Generate QR code data for a coupon
-   * @param {Object} coupon - Coupon details
-   * @param {string} baseUrl - Base URL for verification (subdomain-aware)
-   * @returns {Object} - QR code data
-   */
-  generateQRData(coupon, baseUrl = 'https://mscan.app') {
-    // Generate canonical scan URL (subdomain or path-based)
-    const verificationUrl = `${baseUrl}/scan/${coupon.coupon_code}`;
-    
-    const qrData = {
-      couponCode: coupon.coupon_code,
-      tenantId: coupon.tenant_id,
-      verifyUrl: verificationUrl,
-      discountType: coupon.discount_type,
-      discountValue: coupon.discount_value,
-      couponPoints: coupon.coupon_points || 0, // Points awarded on scan
-      expiryDate: coupon.expiry_date
-    };
-    
-    return {
-      data: JSON.stringify(qrData),
-      url: verificationUrl,
-      text: coupon.coupon_code
-    };
-  }
-
-  /**
-   * Generate QR code image URL
-   * Note: In production, integrate with actual QR code generation library
-   * and upload to cloud storage (S3, Cloudinary, etc.)
-   * @param {string} couponCode - Coupon code to encode
-   * @param {string} data - Data to encode in QR
-   * @returns {Promise<string>} - QR code image URL
-   */
-  async generateQRCodeImage(couponCode, data) {
-    try {
-      // For now, using a public QR code API
-      // In production: Use 'qrcode' library and upload to your storage
-      const encodedData = encodeURIComponent(data);
-      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedData}`;
-      
-      // TODO: Replace with actual implementation:
-      // 1. Generate QR code using 'qrcode' npm package
-      // 2. Upload to cloud storage (AWS S3, Cloudinary)
-      // 3. Return permanent URL
-      
-      return qrCodeUrl;
-    } catch (error) {
-      console.error('QR code generation failed:', error);
-      throw new Error('Failed to generate QR code');
-    }
-  }
-
-  /**
    * Validate coupon code format
    * @param {string} code - Coupon code to validate
    * @returns {boolean} - Valid or not

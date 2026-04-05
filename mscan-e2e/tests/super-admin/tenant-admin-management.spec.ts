@@ -22,7 +22,7 @@ test.describe('Super Admin - Tenant Admin Management (NgRx)', () => {
       
       // Wait for page to load and NgRx state
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(8080);
       
       // Verify main heading
       await expect(page.locator('h1:has-text("Tenant Admin Management")')).toBeVisible({ timeout: 15000 });
@@ -43,7 +43,7 @@ test.describe('Super Admin - Tenant Admin Management (NgRx)', () => {
     test('should search tenants by name', async ({ page }) => {
       await page.goto(`${TEST_CONFIG.baseURL}/super-admin/tenant-admins`);
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(8080);
       
       // Wait for table to load
       await expect(page.locator('table.tenants-table')).toBeVisible({ timeout: 15000 });
@@ -73,7 +73,7 @@ test.describe('Super Admin - Tenant Admin Management (NgRx)', () => {
     test('should filter tenants by admin status', async ({ page }) => {
       await page.goto(`${TEST_CONFIG.baseURL}/super-admin/tenant-admins`);
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(8080);
       
       // Wait for table
       await expect(page.locator('table.tenants-table')).toBeVisible({ timeout: 15000 });
@@ -111,7 +111,7 @@ test.describe('Super Admin - Tenant Admin Management (NgRx)', () => {
     test('should navigate to add tenant admin', async ({ page }) => {
       await page.goto(`${TEST_CONFIG.baseURL}/super-admin/tenant-admins`);
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(8080);
       
       // Click "Add Tenant Admin" button
       await page.locator('button:has-text("Add Tenant Admin")').click({ timeout: 15000 });
@@ -124,7 +124,7 @@ test.describe('Super Admin - Tenant Admin Management (NgRx)', () => {
     test('should navigate to view tenant admins', async ({ page }) => {
       await page.goto(`${TEST_CONFIG.baseURL}/super-admin/tenant-admins`);
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(8080);
       
       // Find first tenant with admins
       const viewButton = page.locator('button:has-text("View Admins")').first();
@@ -144,7 +144,7 @@ test.describe('Super Admin - Tenant Admin Management (NgRx)', () => {
     test('should display add tenant admin form', async ({ page }) => {
       await page.goto(`${TEST_CONFIG.baseURL}/super-admin/tenant-admins/add`);
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(8080);
       
       // Verify form elements
       await expect(page.locator('h1:has-text("Add Tenant Admin")')).toBeVisible({ timeout: 15000 });
@@ -156,7 +156,7 @@ test.describe('Super Admin - Tenant Admin Management (NgRx)', () => {
     test('should search and select tenant using autocomplete', async ({ page }) => {
       await page.goto(`${TEST_CONFIG.baseURL}/super-admin/tenant-admins/add`);
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(8080);
       
       // Type in tenant search field
       const tenantSearch = page.locator('input[name="tenantSearch"]');
@@ -186,7 +186,7 @@ test.describe('Super Admin - Tenant Admin Management (NgRx)', () => {
     test('should show validation errors for empty form', async ({ page }) => {
       await page.goto(`${TEST_CONFIG.baseURL}/super-admin/tenant-admins/add`);
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(8080);
       
       // Try to submit without filling form - button should be disabled
       const submitButton = page.locator('button[type="submit"]');
@@ -205,7 +205,7 @@ test.describe('Super Admin - Tenant Admin Management (NgRx)', () => {
     test('should validate email format', async ({ page }) => {
       await page.goto(`${TEST_CONFIG.baseURL}/super-admin/tenant-admins/add`);
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(8080);
       
       // First select a tenant
       await page.locator('input[name="tenantSearch"]').fill('test');
@@ -229,7 +229,7 @@ test.describe('Super Admin - Tenant Admin Management (NgRx)', () => {
     test('should create tenant admin successfully', async ({ page }) => {
       await page.goto(`${TEST_CONFIG.baseURL}/super-admin/tenant-admins/add`);
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(8080);
       
       // Select first available tenant
       const tenantSearch = page.locator('input[name="tenantSearch"]');
@@ -254,14 +254,14 @@ test.describe('Super Admin - Tenant Admin Management (NgRx)', () => {
         await page.locator('button[type="submit"]').click();
         
         // Wait for success or navigation
-        await page.waitForTimeout(3000);
+        await page.waitForTimeout(8080);
         
         // Verify success message or navigation
         const successAlert = page.locator('.alert-success, .alert.success');
         const isOnDetailPage = page.url().includes('/tenant-admins/tenant/');
         
         expect(
-          await successAlert.isVisible({ timeout: 3000 }).catch(() => false) || isOnDetailPage
+          await successAlert.isVisible({ timeout: 8080 }).catch(() => false) || isOnDetailPage
         ).toBeTruthy();
       } else {
         test.skip();
@@ -423,7 +423,7 @@ test.describe('Super Admin - Tenant Admin Management (NgRx)', () => {
       
       await page.goto(`${TEST_CONFIG.baseURL}/super-admin/tenant-admins`);
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(8080);
       
       // Initial load should make API call
       expect(requestCount).toBeGreaterThanOrEqual(1);
@@ -442,7 +442,7 @@ test.describe('Super Admin - Tenant Admin Management (NgRx)', () => {
     test('should filter instantly (client-side)', async ({ page }) => {
       await page.goto(`${TEST_CONFIG.baseURL}/super-admin/tenant-admins`);
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(8080);
       
       let apiCallsDuringFilter = 0;
       
@@ -480,7 +480,7 @@ test.describe('Super Admin - Tenant Admin Management (NgRx)', () => {
       
       await page.goto(`${TEST_CONFIG.baseURL}/super-admin/tenant-admins/add`);
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(8080);
       
       // Initial load
       const initialCount = reloadCount;
@@ -501,7 +501,7 @@ test.describe('Super Admin - Tenant Admin Management (NgRx)', () => {
         await page.locator('input[name="fullName"]').fill(`Reload Test ${timestamp}`);
         
         await page.locator('button[type="submit"]').click();
-        await page.waitForTimeout(3000);
+        await page.waitForTimeout(8080);
         
         // Check if data was reloaded (should be > initial)
         expect(reloadCount).toBeGreaterThan(initialCount);
@@ -514,7 +514,7 @@ test.describe('Super Admin - Tenant Admin Management (NgRx)', () => {
     test('should display tenant list with filtering', async ({ page }) => {
       await page.goto(`${TEST_CONFIG.baseURL}/super-admin/tenants`);
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(3000);
+      await page.waitForTimeout(8080);
       
       // Verify table
       await expect(page.locator('table.tenant-table')).toBeVisible({ timeout: 15000 });

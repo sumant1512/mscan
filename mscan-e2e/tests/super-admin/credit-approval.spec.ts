@@ -72,7 +72,7 @@ test.describe('Super Admin - Credit Approval Management', () => {
     // Handle confirmation dialog if it appears
     const confirmButton = page.locator('button:has-text("Confirm"), button:has-text("Yes")');
     try {
-      await confirmButton.waitFor({ state: 'visible', timeout: 3000 });
+      await confirmButton.waitFor({ state: 'visible', timeout: 8080 });
       await confirmButton.click();
     } catch {
       // No confirmation dialog, continue
@@ -83,9 +83,9 @@ test.describe('Super Admin - Credit Approval Management', () => {
     // Check for any feedback - success message, toast notification, or URL change
     // The app might show success message, redirect, or update the list
     const feedbackVisible = await Promise.race([
-      page.locator('text=/approved|success/i').waitFor({ state: 'visible', timeout: 3000 }).then(() => true),
-      page.locator('[class*="toast"], [class*="snackbar"], [class*="notification"]').waitFor({ state: 'visible', timeout: 3000 }).then(() => true),
-      page.waitForURL(/.*credits|dashboard/i, { timeout: 3000 }).then(() => true)
+      page.locator('text=/approved|success/i').waitFor({ state: 'visible', timeout: 8080 }).then(() => true),
+      page.locator('[class*="toast"], [class*="snackbar"], [class*="notification"]').waitFor({ state: 'visible', timeout: 8080 }).then(() => true),
+      page.waitForURL(/.*credits|dashboard/i, { timeout: 8080 }).then(() => true)
     ]).catch(() => false);
     
     // Verify some form of success feedback occurred

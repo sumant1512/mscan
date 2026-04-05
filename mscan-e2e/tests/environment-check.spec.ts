@@ -13,7 +13,7 @@ test.describe('Environment Checks', () => {
   test('should verify backend is accessible', async ({ request }) => {
     try {
       // Try to make a simple API call to verify backend is running
-      const response = await request.post('http://localhost:3000/api/auth/request-otp', {
+      const response = await request.post('http://localhost:8080/api/auth/request-otp', {
         data: { email: 'test@example.com' }
       });
       
@@ -24,7 +24,7 @@ test.describe('Environment Checks', () => {
       expect([200, 201, 400, 404]).toContain(response.status());
     } catch (error: any) {
       if (error.message?.includes('ECONNREFUSED')) {
-        console.error('❌ Backend is not accessible at http://localhost:3000');
+        console.error('❌ Backend is not accessible at http://localhost:8080');
         console.error('⚠️  Please start your backend server:');
         console.error('    cd mscan-server && npm start');
       }
@@ -92,7 +92,7 @@ test.describe('Environment Checks', () => {
 
   test('should test API endpoint directly', async ({ request }) => {
     try {
-      const response = await request.post('http://localhost:3000/api/auth/request-otp', {
+      const response = await request.post('http://localhost:8080/api/auth/request-otp', {
         data: {
           email: 'sumantmishra511@gmail.com'
         }

@@ -10,7 +10,7 @@ const request = require('supertest');
 const { Pool } = require('pg');
 
 // Test configuration
-const API_URL = process.env.TEST_API_URL || 'http://localhost:3000';
+const API_URL = process.env.TEST_API_URL || 'http://localhost:8080';
 const DB_CONFIG = {
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 5432,

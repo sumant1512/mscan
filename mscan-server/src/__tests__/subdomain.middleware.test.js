@@ -66,7 +66,7 @@ describe('Subdomain Middleware', () => {
     });
 
     it('should handle subdomains with ports', () => {
-      req.hostname = 'test-company.localhost:3000';
+      req.hostname = 'test-company.localhost:8080';
       
       subdomainMiddleware(req, res, next);
       

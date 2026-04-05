@@ -376,28 +376,19 @@ exports.createCoupon = asyncHandler(async (req, res) => {
       const couponReference = referenceResult.rows[0].ref;
 
       const couponPoints = req.body.coupon_points || discount_value;
-      const qrData = couponGenerator.generateQRData({
-        coupon_code: couponCode,
-        tenant_id: tenantId,
-        discount_type: 'FIXED_AMOUNT',
-        discount_value,
-        coupon_points: couponPoints,
-        expiry_date
-      });
-      const qrCodeUrl = await couponGenerator.generateQRCodeImage(couponCode, qrData.url);
 
       const couponResult = await client.query(
         `INSERT INTO coupons
          (tenant_id, verification_app_id, coupon_code, coupon_reference, discount_type, discount_value,
           discount_currency, buy_quantity, get_quantity, min_purchase_amount,
-          expiry_date, total_usage_limit, per_user_usage_limit, qr_code_url,
+          expiry_date, total_usage_limit, per_user_usage_limit,
           description, terms, credit_cost, status, max_scans_per_code, batch_id, batch_quantity,
           product_id, coupon_points)
-         VALUES ($1, $2, $3, $4, 'FIXED_AMOUNT', $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'draft', $17, $18, $19, $20, $21)
+         VALUES ($1, $2, $3, $4, 'FIXED_AMOUNT', $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'draft', $16, $17, $18, $19, $20)
          RETURNING *`,
         [tenantId, verification_app_id, couponCode, couponReference, discount_value,
          discount_currency || 'USD', buy_quantity, get_quantity, min_purchase_amount,
-         expiry_date, finalTotalUsageLimit, finalPerUserUsageLimit, qrCodeUrl,
+         expiry_date, finalTotalUsageLimit, finalPerUserUsageLimit,
          description, terms, discount_value,
          maxScansPerCode, batchId, i === 0 ? actualBatchQuantity : null,
          product_id || null, couponPoints]
@@ -549,26 +540,17 @@ exports.createMultiBatchCoupons = asyncHandler(async (req, res) => {
         const couponReference = referenceResult.rows[0].ref;
 
         const couponPoints = batch.couponPoints || batch.discountAmount;
-        const qrData = couponGenerator.generateQRData({
-          coupon_code: couponCode,
-          tenant_id: tenantId,
-          discount_type: 'FIXED_AMOUNT',
-          discount_value: batch.discountAmount,
-          coupon_points: couponPoints,
-          expiry_date: batch.expiryDate
-        });
-        const qrCodeUrl = await couponGenerator.generateQRCodeImage(couponCode, qrData.url);
 
         const couponResult = await client.query(
           `INSERT INTO coupons
            (tenant_id, verification_app_id, coupon_code, coupon_reference, discount_type, discount_value,
-            discount_currency, expiry_date, total_usage_limit, per_user_usage_limit, qr_code_url,
+            discount_currency, expiry_date, total_usage_limit, per_user_usage_limit,
             description, credit_cost, status, max_scans_per_code, batch_id, batch_quantity,
             product_id, coupon_points)
-           VALUES ($1, $2, $3, $4, 'FIXED_AMOUNT', $5, $6, $7, $8, $9, $10, $11, $12, 'draft', $13, $14, $15, $16, $17)
+           VALUES ($1, $2, $3, $4, 'FIXED_AMOUNT', $5, $6, $7, $8, $9, $10, $11, 'draft', $12, $13, $14, $15, $16)
            RETURNING *`,
           [tenantId, verificationAppId, couponCode, couponReference, batch.discountAmount,
-           'USD', batch.expiryDate, 1, 1, qrCodeUrl,
+           'USD', batch.expiryDate, 1, 1,
            batch.description, batch.discountAmount,
            1, batchId,
            i === 0 ? batch.quantity : null,
@@ -617,7 +599,7 @@ exports.createMultiBatchCoupons = asyncHandler(async (req, res) => {
  */
 exports.getCoupons = asyncHandler(async (req, res) => {
   const tenantId = req.user.tenant_id;
-  const { status, verification_app_id, page = 1, limit = 20, search } = req.query;
+  const { status, verification_app_id, page = 1, limit = 20, search, print_status } = req.query;
   const offset = (page - 1) * limit;
 
   let query = `
@@ -649,6 +631,13 @@ exports.getCoupons = asyncHandler(async (req, res) => {
     paramIndex++;
   }
 
+  // print_status: 'unprinted' = never printed, 'printed' = printed at least once
+  if (print_status === 'unprinted') {
+    query += ` AND COALESCE(c.printed_count, 0) = 0`;
+  } else if (print_status === 'printed') {
+    query += ` AND COALESCE(c.printed_count, 0) > 0`;
+  }
+
   query += ` GROUP BY c.id, va.app_name ORDER BY c.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
   params.push(limit, offset);
 
@@ -678,6 +667,13 @@ exports.getCoupons = asyncHandler(async (req, res) => {
   if (search) {
     countQuery += ` AND (c.coupon_code ILIKE $${countParamIndex} OR c.coupon_reference ILIKE $${countParamIndex} OR c.description ILIKE $${countParamIndex})`;
     countParams.push(`%${search}%`);
+    countParamIndex++;
+  }
+
+  if (print_status === 'unprinted') {
+    countQuery += ` AND COALESCE(c.printed_count, 0) = 0`;
+  } else if (print_status === 'printed') {
+    countQuery += ` AND COALESCE(c.printed_count, 0) > 0`;
   }
 
   const countResult = await db.query(countQuery, countParams);
@@ -811,7 +807,16 @@ exports.updateCouponStatus = asyncHandler(async (req, res) => {
  * POST /api/scans/verify
  */
 exports.verifyScan = asyncHandler(async (req, res) => {
-  const { coupon_code, location_lat, location_lng } = req.body;
+  let { coupon_code, location_lat, location_lng } = req.body;
+
+  // Accept full scan URLs (e.g. http://demo-brand-one.localhost:8080/scan/DEMO-ACTV-0001)
+  if (coupon_code && (coupon_code.startsWith('http://') || coupon_code.startsWith('https://'))) {
+    try {
+      const segments = new URL(coupon_code).pathname.split('/').filter(Boolean);
+      coupon_code = segments[segments.length - 1] || coupon_code;
+    } catch (_) { /* leave coupon_code unchanged if URL is malformed */ }
+  }
+
   const device_info = req.get('user-agent');
   const ip_address = req.ip;
 
@@ -1008,7 +1013,7 @@ exports.getScanAnalytics = asyncHandler(async (req, res) => {
  */
 exports.activateCouponRange = asyncHandler(async (req, res) => {
   const tenantId = req.user.tenant_id;
-  const { from_reference, to_reference, status_filter = 'printed', activation_note } = req.body;
+  const { from_reference, to_reference, activation_note } = req.body;
 
   validateRequiredFields(req.body, ['from_reference', 'to_reference']);
 
@@ -1027,17 +1032,17 @@ exports.activateCouponRange = asyncHandler(async (req, res) => {
        WHERE tenant_id = $1
          AND coupon_reference >= $2
          AND coupon_reference <= $3
-         AND status = $4
+         AND status IN ('draft', 'printed')
        ORDER BY coupon_reference
        LIMIT 1000`,
-      [tenantId, from_reference, to_reference, status_filter]
+      [tenantId, from_reference, to_reference]
     );
 
     const coupons = findResult.rows;
 
     if (coupons.length === 0) {
       throw new NotFoundError(
-        `No coupons found with status '${status_filter}' between references ${from_reference} and ${to_reference}`,
+        `No activatable coupons found between references ${from_reference} and ${to_reference}`,
         null,
         { found: 0 }
       );
@@ -1086,12 +1091,12 @@ exports.activateCouponBatch = asyncHandler(async (req, res) => {
        FROM coupons
        WHERE tenant_id = $1
          AND batch_id = $2
-         AND status = 'printed'`,
+         AND status IN ('draft', 'printed')`,
       [tenantId, batch_id]
     );
 
     if (findResult.rowCount === 0) {
-      throw new NotFoundError('No printed coupons found in this batch');
+      throw new NotFoundError('No activatable coupons found in this batch');
     }
 
     const couponIds = findResult.rows.map(c => c.id);
@@ -1130,11 +1135,7 @@ exports.markCouponAsPrinted = asyncHandler(async (req, res) => {
 
   const result = await db.query(
     `UPDATE coupons
-     SET status = CASE
-                    WHEN status = 'draft' THEN 'printed'::VARCHAR
-                    ELSE status
-                  END,
-         printed_at = CURRENT_TIMESTAMP,
+     SET printed_at = CURRENT_TIMESTAMP,
          printed_count = COALESCE(printed_count, 0) + 1,
          updated_at = CURRENT_TIMESTAMP
      WHERE id = $1 AND tenant_id = $2
@@ -1167,11 +1168,7 @@ exports.bulkMarkAsPrinted = asyncHandler(async (req, res) => {
   const result = await executeTransaction(db, async (client) => {
     const updateResult = await client.query(
       `UPDATE coupons
-       SET status = CASE
-                      WHEN status = 'draft' THEN 'printed'::VARCHAR
-                      ELSE status
-                    END,
-           printed_at = CURRENT_TIMESTAMP,
+       SET printed_at = CURRENT_TIMESTAMP,
            printed_count = COALESCE(printed_count, 0) + 1,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ANY($1) AND tenant_id = $2
@@ -1403,10 +1400,10 @@ exports.batchPrint = asyncHandler(async (req, res) => {
 
   const result = await db.query(
     `UPDATE coupons
-     SET status = 'printed',
-         printed_at = CURRENT_TIMESTAMP,
+     SET printed_at = CURRENT_TIMESTAMP,
+         printed_count = COALESCE(printed_count, 0) + 1,
          updated_at = CURRENT_TIMESTAMP
-     WHERE batch_id = $1 AND tenant_id = $2 AND status = 'draft'
+     WHERE batch_id = $1 AND tenant_id = $2
      RETURNING coupon_code`,
     [batch_id, tenantId]
   );
@@ -1439,23 +1436,13 @@ exports.batchActivate = asyncHandler(async (req, res) => {
     throw new NotFoundError('Batch');
   }
 
-  // Check if any coupons are in draft status
-  const draftCheck = await db.query(
-    `SELECT COUNT(*) as count FROM coupons
-     WHERE batch_id = $1 AND tenant_id = $2 AND status = 'draft'`,
-    [batch_id, tenantId]
-  );
-
-  if (parseInt(draftCheck.rows[0].count) > 0) {
-    throw new ValidationError('Cannot activate batch with unprinted coupons. Please mark batch as printed first.');
-  }
-
   const result = await db.query(
     `UPDATE coupons
      SET status = 'active',
+         activated_at = CURRENT_TIMESTAMP,
          activation_note = $3,
          updated_at = CURRENT_TIMESTAMP
-     WHERE batch_id = $1 AND tenant_id = $2 AND status = 'printed'
+     WHERE batch_id = $1 AND tenant_id = $2 AND status IN ('draft', 'printed')
      RETURNING coupon_code`,
     [batch_id, tenantId, activation_note || null]
   );

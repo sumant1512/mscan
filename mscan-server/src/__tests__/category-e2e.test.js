@@ -54,7 +54,7 @@ testRunner('Category Management System E2E Tests', () => {
   const loginViaOTP = async (email, subdomain = null) => {
     const otpResponse = await request(app)
       .post('/api/auth/request-otp')
-      .set('Host', subdomain ? `${subdomain}.localhost:3000` : 'localhost:3000')
+      .set('Host', subdomain ? `${subdomain}.localhost:8080` : 'localhost:8080')
       .send({ identifier: email });
 
     const otpQuery = await db.query(
@@ -65,7 +65,7 @@ testRunner('Category Management System E2E Tests', () => {
 
     const verifyResponse = await request(app)
       .post('/api/auth/verify-otp')
-      .set('Host', subdomain ? `${subdomain}.localhost:3000` : 'localhost:3000')
+      .set('Host', subdomain ? `${subdomain}.localhost:8080` : 'localhost:8080')
       .send({ identifier: email, otp: otpCode });
 
     return verifyResponse.body.accessToken;

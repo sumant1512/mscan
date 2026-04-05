@@ -286,6 +286,32 @@
   color: #92400e;
 }
 
+/* Print status badge — shown in every coupon row */
+.print-status-badge {
+  padding: 0.1875rem 0.5625rem;
+  border-radius: 0.6250rem;
+  font-size: 0.6250rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.print-badge-none {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 0.0625rem dashed #d1d5db;
+}
+
+.print-badge-once {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.print-badge-reprint {
+  background: #fef3c7;
+  color: #b45309;
+}
+
 .btn-secondary {
   padding: 0.6250rem 1.1250rem;
   border: 0.0625rem solid #3b82f6;

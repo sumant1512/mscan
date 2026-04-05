@@ -20,9 +20,9 @@ The interceptor now logs:
 
 **Logs you should see:**
 ```
-🔒 Auth Interceptor - URL: http://sumant.localhost:3000/api/products
+🔒 Auth Interceptor - URL: http://sumant.localhost:8080/api/products
 🔑 Token exists: true
-✅ Adding Authorization header to: http://sumant.localhost:3000/api/products
+✅ Adding Authorization header to: http://sumant.localhost:8080/api/products
 📋 Final request headers:
    Authorization: Bearer eyJhbGci...
    Accept: application/json
@@ -72,7 +72,7 @@ Look for these logs when you click "Test with HttpClient":
 ```
 === TEST 1: Angular HttpClient ===
 🔑 Token found: eyJhbGci...
-🌐 Making request to: http://sumant.localhost:3000/api/products
+🌐 Making request to: http://sumant.localhost:8080/api/products
 ⏳ Watch for interceptor logs...
 🔒 Auth Interceptor - URL: ...
 🔑 Token exists: true

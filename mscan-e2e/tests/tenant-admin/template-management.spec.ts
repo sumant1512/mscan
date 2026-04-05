@@ -29,8 +29,8 @@ test.describe('Tenant Admin - Template Management', () => {
     await expect(page.locator('h1, h2, .page-title').first()).toBeVisible();
 
     // Verify either templates grid exists or empty state is shown
-    const hasTemplatesGrid = await page.locator('.template-card, .card, mat-card').first().isVisible({ timeout: 3000 }).catch(() => false);
-    const hasEmptyState = await page.locator('text=/no templates|empty|create your first/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTemplatesGrid = await page.locator('.template-card, .card, mat-card').first().isVisible({ timeout: 8080 }).catch(() => false);
+    const hasEmptyState = await page.locator('text=/no templates|empty|create your first/i').isVisible({ timeout: 8080 }).catch(() => false);
 
     expect(hasTemplatesGrid || hasEmptyState).toBeTruthy();
   });
@@ -78,7 +78,7 @@ test.describe('Tenant Admin - Template Management', () => {
 
     // Verify success
     const isOnListPage = page.url().includes('/templates') && !page.url().includes('/create');
-    const hasSuccessMessage = await page.locator('text=/success|created|saved/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSuccessMessage = await page.locator('text=/success|created|saved/i').isVisible({ timeout: 8080 }).catch(() => false);
 
     expect(isOnListPage || hasSuccessMessage).toBeTruthy();
 
@@ -95,7 +95,7 @@ test.describe('Tenant Admin - Template Management', () => {
 
     // Check if search box exists
     const searchBox = page.locator('input[type="text"][placeholder*="earch"], input[type="search"], input.search-input').first();
-    const searchExists = await searchBox.isVisible({ timeout: 3000 }).catch(() => false);
+    const searchExists = await searchBox.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!searchExists) {
       test.skip(true, 'Search functionality not available');
@@ -103,7 +103,7 @@ test.describe('Tenant Admin - Template Management', () => {
 
     // Get a template name from the page if any exist
     const firstTemplate = page.locator('.template-card, .card').first();
-    const hasTemplates = await firstTemplate.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTemplates = await firstTemplate.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasTemplates) {
       test.skip(true, 'No templates available to search');
@@ -133,7 +133,7 @@ test.describe('Tenant Admin - Template Management', () => {
 
     // Check if any templates exist
     const templateCard = page.locator('.template-card, .card, mat-card').first();
-    const hasTemplates = await templateCard.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTemplates = await templateCard.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasTemplates) {
       test.skip(true, 'No templates available to view');
@@ -153,7 +153,7 @@ test.describe('Tenant Admin - Template Management', () => {
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
     // Verify we're on a detail page or modal opened
-    const hasDetails = await page.locator('text=/description|attributes|fields|category/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasDetails = await page.locator('text=/description|attributes|fields|category/i').isVisible({ timeout: 8080 }).catch(() => false);
     expect(hasDetails).toBeTruthy();
   });
 
@@ -167,7 +167,7 @@ test.describe('Tenant Admin - Template Management', () => {
     }).first();
 
     const editButton = editableTemplate.locator('button:has-text("Edit"), .btn-action:has-text("Edit"), a:has-text("Edit")').first();
-    const hasEditButton = await editButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasEditButton = await editButton.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasEditButton) {
       test.skip(true, 'No editable templates available or edit button not found');
@@ -197,7 +197,7 @@ test.describe('Tenant Admin - Template Management', () => {
 
     // Verify success
     const isOnListPage = page.url().includes('/templates') && !page.url().includes('/edit');
-    const hasSuccessMessage = await page.locator('text=/success|updated|saved/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSuccessMessage = await page.locator('text=/success|updated|saved/i').isVisible({ timeout: 8080 }).catch(() => false);
 
     expect(isOnListPage || hasSuccessMessage).toBeTruthy();
   });
@@ -208,14 +208,14 @@ test.describe('Tenant Admin - Template Management', () => {
 
     // Find duplicate button
     const templateCard = page.locator('.template-card, .card, mat-card').first();
-    const hasTemplates = await templateCard.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTemplates = await templateCard.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasTemplates) {
       test.skip(true, 'No templates available to duplicate');
     }
 
     const duplicateButton = templateCard.locator('button:has-text("Duplicate"), button:has-text("Copy"), .btn-action:has-text("Duplicate")').first();
-    const hasDuplicateButton = await duplicateButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasDuplicateButton = await duplicateButton.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasDuplicateButton) {
       test.skip(true, 'Duplicate button not found');
@@ -243,7 +243,7 @@ test.describe('Tenant Admin - Template Management', () => {
 
     if (!hasDuplicate) {
       // Alternative: Just verify success message
-      const hasSuccessMessage = await page.locator('text=/duplicated|copied|success/i').isVisible({ timeout: 3000 }).catch(() => false);
+      const hasSuccessMessage = await page.locator('text=/duplicated|copied|success/i').isVisible({ timeout: 8080 }).catch(() => false);
       expect(hasSuccessMessage).toBeTruthy();
     } else {
       await expect(duplicatedTemplate).toBeVisible();
@@ -276,7 +276,7 @@ test.describe('Tenant Admin - Template Management', () => {
     // Find the delete button for our template
     const templateCard = page.locator(`text="${templateToDelete}"`).locator('..').locator('..').first();
     const deleteButton = templateCard.locator('button:has-text("Delete"), button[class*="delete"]').first();
-    const hasDeleteButton = await deleteButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasDeleteButton = await deleteButton.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasDeleteButton) {
       test.skip(true, 'Delete button not found');
@@ -308,7 +308,7 @@ test.describe('Tenant Admin - Template Management', () => {
       has: page.locator('text=/system/i, .badge:has-text("System")')
     }).first();
 
-    const hasSystemTemplate = await systemTemplate.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSystemTemplate = await systemTemplate.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasSystemTemplate) {
       test.skip(true, 'No system templates found');
@@ -334,7 +334,7 @@ test.describe('Tenant Admin - Template Management', () => {
 
     // Check if app filter exists
     const appFilter = page.locator('select[name*="app"], select[id*="app"], .app-filter select').first();
-    const hasFilter = await appFilter.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasFilter = await appFilter.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasFilter) {
       test.skip(true, 'App filter not available');
@@ -369,7 +369,7 @@ test.describe('Tenant Admin - Template Management', () => {
 
     // Click on first template to view details
     const templateCard = page.locator('.template-card, .card, mat-card').first();
-    const hasTemplates = await templateCard.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTemplates = await templateCard.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasTemplates) {
       test.skip(true, 'No templates available');
@@ -379,7 +379,7 @@ test.describe('Tenant Admin - Template Management', () => {
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
 
     // Verify attributes or fields are displayed
-    const hasAttributes = await page.locator('text=/attributes|fields|properties|schema/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasAttributes = await page.locator('text=/attributes|fields|properties|schema/i').isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasAttributes) {
       test.skip(true, 'Template details do not show attributes/fields');
@@ -394,7 +394,7 @@ test.describe('Tenant Admin - Template Management', () => {
 
     // Check if templates show usage count (number of products using this template)
     const usageCount = page.locator('text=/[0-9]+ product|used by/i').first();
-    const hasUsageCount = await usageCount.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasUsageCount = await usageCount.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasUsageCount) {
       test.skip(true, 'Template usage count not displayed');
@@ -416,7 +416,7 @@ test.describe('Tenant Admin - Template Management', () => {
 
     // Verify validation error appears
     const errorMessage = page.locator('text=/required|name.*required/i').first();
-    const hasError = await errorMessage.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasError = await errorMessage.isVisible({ timeout: 8080 }).catch(() => false);
 
     expect(hasError).toBeTruthy();
   });

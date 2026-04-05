@@ -1,0 +1,170 @@
+<div class="container">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h2>Cashback Transactions</h2>
+      <p class="subtitle">Monitor all UPI cashback payouts for this tenant</p>
+    </div>
+  </div>
+
+  <!-- Error -->
+  @if (error()) {
+    <div class="alert alert-error">
+      <span class="material-icons">error_outline</span>
+      {{ error() }}
+    </div>
+  }
+
+  <!-- Summary cards -->
+  <div class="stats-grid">
+    <div class="stat-card completed">
+      <div class="stat-icon"><span class="material-icons">check_circle</span></div>
+      <div class="stat-body">
+        <span class="stat-value">{{ completedCount }}</span>
+        <span class="stat-label">Completed</span>
+      </div>
+    </div>
+    <div class="stat-card failed">
+      <div class="stat-icon"><span class="material-icons">error</span></div>
+      <div class="stat-body">
+        <span class="stat-value">{{ failedCount }}</span>
+        <span class="stat-label">Failed</span>
+      </div>
+    </div>
+    <div class="stat-card processing">
+      <div class="stat-icon"><span class="material-icons">pending</span></div>
+      <div class="stat-body">
+        <span class="stat-value">{{ processingCount }}</span>
+        <span class="stat-label">Processing</span>
+      </div>
+    </div>
+    <div class="stat-card amount">
+      <div class="stat-icon"><span class="material-icons">currency_rupee</span></div>
+      <div class="stat-body">
+        <span class="stat-value">₹{{ totalAmount | number:'1.2-2' }}</span>
+        <span class="stat-label">Total Paid Out</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <form [formGroup]="filterForm" (ngSubmit)="applyFilter()" class="filter-form">
+      <div class="filter-group">
+        <label>Status</label>
+        <select formControlName="status">
+          <option value="">All</option>
+          <option value="PROCESSING">Processing</option>
+          <option value="COMPLETED">Completed</option>
+          <option value="FAILED">Failed</option>
+          <option value="REVERSED">Reversed</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>From</label>
+        <input type="date" formControlName="from" />
+      </div>
+      <div class="filter-group">
+        <label>To</label>
+        <input type="date" formControlName="to" />
+      </div>
+      <div class="filter-actions">
+        <button type="submit" class="btn-primary" [disabled]="loading$ | async">Apply</button>
+        <button type="button" class="btn-secondary" (click)="clearFilter()">Clear</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    @if (loading$ | async) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <span>Loading transactions...</span>
+      </div>
+    } @else if (transactions().length === 0) {
+      <div class="empty-state">
+        <span class="material-icons">receipt_long</span>
+        <p>No cashback transactions found.</p>
+      </div>
+    } @else {
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Coupon</th>
+              <th>Amount</th>
+              <th>UPI ID</th>
+              <th>Status</th>
+              <th>Gateway Txn ID</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (tx of transactions(); track tx.id) {
+              <tr>
+                <td>
+                  <span class="coupon-code">{{ tx.coupon_code }}</span>
+                </td>
+                <td>
+                  <span class="amount">₹{{ tx.amount | number:'1.2-2' }}</span>
+                </td>
+                <td>
+                  <span class="upi-id">{{ tx.upi_id || '—' }}</span>
+                </td>
+                <td>
+                  <span class="badge" [class]="'badge-' + tx.status.toLowerCase()">
+                    {{ statusLabel(tx.status) }}
+                  </span>
+                </td>
+                <td>
+                  @if (tx.gateway_transaction_id) {
+                    <div class="gateway-id">
+                      <span class="mono">{{ tx.gateway_transaction_id }}</span>
+                      <button class="btn-copy" (click)="copyToClipboard(tx.gateway_transaction_id!)" title="Copy">
+                        <span class="material-icons">content_copy</span>
+                      </button>
+                    </div>
+                  } @else {
+                    <span class="muted">—</span>
+                  }
+                </td>
+                <td>
+                  <span class="date">{{ tx.created_at | date:'dd MMM yyyy, HH:mm' }}</span>
+                </td>
+              </tr>
+              @if (tx.status === 'FAILED' && tx.failure_reason) {
+                <tr class="failure-row">
+                  <td colspan="6">
+                    <span class="material-icons">warning</span>
+                    {{ tx.failure_reason }}
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (totalPages > 1) {
+        <div class="pagination">
+          <button class="page-btn" (click)="goToPage(page() - 1)" [disabled]="page() === 1">
+            <span class="material-icons">chevron_left</span>
+          </button>
+          @for (p of pages; track p) {
+            <button class="page-btn" [class.active]="p === page()" (click)="goToPage(p)">
+              {{ p }}
+            </button>
+          }
+          <button class="page-btn" (click)="goToPage(page() + 1)" [disabled]="page() === totalPages">
+            <span class="material-icons">chevron_right</span>
+          </button>
+          <span class="page-info">{{ total() }} total</span>
+        </div>
+      }
+    }
+  </div>
+
+</div>

@@ -166,7 +166,7 @@ export class TenantDetailComponent implements OnInit, OnDestroy {
           this.savingAppLimit = false;
           this.appLimitSuccess = 'App limit updated successfully';
           this.cdr.detectChanges();
-          setTimeout(() => { this.appLimitSuccess = ''; this.cdr.detectChanges(); }, 3000);
+          setTimeout(() => { this.appLimitSuccess = ''; this.cdr.detectChanges(); }, 8080);
         },
         error: (err) => {
           this.appLimitError = HttpErrorHandler.getMessage(err, 'Failed to update app limit');

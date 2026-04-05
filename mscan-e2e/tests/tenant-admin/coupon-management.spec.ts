@@ -94,7 +94,7 @@ test.describe('Tenant Admin - Coupon Management', () => {
     
     // Check if any active coupons exist with edit button
     const editButton = page.locator('button:has-text("Edit"), .btn-action:has-text("Edit")').first();
-    const buttonExists = await editButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const buttonExists = await editButton.isVisible({ timeout: 8080 }).catch(() => false);
     
     if (!buttonExists) {
       test.skip(true, 'No active coupons available to edit');
@@ -144,7 +144,7 @@ test.describe('Tenant Admin - Coupon Management', () => {
     
     // Check if status toggle button exists
     const statusButton = page.locator('button:has-text("Activate"), button:has-text("Deactivate"), .btn-action:has-text("Activate"), .btn-action:has-text("Deactivate")').first();
-    const buttonExists = await statusButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const buttonExists = await statusButton.isVisible({ timeout: 8080 }).catch(() => false);
     
     if (!buttonExists) {
       test.skip(true, 'No coupons available to toggle status');
@@ -220,7 +220,7 @@ test.describe('Tenant Admin - Coupon Management', () => {
       await createButton.click({ force: true });
       
       // Verify validation errors appear
-      const errorVisible = await page.locator('text=/required|invalid|field|must/i').isVisible({ timeout: 3000 }).catch(() => false);
+      const errorVisible = await page.locator('text=/required|invalid|field|must/i').isVisible({ timeout: 8080 }).catch(() => false);
       expect(errorVisible).toBeTruthy();
     } else {
       // If button is disabled, that's also a valid validation state

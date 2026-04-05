@@ -334,7 +334,9 @@ const getPermissionsByRole = (role) => {
       // User and Permission management
       'manage_tenant_users', 'view_tenant_users',
       'assign_permissions', 'view_permissions',
-      'create_tenant_user', 'edit_tenant_user', 'delete_tenant_user'
+      'create_tenant_user', 'edit_tenant_user', 'delete_tenant_user',
+      // Dealer management
+      'manage_dealers', 'view_dealers'
     ],
     TENANT_ADMIN: [
       // App management
@@ -354,7 +356,9 @@ const getPermissionsByRole = (role) => {
       // User and Permission management
       'manage_tenant_users', 'view_tenant_users',
       'assign_permissions', 'view_permissions',
-      'create_tenant_user', 'edit_tenant_user', 'delete_tenant_user'
+      'create_tenant_user', 'edit_tenant_user', 'delete_tenant_user',
+      // Dealer management
+      'manage_dealers', 'view_dealers'
     ],
     TENANT_USER: [
       // Read-only permissions
@@ -369,6 +373,17 @@ const getPermissionsByRole = (role) => {
       'view_credit_transactions',
       'view_tenant_users',
       'view_permissions'
+    ],
+    DEALER: [
+      'dealer_scan',
+      'dealer_view_points',
+      'dealer_view_profile'
+    ],
+    CUSTOMER: [
+      'customer_browse_products',
+      'customer_view_profile',
+      'customer_update_profile',
+      'customer_cashback'
     ]
   };
 

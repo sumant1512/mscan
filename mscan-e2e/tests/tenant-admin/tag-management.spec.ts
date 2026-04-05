@@ -29,8 +29,8 @@ test.describe('Tenant Admin - Tag Management', () => {
     await expect(page.locator('h1, h2, .page-title').first()).toBeVisible();
 
     // Verify either tags list exists or empty state is shown
-    const hasTagsList = await page.locator('.tag-card, .tag-chip, .card, mat-chip').first().isVisible({ timeout: 3000 }).catch(() => false);
-    const hasEmptyState = await page.locator('text=/no tags|empty|create your first/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTagsList = await page.locator('.tag-card, .tag-chip, .card, mat-chip').first().isVisible({ timeout: 8080 }).catch(() => false);
+    const hasEmptyState = await page.locator('text=/no tags|empty|create your first/i').isVisible({ timeout: 8080 }).catch(() => false);
 
     expect(hasTagsList || hasEmptyState).toBeTruthy();
   });
@@ -81,7 +81,7 @@ test.describe('Tenant Admin - Tag Management', () => {
 
     // Verify success
     const isOnListPage = page.url().includes('/tags') && !page.url().includes('/create');
-    const hasSuccessMessage = await page.locator('text=/success|created|saved/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSuccessMessage = await page.locator('text=/success|created|saved/i').isVisible({ timeout: 8080 }).catch(() => false);
 
     expect(isOnListPage || hasSuccessMessage).toBeTruthy();
 
@@ -126,7 +126,7 @@ test.describe('Tenant Admin - Tag Management', () => {
 
     // Check if search box exists
     const searchBox = page.locator('input[type="text"][placeholder*="earch"], input[type="search"], input.search-input').first();
-    const searchExists = await searchBox.isVisible({ timeout: 3000 }).catch(() => false);
+    const searchExists = await searchBox.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!searchExists) {
       test.skip(true, 'Search functionality not available');
@@ -134,7 +134,7 @@ test.describe('Tenant Admin - Tag Management', () => {
 
     // Get a tag name from the page if any exist
     const firstTag = page.locator('.tag-card, .tag-chip, .card, mat-chip').first();
-    const hasTags = await firstTag.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTags = await firstTag.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasTags) {
       test.skip(true, 'No tags available to search');
@@ -164,7 +164,7 @@ test.describe('Tenant Admin - Tag Management', () => {
 
     // Check if edit button exists on first tag
     const editButton = page.locator('button:has-text("Edit"), .btn-action:has-text("Edit"), a:has-text("Edit")').first();
-    const hasEditButton = await editButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasEditButton = await editButton.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasEditButton) {
       test.skip(true, 'No tags available to edit or edit button not found');
@@ -202,7 +202,7 @@ test.describe('Tenant Admin - Tag Management', () => {
 
     // Verify success
     const isOnListPage = page.url().includes('/tags') && !page.url().includes('/edit');
-    const hasSuccessMessage = await page.locator('text=/success|updated|saved/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSuccessMessage = await page.locator('text=/success|updated|saved/i').isVisible({ timeout: 8080 }).catch(() => false);
 
     expect(isOnListPage || hasSuccessMessage).toBeTruthy();
   });
@@ -230,7 +230,7 @@ test.describe('Tenant Admin - Tag Management', () => {
     // Find the delete button for our tag
     const tagElement = page.locator(`text="${tagToDelete}"`).locator('..').locator('..').first();
     const deleteButton = tagElement.locator('button:has-text("Delete"), button[class*="delete"]').first();
-    const hasDeleteButton = await deleteButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasDeleteButton = await deleteButton.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasDeleteButton) {
       test.skip(true, 'Delete button not found');
@@ -259,7 +259,7 @@ test.describe('Tenant Admin - Tag Management', () => {
 
     // Check if tags show usage count (number of products using this tag)
     const usageCount = page.locator('text=/[0-9]+ product|used by/i').first();
-    const hasUsageCount = await usageCount.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasUsageCount = await usageCount.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasUsageCount) {
       test.skip(true, 'Tag usage count not displayed');
@@ -274,7 +274,7 @@ test.describe('Tenant Admin - Tag Management', () => {
 
     // Check if app filter exists
     const appFilter = page.locator('select[name*="app"], select[id*="app"], .app-filter select').first();
-    const hasFilter = await appFilter.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasFilter = await appFilter.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasFilter) {
       test.skip(true, 'App filter not available');
@@ -309,7 +309,7 @@ test.describe('Tenant Admin - Tag Management', () => {
 
     // Check if tags display color badges or chips
     const tagBadge = page.locator('.tag-chip, mat-chip, .badge, [style*="background-color"]').first();
-    const hasBadge = await tagBadge.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasBadge = await tagBadge.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasBadge) {
       test.skip(true, 'Tag colors/badges not displayed');
@@ -331,7 +331,7 @@ test.describe('Tenant Admin - Tag Management', () => {
 
     // Verify validation error appears
     const errorMessage = page.locator('text=/required|name.*required/i').first();
-    const hasError = await errorMessage.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasError = await errorMessage.isVisible({ timeout: 8080 }).catch(() => false);
 
     expect(hasError).toBeTruthy();
   });
@@ -343,7 +343,7 @@ test.describe('Tenant Admin - Tag Management', () => {
 
     // Check if tag selector exists in product form
     const tagSelector = page.locator('select[formControlName="tags"], mat-select[formControlName="tags"], [formControlName="tags"]').first();
-    const hasTagSelector = await tagSelector.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasTagSelector = await tagSelector.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasTagSelector) {
       test.skip(true, 'Tag selector not available in product form');
@@ -374,7 +374,7 @@ test.describe('Tenant Admin - Tag Management', () => {
       has: page.locator('.tag-chip, mat-chip, .badge')
     }).first();
 
-    const hasProductWithTags = await productWithTags.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasProductWithTags = await productWithTags.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasProductWithTags) {
       test.skip(true, 'No products with tags found');

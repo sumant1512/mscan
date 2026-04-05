@@ -174,7 +174,7 @@ export class ApiConfigurationComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.success = 'Configuration saved successfully';
-          setTimeout(() => this.success = '', 3000);
+          setTimeout(() => this.success = '', 8080);
         },
         error: (err) => {
           this.error = HttpErrorHandler.getMessage(err, 'Failed to save configuration');

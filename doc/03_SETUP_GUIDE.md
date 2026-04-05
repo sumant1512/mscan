@@ -149,7 +149,7 @@ Create `.env` file in `mscan-server/` directory:
 
 ```env
 # Server Configuration
-PORT=3000
+PORT=8080
 NODE_ENV=development
 
 # Database Configuration
@@ -175,7 +175,7 @@ EMAIL_FROM=MScan <noreply@mscan.com>
 
 # Application URLs
 CLIENT_URL=http://localhost:4200
-SERVER_URL=http://localhost:3000
+SERVER_URL=http://localhost:8080
 
 # OTP Configuration
 OTP_EXPIRY_MINUTES=5
@@ -204,8 +204,8 @@ Create `mscan-client/src/environments/environment.ts`:
 ```typescript
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:3000/api',
-  serverUrl: 'http://localhost:3000',
+  apiUrl: 'http://localhost:8080/api',
+  serverUrl: 'http://localhost:8080',
   defaultSubdomain: 'localhost',
   enableDebugMode: true
 };
@@ -317,11 +317,11 @@ npm run dev
 npm start
 ```
 
-The server will start at `http://localhost:3000`
+The server will start at `http://localhost:8080`
 
 **Verify Backend:**
 ```bash
-curl http://localhost:3000/api/health
+curl http://localhost:8080/api/health
 # Should return: {"status":"ok","timestamp":"..."}
 ```
 
@@ -367,7 +367,7 @@ After starting the application, you need to create the first Super Admin user.
 **Method 1: Via API**
 
 ```bash
-curl -X POST http://localhost:3000/api/auth/request-otp \
+curl -X POST http://localhost:8080/api/auth/request-otp \
   -H "Content-Type: application/json" \
   -d '{
     "email": "sumantmishra511@gmail.com",
@@ -377,7 +377,7 @@ curl -X POST http://localhost:3000/api/auth/request-otp \
 # Check your email for OTP (or check database otps table)
 # Then verify OTP:
 
-curl -X POST http://localhost:3000/api/auth/verify-otp \
+curl -X POST http://localhost:8080/api/auth/verify-otp \
   -H "Content-Type: application/json" \
   -d '{
     "email": "sumantmishra511@gmail.com",
@@ -423,7 +423,7 @@ WHERE email = 'sumantmishra511@gmail.com';
 Super Admin can create tenants via the UI or API:
 
 ```bash
-curl -X POST http://localhost:3000/api/tenants \
+curl -X POST http://localhost:8080/api/tenants \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_SUPER_ADMIN_TOKEN" \
   -d '{
@@ -787,13 +787,13 @@ psql -U postgres -d mscan_db -c "SELECT NOW();"
 
 ### Port Already in Use
 
-**Problem:** Port 3000 or 4200 already in use
+**Problem:** Port 8080 or 4200 already in use
 
 **Solution:**
 ```bash
 # Find process using port
-lsof -i :3000  # macOS/Linux
-netstat -ano | findstr :3000  # Windows
+lsof -i :8080  # macOS/Linux
+netstat -ano | findstr :8080  # Windows
 
 # Kill process
 kill -9 <PID>  # macOS/Linux
@@ -894,7 +894,7 @@ npx playwright install
 npx playwright test --headed
 
 # Check if backend and frontend are running
-curl http://localhost:3000/api/health
+curl http://localhost:8080/api/health
 curl http://localhost:4200
 
 # Check test database is set up correctly

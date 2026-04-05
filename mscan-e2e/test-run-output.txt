@@ -40,7 +40,7 @@ Running 117 tests using 1 worker
 ⚠️  No OTP found for harsh@mscan.com
 ⚠️  No OTP found in database for harsh@mscan.com, using TEST_CONFIG.testOTP
 🔄 Using API fallback to verify OTP via root domain...
-📡 Calling: http://localhost:3000/api/auth/verify-otp
+📡 Calling: http://localhost:8080/api/auth/verify-otp
 🔌 Disconnected from database
 ❌ Tenant admin login failed: Error: API verification failed: HTTP 401: {"success":false,"message":"Invalid or expired OTP"}
     at AuthHelper.loginAsTenantAdmin [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mutils/helpers.ts:200:15[90m)[39m
@@ -61,7 +61,7 @@ Running 117 tests using 1 worker
 ⚠️  No OTP found for harsh@mscan.com
 ⚠️  No OTP found in database for harsh@mscan.com, using TEST_CONFIG.testOTP
 🔄 Using API fallback to verify OTP via root domain...
-📡 Calling: http://localhost:3000/api/auth/verify-otp
+📡 Calling: http://localhost:8080/api/auth/verify-otp
 🔌 Disconnected from database
 ❌ Tenant admin login failed: Error: API verification failed: HTTP 401: {"success":false,"message":"Invalid or expired OTP"}
     at AuthHelper.loginAsTenantAdmin [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mutils/helpers.ts:200:15[90m)[39m
@@ -82,7 +82,7 @@ Running 117 tests using 1 worker
 ⚠️  No OTP found for harsh@mscan.com
 ⚠️  No OTP found in database for harsh@mscan.com, using TEST_CONFIG.testOTP
 🔄 Using API fallback to verify OTP via root domain...
-📡 Calling: http://localhost:3000/api/auth/verify-otp
+📡 Calling: http://localhost:8080/api/auth/verify-otp
 🔌 Disconnected from database
 ❌ Tenant admin login failed: Error: API verification failed: HTTP 401: {"success":false,"message":"Invalid or expired OTP"}
     at AuthHelper.loginAsTenantAdmin [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mutils/helpers.ts:200:15[90m)[39m
@@ -117,7 +117,7 @@ Running 117 tests using 1 worker
 ⚠️  No OTP found for harsh@mscan.com
 ⚠️  No OTP found in database for harsh@mscan.com, using TEST_CONFIG.testOTP
 🔄 Using API fallback to verify OTP via root domain...
-📡 Calling: http://localhost:3000/api/auth/verify-otp
+📡 Calling: http://localhost:8080/api/auth/verify-otp
 🔌 Disconnected from database
 ❌ Tenant admin login failed: Error: API verification failed: HTTP 401: {"success":false,"message":"Invalid or expired OTP"}
     at AuthHelper.loginAsTenantAdmin [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mutils/helpers.ts:200:15[90m)[39m
@@ -138,7 +138,7 @@ Running 117 tests using 1 worker
 ⚠️  No OTP found for harsh@mscan.com
 ⚠️  No OTP found in database for harsh@mscan.com, using TEST_CONFIG.testOTP
 🔄 Using API fallback to verify OTP via root domain...
-📡 Calling: http://localhost:3000/api/auth/verify-otp
+📡 Calling: http://localhost:8080/api/auth/verify-otp
 🔌 Disconnected from database
 ❌ Tenant admin login failed: Error: API verification failed: HTTP 401: {"success":false,"message":"Invalid or expired OTP"}
     at AuthHelper.loginAsTenantAdmin [90m(/Users/sumant.mishra/Library/CloudStorage/OneDrive-UKG/Desktop/workspaces/projects/mscan/mscan-e2e/[39mutils/helpers.ts:200:15[90m)[39m

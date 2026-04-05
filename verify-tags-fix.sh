@@ -10,7 +10,7 @@ echo ""
 # You need to set these values
 TOKEN="${TOKEN:-your-token-here}"
 APP_ID="${APP_ID:-your-app-id-here}"
-BASE_URL="http://sumant.localhost:3000/api"
+BASE_URL="http://sumant.localhost:8080/api"
 
 if [ "$TOKEN" = "your-token-here" ]; then
   echo "⚠️  Set TOKEN and APP_ID environment variables first"

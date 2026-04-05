@@ -32,8 +32,8 @@ test.describe('Tenant Admin - Catalogue Products', () => {
     await expect(page.locator('h1, h2, .page-title').first()).toBeVisible();
     
     // Verify either products grid exists or empty state is shown
-    const hasProductsGrid = await page.locator('.product-grid, .products-grid, .grid, [class*="card"]').first().isVisible({ timeout: 3000 }).catch(() => false);
-    const hasEmptyState = await page.locator('text=/no products|empty|create your first/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasProductsGrid = await page.locator('.product-grid, .products-grid, .grid, [class*="card"]').first().isVisible({ timeout: 8080 }).catch(() => false);
+    const hasEmptyState = await page.locator('text=/no products|empty|create your first/i').isVisible({ timeout: 8080 }).catch(() => false);
     
     expect(hasProductsGrid || hasEmptyState).toBeTruthy();
   });
@@ -108,7 +108,7 @@ test.describe('Tenant Admin - Catalogue Products', () => {
     
     // Verify success
     const isOnListPage = page.url().includes('/products') && !page.url().includes('/create');
-    const hasSuccessMessage = await page.locator('text=/success|created|saved/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSuccessMessage = await page.locator('text=/success|created|saved/i').isVisible({ timeout: 8080 }).catch(() => false);
     
     expect(isOnListPage || hasSuccessMessage).toBeTruthy();
     
@@ -177,7 +177,7 @@ test.describe('Tenant Admin - Catalogue Products', () => {
     
     // Verify success
     const isOnListPage = page.url().includes('/products') && !page.url().includes('/create');
-    const hasSuccessMessage = await page.locator('text=/success|created/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSuccessMessage = await page.locator('text=/success|created/i').isVisible({ timeout: 8080 }).catch(() => false);
     
     expect(isOnListPage || hasSuccessMessage).toBeTruthy();
   });
@@ -187,7 +187,7 @@ test.describe('Tenant Admin - Catalogue Products', () => {
     
     // Check if search box exists
     const searchBox = page.locator('input[type="text"][placeholder*="earch"], input[type="search"], input.search-input').first();
-    const searchExists = await searchBox.isVisible({ timeout: 3000 }).catch(() => false);
+    const searchExists = await searchBox.isVisible({ timeout: 8080 }).catch(() => false);
     
     if (!searchExists) {
       test.skip(true, 'Search functionality not available');
@@ -195,7 +195,7 @@ test.describe('Tenant Admin - Catalogue Products', () => {
     
     // Get a product name from the page if any exist
     const firstProduct = page.locator('.product-card, .card').first();
-    const hasProducts = await firstProduct.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasProducts = await firstProduct.isVisible({ timeout: 8080 }).catch(() => false);
     
     if (!hasProducts) {
       test.skip(true, 'No products available to search');
@@ -224,7 +224,7 @@ test.describe('Tenant Admin - Catalogue Products', () => {
 
     // Check if tag filter exists
     const tagFilter = page.locator('select[name*="tag"], select[id*="tag"], .tag-filter select').first();
-    const hasFilter = await tagFilter.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasFilter = await tagFilter.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasFilter) {
       test.skip(true, 'Tag filter not available');
@@ -243,8 +243,8 @@ test.describe('Tenant Admin - Catalogue Products', () => {
     await page.waitForTimeout(1000);
 
     // Verify some products are displayed (or empty state if no products with tag)
-    const hasProducts = await page.locator('.product-card, .card').first().isVisible({ timeout: 3000 }).catch(() => false);
-    const hasEmptyState = await page.locator('text=/no products|empty/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasProducts = await page.locator('.product-card, .card').first().isVisible({ timeout: 8080 }).catch(() => false);
+    const hasEmptyState = await page.locator('text=/no products|empty/i').isVisible({ timeout: 8080 }).catch(() => false);
 
     expect(hasProducts || hasEmptyState).toBeTruthy();
   });
@@ -254,7 +254,7 @@ test.describe('Tenant Admin - Catalogue Products', () => {
     
     // Check if any products exist
     const productCard = page.locator('.product-card, .card').first();
-    const hasProducts = await productCard.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasProducts = await productCard.isVisible({ timeout: 8080 }).catch(() => false);
     
     if (!hasProducts) {
       test.skip(true, 'No products available to view');
@@ -274,7 +274,7 @@ test.describe('Tenant Admin - Catalogue Products', () => {
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     
     // Verify we're on a detail page or modal opened
-    const hasDetails = await page.locator('text=/description|price|SKU|tag/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasDetails = await page.locator('text=/description|price|SKU|tag/i').isVisible({ timeout: 8080 }).catch(() => false);
     expect(hasDetails).toBeTruthy();
   });
 
@@ -283,7 +283,7 @@ test.describe('Tenant Admin - Catalogue Products', () => {
     
     // Check if edit button exists on first product
     const editButton = page.locator('button:has-text("Edit"), .btn-action:has-text("Edit"), a:has-text("Edit")').first();
-    const hasEditButton = await editButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasEditButton = await editButton.isVisible({ timeout: 8080 }).catch(() => false);
     
     if (!hasEditButton) {
       test.skip(true, 'No products available to edit or edit button not found');
@@ -317,7 +317,7 @@ test.describe('Tenant Admin - Catalogue Products', () => {
     
     // Verify success
     const isOnListPage = page.url().includes('/products') && !page.url().includes('/edit');
-    const hasSuccessMessage = await page.locator('text=/success|updated|saved/i').isVisible({ timeout: 3000 }).catch(() => false);
+    const hasSuccessMessage = await page.locator('text=/success|updated|saved/i').isVisible({ timeout: 8080 }).catch(() => false);
     
     expect(isOnListPage || hasSuccessMessage).toBeTruthy();
   });
@@ -351,7 +351,7 @@ test.describe('Tenant Admin - Catalogue Products', () => {
     // Find the delete button for our product
     const productCard = page.locator(`text="${productToDelete}"`).locator('..').locator('..').first();
     const deleteButton = productCard.locator('button:has-text("Delete"), button[class*="delete"]').first();
-    const hasDeleteButton = await deleteButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasDeleteButton = await deleteButton.isVisible({ timeout: 8080 }).catch(() => false);
     
     if (!hasDeleteButton) {
       test.skip(true, 'Delete button not found');
@@ -382,7 +382,7 @@ test.describe('Tenant Admin - Catalogue Products', () => {
       has: page.locator('text=/tag|label/i')
     }).first();
 
-    const hasProduct = await productWithTags.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasProduct = await productWithTags.isVisible({ timeout: 8080 }).catch(() => false);
 
     if (!hasProduct) {
       test.skip(true, 'No products with tags found');
@@ -397,7 +397,7 @@ test.describe('Tenant Admin - Catalogue Products', () => {
     
     // Check if products display price
     const productPrice = page.locator('text=/[$£€₹][0-9]+|[0-9]+\.[0-9]{2}/').first();
-    const hasPrice = await productPrice.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasPrice = await productPrice.isVisible({ timeout: 8080 }).catch(() => false);
     
     if (!hasPrice) {
       test.skip(true, 'No product prices found');
@@ -412,7 +412,7 @@ test.describe('Tenant Admin - Catalogue Products', () => {
     
     // Look for toggle or status button
     const statusButton = page.locator('button:has-text("Activate"), button:has-text("Deactivate"), input[type="checkbox"]').first();
-    const hasStatusControl = await statusButton.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasStatusControl = await statusButton.isVisible({ timeout: 8080 }).catch(() => false);
     
     if (!hasStatusControl) {
       test.skip(true, 'Status toggle not available');
@@ -444,7 +444,7 @@ test.describe('Tenant Admin - Catalogue Products', () => {
     
     // Check if products have images or placeholders
     const productImage = page.locator('.product-card img, .card img, .product-image, i.material-icons').first();
-    const hasImage = await productImage.isVisible({ timeout: 3000 }).catch(() => false);
+    const hasImage = await productImage.isVisible({ timeout: 8080 }).catch(() => false);
     
     if (!hasImage) {
       test.skip(true, 'No product images or placeholders found');

@@ -14,7 +14,7 @@ import { test, expect } from '@playwright/test';
 import { TEST_CONFIG } from '../../utils/test-config.js';
 import { DatabaseHelper } from '../../utils/database-helper.js';
 
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000/api';
+const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080/api';
 const HOST_HEADER = `${TEST_CONFIG.tenant1.subdomain}.localhost`;
 
 test.describe('Complete Coupon Creation Workflow', () => {

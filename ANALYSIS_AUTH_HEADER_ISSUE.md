@@ -37,7 +37,7 @@ The header IS being added to the request object. Your console log at line 38 con
 I tested your server's CORS preflight response:
 
 ```bash
-curl -I -X OPTIONS http://sumant.localhost:3000/api/products
+curl -I -X OPTIONS http://sumant.localhost:8080/api/products
 ```
 
 **Server Response:**
@@ -114,7 +114,7 @@ When you test with fetch() from the browser console on a page already at `http:/
 2. **Different CORS rules** - DevTools console sometimes has relaxed CORS
 3. **No preflight** - Simple requests don't trigger preflight
 
-Also, if you're testing fetch() from the same origin (http://sumant.localhost:4200 → http://sumant.localhost:3000), both are `localhost`, so some browsers treat it as same-origin for certain purposes.
+Also, if you're testing fetch() from the same origin (http://sumant.localhost:4200 → http://sumant.localhost:8080), both are `localhost`, so some browsers treat it as same-origin for certain purposes.
 
 ## 🧩 The Angular HttpClient Difference
 
@@ -200,7 +200,7 @@ Your server's CORS configuration is missing `allowedHeaders`, so the browser str
 5. ❌ Server receives request without header
 
 **Evidence:**
-- `curl -I -X OPTIONS http://sumant.localhost:3000/api/products` shows no `Access-Control-Allow-Headers`
+- `curl -I -X OPTIONS http://sumant.localhost:8080/api/products` shows no `Access-Control-Allow-Headers`
 - Interceptor logs show header is added
 - Network tab shows header is missing
 - Server says "No token provided"
@@ -247,12 +247,12 @@ But the key is checking the **Network tab**, not the console. The Network tab sh
 │                                                              │
 │  4. Browser: "This is cross-origin with custom headers"     │
 │  5. Browser sends OPTIONS preflight                         │
-│     OPTIONS http://sumant.localhost:3000/api/products       │
+│     OPTIONS http://sumant.localhost:8080/api/products       │
 └──────────────────────┬──────────────────────────────────────┘
                        │
                        ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Server (http://sumant.localhost:3000)                       │
+│ Server (http://sumant.localhost:8080)                       │
 │                                                              │
 │  6. CORS middleware processes OPTIONS                       │
 │  7. Responds with:                                          │
@@ -267,13 +267,13 @@ But the key is checking the **Network tab**, not the console. The Network tab sh
 │  8. Browser: "Server didn't allow Authorization header"     │
 │  9. Browser STRIPS Authorization header from request ❌     │
 │  10. Browser sends actual GET request WITHOUT header        │
-│      GET http://sumant.localhost:3000/api/products          │
+│      GET http://sumant.localhost:8080/api/products          │
 │      Headers: [Content-Type, Accept] (NO Authorization!)   │
 └──────────────────────┬──────────────────────────────────────┘
                        │
                        ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Server (http://sumant.localhost:3000)                       │
+│ Server (http://sumant.localhost:8080)                       │
 │                                                              │
 │  11. Auth middleware checks req.headers.authorization       │
 │  12. Header is missing!                                     │
@@ -289,7 +289,7 @@ curl -v -X OPTIONS \
   -H "Origin: http://sumant.localhost:4200" \
   -H "Access-Control-Request-Method: GET" \
   -H "Access-Control-Request-Headers: authorization" \
-  http://sumant.localhost:3000/api/products
+  http://sumant.localhost:8080/api/products
 ```
 
 Look for `Access-Control-Allow-Headers` in the response.

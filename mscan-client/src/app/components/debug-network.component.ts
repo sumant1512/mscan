@@ -72,7 +72,7 @@ import { HttpClient } from '@angular/common/http';
 export class DebugNetworkComponent {
   results: any[] = [];
 
-  private readonly TEST_URL = 'http://sumant.localhost:3000/api/products?search=&app_id=b3fe1206-da13-40b6-9259-8082ca15430f';
+  private readonly TEST_URL = 'http://sumant.localhost:8080/api/products?search=&app_id=b3fe1206-da13-40b6-9259-8082ca15430f';
 
   constructor(private http: HttpClient) {}
 

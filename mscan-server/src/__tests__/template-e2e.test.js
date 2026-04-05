@@ -56,7 +56,7 @@ testRunner('Template System E2E Tests', () => {
     // Request OTP
     const otpResponse = await request(app)
       .post('/api/auth/request-otp')
-      .set('Host', subdomain ? `${subdomain}.localhost:3000` : 'localhost:3000')
+      .set('Host', subdomain ? `${subdomain}.localhost:8080` : 'localhost:8080')
       .send({ identifier: email });
 
     expect(otpResponse.status).toBe(200);
@@ -71,7 +71,7 @@ testRunner('Template System E2E Tests', () => {
     // Verify OTP
     const verifyResponse = await request(app)
       .post('/api/auth/verify-otp')
-      .set('Host', subdomain ? `${subdomain}.localhost:3000` : 'localhost:3000')
+      .set('Host', subdomain ? `${subdomain}.localhost:8080` : 'localhost:8080')
       .send({ identifier: email, otp: otpCode });
 
     expect(verifyResponse.status).toBe(200);

@@ -12,7 +12,7 @@ console.log('Token preview:', token ? token.substring(0, 50) + '...' : 'NO TOKEN
 
 // Test 2: Make direct request with token
 if (token) {
-  fetch('http://sumant.localhost:3000/api/products?search=&app_id=b3fe1206-da13-40b6-9259-8082ca15430f', {
+  fetch('http://sumant.localhost:8080/api/products?search=&app_id=b3fe1206-da13-40b6-9259-8082ca15430f', {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -100,7 +100,7 @@ console.log('Token:', localStorage.getItem('tms_access_token') ? 'EXISTS' : 'MIS
 Try another API that works (e.g., tags):
 ```javascript
 // Test tags API (if it works)
-fetch('http://sumant.localhost:3000/api/tags', {
+fetch('http://sumant.localhost:8080/api/tags', {
   headers: {
     'Authorization': `Bearer ${localStorage.getItem('tms_access_token')}`
   }
@@ -136,7 +136,7 @@ The products API requires `view_products` permission.
 Check if your user has this permission:
 ```javascript
 // After logging in, check user context
-fetch('http://sumant.localhost:3000/api/auth/context', {
+fetch('http://sumant.localhost:8080/api/auth/context', {
   headers: {
     'Authorization': `Bearer ${localStorage.getItem('tms_access_token')}`
   }
@@ -163,7 +163,7 @@ Based on the error "No token provided" for ONLY the products API:
 3. **Try this test:**
 ```javascript
 // Check your user role
-fetch('http://sumant.localhost:3000/api/auth/context', {
+fetch('http://sumant.localhost:8080/api/auth/context', {
   headers: {
     'Authorization': `Bearer ${localStorage.getItem('tms_access_token')}`
   }

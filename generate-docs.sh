@@ -71,7 +71,7 @@ Edit `.env` with your configuration:
 
 ```env
 # Server Configuration
-PORT=3000
+PORT=8080
 NODE_ENV=development
 
 # Database Configuration
@@ -96,7 +96,7 @@ EMAIL_FROM=noreply@mscan.com
 
 # CORS Configuration
 FRONTEND_URL=http://localhost:4200
-ALLOWED_ORIGINS=http://localhost:4200,http://localhost:3000
+ALLOWED_ORIGINS=http://localhost:4200,http://localhost:8080
 
 # Rate Limiting
 OTP_RATE_LIMIT_WINDOW_MS=900000
@@ -167,9 +167,9 @@ Edit `src/environments/environment.ts`:
 ```typescript
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:3000/api',
+  apiUrl: 'http://localhost:8080/api',
   defaultDomain: 'localhost',
-  port: 3000
+  port: 8080
 };
 ```
 
@@ -195,7 +195,7 @@ export const environment = {
 ```bash
 cd mscan-server
 npm start
-# Server runs on http://localhost:3000
+# Server runs on http://localhost:8080
 ```
 
 **Terminal 2 - Frontend:**
@@ -289,8 +289,8 @@ psql -U your_db_user -d mscan_db
 
 ### Port Already in Use
 ```bash
-# Find process using port 3000
-lsof -ti:3000
+# Find process using port 8080
+lsof -ti:8080
 
 # Kill process
 kill -9 <PID>
@@ -2089,7 +2089,7 @@ Complete REST API documentation for MScan platform.
 ## Base URLs
 
 ```
-Development: http://localhost:3000/api
+Development: http://localhost:8080/api
 Production: https://api.mscan.com/api
 Tenant Subdomain: https://{tenant-slug}.mscan.com/api
 ```

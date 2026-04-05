@@ -7,3 +7,5 @@ dist/
 build/
 .env.local
 .env.production
+.client_secret.json
+.token.json

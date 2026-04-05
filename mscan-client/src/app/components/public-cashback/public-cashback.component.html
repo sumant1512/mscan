@@ -1,0 +1,266 @@
+<div class="cashback-page">
+  <div class="cashback-card">
+
+    <!-- Header -->
+    <div class="card-header">
+      <div class="logo">
+        <span class="logo-icon">💸</span>
+        <span class="logo-text">Instant Cashback</span>
+      </div>
+    </div>
+
+    <!-- Progress Steps (hidden on result) -->
+    @if (currentStep() !== 'result') {
+      <div class="progress-steps">
+        @for (step of ['Mobile', 'OTP', 'UPI', 'Confirm']; track step; let i = $index) {
+          <div class="step" [class.active]="stepIndex() === i" [class.done]="stepIndex() > i">
+            <div class="step-circle">
+              @if (stepIndex() > i) {
+                <span class="material-icons">check</span>
+              } @else {
+                {{ i + 1 }}
+              }
+            </div>
+            <span class="step-label">{{ step }}</span>
+          </div>
+          @if (i < 3) {
+            <div class="step-line" [class.done]="stepIndex() > i"></div>
+          }
+        }
+      </div>
+    }
+
+    <!-- Error Message -->
+    @if (error()) {
+      <div class="alert alert-error">
+        <span class="material-icons">error_outline</span>
+        {{ error() }}
+      </div>
+    }
+
+    <!-- ── Step 1: Mobile + Coupon ────────────────────────────────────── -->
+    @if (currentStep() === 'start') {
+      <div class="step-content">
+        <h2 class="step-title">Claim Your Cashback</h2>
+        <p class="step-desc">Enter your mobile number to receive an OTP and claim your instant cashback.</p>
+
+        <form [formGroup]="mobileForm" (ngSubmit)="submitMobile()">
+          <div class="form-group">
+            <label for="coupon_code">Coupon Code <span class="req">*</span></label>
+            <input
+              id="coupon_code"
+              type="text"
+              formControlName="coupon_code"
+              placeholder="e.g. COUPON123"
+              [class.invalid]="isInvalid(mobileForm, 'coupon_code')"
+              autocomplete="off"
+            />
+            @if (isInvalid(mobileForm, 'coupon_code')) {
+              <span class="field-error">{{ getError(mobileForm, 'coupon_code') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="phone_e164">Mobile Number <span class="req">*</span></label>
+            <input
+              id="phone_e164"
+              type="tel"
+              formControlName="phone_e164"
+              placeholder="+919876543210"
+              [class.invalid]="isInvalid(mobileForm, 'phone_e164')"
+              autocomplete="tel"
+            />
+            @if (isInvalid(mobileForm, 'phone_e164')) {
+              <span class="field-error">{{ getError(mobileForm, 'phone_e164') }}</span>
+            }
+            <span class="field-hint">Include country code (e.g. +91 for India)</span>
+          </div>
+
+          <button type="submit" class="btn-primary btn-full" [disabled]="loading$ | async">
+            @if (loading$ | async) { Sending OTP... } @else { Send OTP →  }
+          </button>
+        </form>
+      </div>
+    }
+
+    <!-- ── Step 2: OTP ────────────────────────────────────────────────── -->
+    @if (currentStep() === 'otp') {
+      <div class="step-content">
+        <h2 class="step-title">Enter OTP</h2>
+        <p class="step-desc">
+          We sent a 6-digit OTP to <strong>{{ maskedMobile() }}</strong>
+        </p>
+
+        @if (!otpExpired) {
+          <div class="otp-timer">
+            <span class="material-icons">timer</span>
+            Expires in <strong>{{ otpCountdown }}</strong>
+          </div>
+        } @else {
+          <div class="otp-timer expired">OTP expired. Please resend.</div>
+        }
+
+        <form [formGroup]="otpForm" (ngSubmit)="verifyOtp()">
+          <div class="form-group">
+            <label for="otp">OTP <span class="req">*</span></label>
+            <input
+              id="otp"
+              type="text"
+              formControlName="otp"
+              placeholder="6-digit OTP"
+              maxlength="6"
+              inputmode="numeric"
+              [class.invalid]="isInvalid(otpForm, 'otp')"
+              autocomplete="one-time-code"
+            />
+            @if (isInvalid(otpForm, 'otp')) {
+              <span class="field-error">{{ getError(otpForm, 'otp') }}</span>
+            }
+          </div>
+
+          <button type="submit" class="btn-primary btn-full" [disabled]="(loading$ | async) || otpExpired">
+            @if (loading$ | async) { Verifying... } @else { Verify OTP → }
+          </button>
+        </form>
+
+        <button class="btn-link" (click)="resendOtp()" [disabled]="loading$ | async">
+          Resend OTP
+        </button>
+      </div>
+    }
+
+    <!-- ── Step 3: UPI ────────────────────────────────────────────────── -->
+    @if (currentStep() === 'upi') {
+      <div class="step-content">
+        @if (session()) {
+          <div class="cashback-preview">
+            <span class="cashback-label">Cashback Amount</span>
+            <span class="cashback-amount">₹{{ session()!.cashback_amount }}</span>
+            <span class="coupon-badge">{{ session()!.coupon_code }}</span>
+          </div>
+        }
+
+        <h2 class="step-title">Enter UPI ID</h2>
+        <p class="step-desc">Cashback will be transferred instantly to your UPI account.</p>
+
+        <form [formGroup]="upiForm" (ngSubmit)="submitUpi()">
+          <div class="form-group">
+            <label for="upi_id">UPI ID <span class="req">*</span></label>
+            <input
+              id="upi_id"
+              type="text"
+              formControlName="upi_id"
+              placeholder="username@bankname"
+              [class.invalid]="isInvalid(upiForm, 'upi_id')"
+              autocomplete="off"
+            />
+            @if (isInvalid(upiForm, 'upi_id')) {
+              <span class="field-error">{{ getError(upiForm, 'upi_id') }}</span>
+            }
+            <span class="field-hint">e.g. john@okaxis, 9876543210@upi</span>
+          </div>
+
+          <button type="submit" class="btn-primary btn-full" [disabled]="loading$ | async">
+            @if (loading$ | async) { Saving... } @else { Continue → }
+          </button>
+        </form>
+      </div>
+    }
+
+    <!-- ── Step 4: Confirm ───────────────────────────────────────────── -->
+    @if (currentStep() === 'confirm') {
+      <div class="step-content">
+        <h2 class="step-title">Confirm Cashback</h2>
+
+        @if (session()) {
+          <div class="confirm-summary">
+            <div class="summary-row">
+              <span class="summary-label">Coupon</span>
+              <span class="summary-value">{{ session()!.coupon_code }}</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Amount</span>
+              <span class="summary-value amount">₹{{ session()!.cashback_amount }}</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">UPI ID</span>
+              <span class="summary-value">{{ upiForm.value.upi_id }}</span>
+            </div>
+          </div>
+        }
+
+        <p class="confirm-note">
+          <span class="material-icons">info</span>
+          Cashback will be transferred instantly. The coupon will be marked as used.
+        </p>
+
+        <div class="confirm-actions">
+          <button class="btn-secondary" (click)="editUpi()" [disabled]="loading$ | async">
+            Edit UPI
+          </button>
+          <button class="btn-primary" (click)="confirmPayout()" [disabled]="loading$ | async">
+            @if (loading$ | async) { Processing... } @else { Confirm & Get ₹{{ session()?.cashback_amount }} }
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- ── Step 5: Result ────────────────────────────────────────────── -->
+    @if (currentStep() === 'result') {
+      <div class="step-content result-step">
+        @if (payoutResult()?.success) {
+          <!-- SUCCESS -->
+          <div class="result-icon success">
+            <span class="material-icons">check_circle</span>
+          </div>
+          <h2 class="result-title success">Cashback Sent!</h2>
+          <p class="result-desc">
+            ₹{{ payoutResult()!.cashback_amount }} has been transferred to
+            <strong>{{ payoutResult()!.upi_id }}</strong>
+          </p>
+
+          <div class="result-details">
+            <div class="detail-row">
+              <span>Transaction ID</span>
+              <span class="mono">{{ payoutResult()!.transaction_id }}</span>
+            </div>
+            <div class="detail-row">
+              <span>Status</span>
+              <span class="badge badge-success">COMPLETED</span>
+            </div>
+          </div>
+        } @else {
+          <!-- FAILED -->
+          <div class="result-icon failed">
+            <span class="material-icons">error</span>
+          </div>
+          <h2 class="result-title failed">Payout Failed</h2>
+          <p class="result-desc">
+            Your coupon has been redeemed but the payout could not be processed right now.
+          </p>
+
+          <div class="result-details">
+            <div class="detail-row">
+              <span>Transaction ID</span>
+              <span class="mono">{{ payoutResult()!.transaction_id }}</span>
+            </div>
+            <div class="detail-row">
+              <span>Amount</span>
+              <span>₹{{ payoutResult()!.cashback_amount }}</span>
+            </div>
+            <div class="detail-row">
+              <span>UPI ID</span>
+              <span>{{ payoutResult()!.upi_id }}</span>
+            </div>
+          </div>
+
+          <div class="retry-note">
+            <span class="material-icons">info</span>
+            Save your Transaction ID. You can retry the payout through the mobile app using this ID.
+          </div>
+        }
+      </div>
+    }
+
+  </div>
+</div>

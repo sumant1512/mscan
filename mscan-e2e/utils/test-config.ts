@@ -6,7 +6,7 @@
 export const TEST_CONFIG = {
   // Base URLs
   baseURL: 'http://localhost:4200',
-  apiURL: 'http://localhost:3000/api',
+  apiURL: 'http://localhost:8080/api',
 
   // Super Admin Credentials
   superAdmin: {
@@ -20,7 +20,7 @@ export const TEST_CONFIG = {
     subdomain: 'sumant',
     email: 'sumant@mscan.com',  // Using actual tenant admin from database
     baseUrl: 'http://sumant.localhost:4200',   // Use localhost for E2E tests (tenant identified by email)
-    apiBaseUrl: 'http://localhost:3000/api',  // API base URL
+    apiBaseUrl: 'http://localhost:8080/api',  // API base URL
     tenant_name: 'sumant',
     contactName: 'Sumant Mishra'
   },
@@ -30,7 +30,7 @@ export const TEST_CONFIG = {
     subdomain: 'test-company-1767426455059',
     email: 'test1767426455059@example.com',  // Using actual tenant admin from database
     baseUrl: 'http://test-company-1767426455059.localhost:4200',  // Use localhost for E2E tests (tenant identified by email)
-    apiBaseUrl: 'http://localhost:3000/api',  // API base URL
+    apiBaseUrl: 'http://localhost:8080/api',  // API base URL
     tenant_name: 'Test Company 1767426455059',
     contactName: 'Test User'
   },

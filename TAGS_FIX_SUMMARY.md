@@ -171,11 +171,11 @@ To verify the fix:
    ```bash
    # Test getProducts
    curl -H "Authorization: Bearer <token>" \
-     http://sumant.localhost:3000/api/products?app_id=xxx
+     http://sumant.localhost:8080/api/products?app_id=xxx
 
    # Test getProduct
    curl -H "Authorization: Bearer <token>" \
-     http://sumant.localhost:3000/api/products/123
+     http://sumant.localhost:8080/api/products/123
    ```
 
    Both should include `tags` array in the response.

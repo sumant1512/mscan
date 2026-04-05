@@ -78,7 +78,7 @@
                 return;
             }
 
-            const url = 'http://sumant.localhost:3000/api/products?search=&app_id=b3fe1206-da13-40b6-9259-8082ca15430f';
+            const url = 'http://sumant.localhost:8080/api/products?search=&app_id=b3fe1206-da13-40b6-9259-8082ca15430f';
 
             log(`Making request to: ${url}`);
             log('With Authorization header: Bearer <token>');
@@ -125,7 +125,7 @@
                 return;
             }
 
-            fetch('http://sumant.localhost:3000/api/auth/context', {
+            fetch('http://sumant.localhost:8080/api/auth/context', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }

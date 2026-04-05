@@ -11,7 +11,7 @@
   </div>
   <div class="card-bottom">
     <p *ngIf="productName" class="product-chip">{{ productName }}</p>
-    <img class="qr-code" [src]="qrSrc" alt="" />
+    <app-qr-code *ngIf="couponCode" [couponCode]="couponCode" [size]="80"></app-qr-code>
     <p class="terms-and-condition">
       * Terms & Conditions Applied, to know more please contact or visit us on:
     </p>

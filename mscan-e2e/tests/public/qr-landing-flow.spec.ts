@@ -55,7 +55,7 @@ test.describe('Public QR landing → login → award → redeem', () => {
       const { tenantId, code } = await setupActiveCoupon(dbClient, subdomain);
 
       // Landing
-      const landingContext = await request.newContext({ baseURL: 'http://127.0.0.1:3000', extraHTTPHeaders: { Host: hostHeader } });
+      const landingContext = await request.newContext({ baseURL: 'http://127.0.0.1:8080', extraHTTPHeaders: { Host: hostHeader } });
       const landingResp = await landingContext.get(`/scan/${code}`);
       expect(landingResp.ok()).toBeTruthy();
       const landingJson = await landingResp.json();
@@ -63,7 +63,7 @@ test.describe('Public QR landing → login → award → redeem', () => {
       expect(landingJson.status).toBe('pending-verification');
 
       // Start session
-      const apiContext = await request.newContext({ baseURL: 'http://127.0.0.1:3000/api/public/scan', extraHTTPHeaders: { Host: hostHeader } });
+      const apiContext = await request.newContext({ baseURL: 'http://127.0.0.1:8080/api/public/scan', extraHTTPHeaders: { Host: hostHeader } });
       const startResp = await apiContext.post(`/start`, { data: { coupon_code: code } });
       expect(startResp.ok()).toBeTruthy();
       const startJson = await startResp.json();

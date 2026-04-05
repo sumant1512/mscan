@@ -97,7 +97,7 @@ export class TemplateListComponent implements OnInit, OnDestroy {
           this.successMessage = '';
           this.templatesFacade.clearError();
           this.cdr.detectChanges();
-        }, 3000);
+        }, 8080);
       });
   }
 

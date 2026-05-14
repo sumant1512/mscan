@@ -9,3 +9,5 @@ build/
 .env.production
 .client_secret.json
 .token.json
+credential.json
+token.json

@@ -14,7 +14,7 @@ const http = require("http");
 const { URL } = require("url");
 const { google } = require("googleapis");
 const port = process.env.PORT ? Number(process.env.PORT) : 8080;
-const CRED_PATH = "./credentials.json";
+const CRED_PATH = "./credential.json";
 const TOKEN_PATH = "./token.json";
 
 function exitWith(msg) {

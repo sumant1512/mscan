@@ -1,6 +1,9 @@
 name: Cleanup Artifact Registry Images
 
 on:
+  push:
+    branches:
+      - cleanup
   workflow_dispatch:
 
   schedule:

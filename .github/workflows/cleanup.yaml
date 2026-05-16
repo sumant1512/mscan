@@ -1,4 +1,4 @@
-name: Cleanup Artifact Registry Images
+name: Cleanup Artifact Registry Images # 
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
 env:
   PROJECT_ID: orbital-nirvana-492005-q3
   GAR_LOCATION: us-east4
-  REPOSITORY: mscan-client
+  REPOSITORY: mscan-server
 
 jobs:
   cleanup-images:

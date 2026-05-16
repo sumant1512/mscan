@@ -51,8 +51,6 @@ jobs:
             --include-tags \
             --format="get(DIGEST)" | sort -u > digests.txt
 
-          cat digests.txt
-
           while read DIGEST; do
             if [ ! -z "$DIGEST" ]; then
               IMAGE="$REPO@$DIGEST"
@@ -64,6 +62,25 @@ jobs:
                 --quiet || true
             fi
           done < digests.txt
+
+  delete-cloud-run-services:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
 
       - name: Delete all Cloud Run services
         run: |

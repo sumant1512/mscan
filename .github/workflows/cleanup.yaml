@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
   schedule:
-  - cron: "0 */4 * * *"  
+    - cron: "0 */4 * * *"
 
 env:
   PROJECT_ID: orbital-nirvana-492005-q3
@@ -23,6 +23,7 @@ jobs:
         repository:
           - mscan-server
           - mscan-client
+
     permissions:
       contents: read
       id-token: write
@@ -64,22 +65,22 @@ jobs:
             fi
           done < digests.txt
 
-          - name: Delete all Cloud Run services
-            run: |
-              echo "Fetching Cloud Run services..."
-          
-              gcloud run services list \
-                --region="${{ env.GAR_LOCATION }}" \
-                --format="value(metadata.name)" > services.txt
-          
-              cat services.txt
-          
-              while read SERVICE; do
-                if [ ! -z "$SERVICE" ]; then
-                  echo "Deleting service: $SERVICE"
+      - name: Delete all Cloud Run services
+        run: |
+          echo "Fetching Cloud Run services..."
 
-                  gcloud run services delete "$SERVICE" \
-                    --region="${{ env.GAR_LOCATION }}" \
-                    --quiet || true
-                fi
-              done < services.txt
+          gcloud run services list \
+            --region="${{ env.GAR_LOCATION }}" \
+            --format="value(metadata.name)" > services.txt
+
+          cat services.txt
+
+          while read SERVICE; do
+            if [ ! -z "$SERVICE" ]; then
+              echo "Deleting service: $SERVICE"
+
+              gcloud run services delete "$SERVICE" \
+                --region="${{ env.GAR_LOCATION }}" \
+                --quiet || true
+            fi
+          done < services.txt

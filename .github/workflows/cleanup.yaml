@@ -1,0 +1,46 @@
+name: Cleanup Artifact Registry Images
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "0 3 * * *" # Daily at 3 AM UTC
+
+env:
+  PROJECT_ID: orbital-nirvana-492005-q3
+  GAR_LOCATION: us-east4
+  REPOSITORY: mscan-client
+
+jobs:
+  cleanup-images:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Delete all docker images
+        run: |
+          REPO="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}"
+
+          echo "Fetching images from $REPO"
+
+          gcloud artifacts docker images list $REPO \
+            --format="value(IMAGE)" | while read IMAGE
+          do
+            echo "Deleting image: $IMAGE"
+
+            gcloud artifacts docker images delete "$IMAGE" \
+              --delete-tags \
+              --quiet
+          done

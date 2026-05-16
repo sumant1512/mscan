@@ -2,9 +2,9 @@
 name: Build and Deploy to Cloud Run ms-client #1
 
 on:
-  push:
-    branches:
-      - fix-directorysss
+  # push:
+  #   branches:
+  #     - fix-directorysss
   workflow_dispatch:
 
 env:

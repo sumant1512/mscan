@@ -69,3 +69,4 @@ jobs:
                 --delete-tags \
                 --quiet || true
             fi
+          done

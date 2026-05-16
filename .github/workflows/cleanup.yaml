@@ -46,18 +46,26 @@ jobs:
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Delete all docker images
+      - name: Delete old docker images
         run: |
           REPO="${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}"
-
-          echo "Fetching images from $REPO"
-
+      
+          echo "Fetching image digests from $REPO"
+      
           gcloud artifacts docker images list $REPO \
-            --format="value(IMAGE)" | while read IMAGE
+            --include-tags \
+            --format="get(DIGEST)" | sort -u > digests.txt
+      
+          cat digests.txt
+      
+          while read DIGEST
           do
-            echo "Deleting image: $IMAGE"
-
-            gcloud artifacts docker images delete "$IMAGE" \
-              --delete-tags \
-              --quiet
-          done
+            if [ ! -z "$DIGEST" ]; then
+              IMAGE="$REPO@$DIGEST"
+      
+              echo "Deleting image: $IMAGE"
+      
+              gcloud artifacts docker images delete "$IMAGE" \
+                --delete-tags \
+                --quiet || true
+            fi
